@@ -1,5 +1,7 @@
+'use client';
+
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { LockIcon, MessageCircleIcon, SendIcon, SparklesIcon } from 'lucide-react';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
@@ -35,7 +37,7 @@ export function UpgradeDialog({
 
 
 }: {open: boolean;onClose: () => void;reason: UpgradeReason;}) {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { db } = useStore();
   const paid = db.packages.filter((p) => p.active && p.price > 0).sort((a, b) => a.price - b.price);
   const c = copy[reason];
@@ -48,7 +50,7 @@ export function UpgradeDialog({
           key={pkg.id}
           onClick={() => {
             onClose();
-            navigate(`/app/checkout/${pkg.id}`);
+            router.push(`/app/checkout/${pkg.id}`);
           }}
           className="flex w-full items-center gap-4 rounded-3xl border border-sand bg-cream px-5 py-4 text-left transition-[border-color,background-color] duration-150 ease-soft hover:border-berry-300 hover:bg-white">
           
@@ -79,7 +81,7 @@ export function UpgradeDialog({
         <Button
           onClick={() => {
             onClose();
-            navigate('/app/packages');
+            router.push('/app/packages');
           }}>
           
           Compare all packages

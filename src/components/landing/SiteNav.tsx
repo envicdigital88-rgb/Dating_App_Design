@@ -1,5 +1,8 @@
+'use client';
+
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
+
 import { MenuIcon, XIcon } from 'lucide-react';
 import { BrandMark } from '../BrandMark';
 import { Button } from '../ui/Button';
@@ -18,7 +21,7 @@ export function SiteNav() {
   return (
     <header className="sticky top-0 z-40 border-b border-sand/60 bg-cream/85 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-5 py-3.5 lg:px-8">
-        <Link to="/" aria-label="Kindred home">
+        <Link href="/" aria-label="Kindred home">
           <BrandMark />
         </Link>
 
@@ -35,12 +38,12 @@ export function SiteNav() {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
-          <Link to="/signin">
+          <Link href="/signin">
             <Button variant="ghost" size="sm">
               Sign in
             </Button>
           </Link>
-          <Link to="/join">
+          <Link href="/join">
             <Button size="sm">Start dating</Button>
           </Link>
         </div>
@@ -70,12 +73,12 @@ export function SiteNav() {
           )}
           </nav>
           <div className="mt-4 flex gap-2">
-            <Link to="/signin" className="flex-1">
+            <Link href="/signin" className="flex-1">
               <Button variant="outline" block size="sm">
                 Sign in
               </Button>
             </Link>
-            <Link to="/join" className="flex-1">
+            <Link href="/join" className="flex-1">
               <Button block size="sm">
                 Start dating
               </Button>

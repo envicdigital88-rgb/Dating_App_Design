@@ -1,5 +1,6 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
+
 import { BrandMark } from '../BrandMark';
 
 const columns = [
@@ -44,14 +45,12 @@ export function SiteFooter() {
               conversations — no questionnaires, no compatibility scores.
             </p>
             <div className="mt-6 flex gap-3">
-              <Link
-                to="/join"
+              <Link href="/join"
                 className="rounded-full bg-cream px-5 py-2.5 text-[13px] font-medium text-plum-600 transition-colors duration-150 ease-soft hover:bg-white">
                 
                 Create your profile
               </Link>
-              <Link
-                to="/signin"
+              <Link href="/signin"
                 className="rounded-full border border-cream/25 px-5 py-2.5 text-[13px] font-medium text-cream transition-colors duration-150 ease-soft hover:bg-cream/10">
                 
                 Sign in

@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { BellIcon, DownloadIcon, SmartphoneIcon, WifiOffIcon } from 'lucide-react';
 import { Button } from '../ui/Button';

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
+
 import { HeartIcon, MapPinIcon, SendIcon } from 'lucide-react';
 import { SectionHeading } from '../ui/Bits';
 import { Button } from '../ui/Button';
@@ -24,7 +25,7 @@ export function DiscoverPreview() {
             title="Real profiles, properly photographed"
             body="Large galleries, a bio in their own words, and what they are looking for — visible before you spend anything." />
           
-          <Link to="/join" className="hidden sm:block">
+          <Link href="/join" className="hidden sm:block">
             <Button variant="outline">Browse members</Button>
           </Link>
         </div>

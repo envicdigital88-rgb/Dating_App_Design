@@ -1,5 +1,9 @@
+'use client';
+
 import React from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
+
 import {
   BellIcon,
   CompassIcon,
@@ -31,9 +35,9 @@ interface NavItem {
   badge?: number;
 }
 
-export function AppShell() {
-  const navigate = useNavigate();
-  const location = useLocation();
+export function AppShell({ children }: { children?: React.ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const { offline } = usePwa();
   const {
     currentUser,
@@ -59,33 +63,33 @@ export function AppShell() {
   const primaryPhoto = photosOf(currentUser.id)[0];
 
   const main: NavItem[] = [
-  { to: '/app/discover', label: 'Discover', icon: <CompassIcon className="h-[18px] w-[18px]" /> },
-  { to: '/app/likes', label: 'Likes', icon: <HeartIcon className="h-[18px] w-[18px]" />, badge: likesReceived().length },
-  { to: '/app/requests', label: 'Requests', icon: <SendIcon className="h-[18px] w-[18px]" />, badge: pendingIncoming },
-  { to: '/app/connections', label: 'Connections', icon: <UsersIcon className="h-[18px] w-[18px]" /> },
-  { to: '/app/messages', label: 'Messages', icon: <MessageCircleIcon className="h-[18px] w-[18px]" />, badge: unreadMessages },
-  { to: '/app/photos', label: 'Photos', icon: <ImageIcon className="h-[18px] w-[18px]" /> },
-  { to: '/app/notifications', label: 'Notifications', icon: <BellIcon className="h-[18px] w-[18px]" />, badge: unreadNotifications }];
+  { to: '/discover', label: 'Discover', icon: <CompassIcon className="h-[18px] w-[18px]" /> },
+  { to: '/likes', label: 'Likes', icon: <HeartIcon className="h-[18px] w-[18px]" />, badge: likesReceived().length },
+  { to: '/requests', label: 'Requests', icon: <SendIcon className="h-[18px] w-[18px]" />, badge: pendingIncoming },
+  { to: '/connections', label: 'Connections', icon: <UsersIcon className="h-[18px] w-[18px]" /> },
+  { to: '/messages', label: 'Messages', icon: <MessageCircleIcon className="h-[18px] w-[18px]" />, badge: unreadMessages },
+  { to: '/photos', label: 'Photos', icon: <ImageIcon className="h-[18px] w-[18px]" /> },
+  { to: '/notifications', label: 'Notifications', icon: <BellIcon className="h-[18px] w-[18px]" />, badge: unreadNotifications }];
 
 
   const account: NavItem[] = [
-  { to: '/app/profile', label: 'My profile', icon: <UserIcon className="h-[18px] w-[18px]" /> },
-  { to: '/app/packages', label: 'Packages', icon: <SparklesIcon className="h-[18px] w-[18px]" /> },
-  { to: '/app/subscription', label: 'Subscription', icon: <CreditCardIcon className="h-[18px] w-[18px]" /> },
-  { to: '/app/settings', label: 'Settings', icon: <SettingsIcon className="h-[18px] w-[18px]" /> }];
+  { to: '/profile', label: 'My profile', icon: <UserIcon className="h-[18px] w-[18px]" /> },
+  { to: '/packages', label: 'Packages', icon: <SparklesIcon className="h-[18px] w-[18px]" /> },
+  { to: '/subscription', label: 'Subscription', icon: <CreditCardIcon className="h-[18px] w-[18px]" /> },
+  { to: '/settings', label: 'Settings', icon: <SettingsIcon className="h-[18px] w-[18px]" /> }];
 
 
   const mobileNav: NavItem[] = [
   main[0],
   main[2],
   main[4],
-  { to: '/app/photos', label: 'Photos', icon: <ImageIcon className="h-[18px] w-[18px]" /> },
-  { to: '/app/profile', label: 'You', icon: <UserIcon className="h-[18px] w-[18px]" /> }];
+  { to: '/photos', label: 'Photos', icon: <ImageIcon className="h-[18px] w-[18px]" /> },
+  { to: '/profile', label: 'You', icon: <UserIcon className="h-[18px] w-[18px]" /> }];
 
 
-  const isChat = /^\/app\/messages\/.+/.test(location.pathname);
+  const isChat = /^\/messages\/.+/.test(pathname);
 
-  const navClass = ({ isActive }: {isActive: boolean;}) =>
+  const navClass = (isActive: boolean) =>
   cn(
     'group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-[background-color,color] duration-150 ease-soft',
     isActive ? 'bg-white text-ink shadow-sm' : 'text-ink-soft hover:bg-white/60 hover:text-ink'
@@ -102,38 +106,44 @@ export function AppShell() {
       <div className="mx-auto flex w-full max-w-[1400px]">
         {/* Desktop sidebar */}
         <aside className="sticky top-0 hidden h-screen w-[272px] shrink-0 flex-col border-r border-sand/70 bg-cream-deep/40 px-5 py-6 lg:flex">
-          <button onClick={() => navigate('/app/discover')} className="mb-8 px-1 text-left">
+          <button onClick={() => router.push('/discover')} className="mb-8 px-1 text-left">
             <BrandMark />
           </button>
 
           <nav aria-label="Main" className="space-y-1">
-            {main.map((item) =>
-            <NavLink key={item.to} to={item.to} className={navClass}>
-                {item.icon}
-                <span className="flex-1">{item.label}</span>
-                {!!item.badge &&
-              <span className="rounded-full bg-berry-500 px-1.5 py-0.5 text-[11px] font-semibold text-white">
-                    {item.badge}
-                  </span>
-              }
-              </NavLink>
-            )}
+            {main.map((item) => {
+              const isActive = pathname.startsWith(item.to);
+              return (
+              <Link key={item.to} href={item.to} className={navClass(isActive)}>
+                  {item.icon}
+                  <span className="flex-1">{item.label}</span>
+                  {!!item.badge &&
+                <span className="rounded-full bg-berry-500 px-1.5 py-0.5 text-[11px] font-semibold text-white">
+                      {item.badge}
+                    </span>
+                }
+                </Link>
+              );
+            })}
           </nav>
 
           <div className="my-5 h-px bg-sand/80" />
 
           <nav aria-label="Account" className="space-y-1">
-            {account.map((item) =>
-            <NavLink key={item.to} to={item.to} className={navClass}>
-                {item.icon}
-                <span className="flex-1">{item.label}</span>
-              </NavLink>
-            )}
+            {account.map((item) => {
+              const isActive = pathname.startsWith(item.to);
+              return (
+              <Link key={item.to} href={item.to} className={navClass(isActive)}>
+                  {item.icon}
+                  <span className="flex-1">{item.label}</span>
+                </Link>
+              );
+            })}
             {currentUser.role === 'admin' &&
-            <NavLink to="/admin" className={navClass}>
+            <Link href="/admin" className={navClass(pathname.startsWith('/admin'))}>
                 <ShieldCheckIcon className="h-[18px] w-[18px]" />
                 <span className="flex-1">Admin</span>
-              </NavLink>
+              </Link>
             }
           </nav>
 
@@ -163,7 +173,7 @@ export function AppShell() {
                 size="sm"
                 block
                 className="mt-4 bg-cream text-plum-500 hover:bg-white"
-                onClick={() => navigate('/app/packages')}>
+                onClick={() => router.push('/packages')}>
                 
                   Upgrade
                 </Button>
@@ -179,7 +189,7 @@ export function AppShell() {
               <button
                 onClick={() => {
                   logout();
-                  navigate('/');
+                  router.push('/');
                 }}
                 aria-label="Sign out"
                 className="rounded-full p-2 text-ink-muted transition-colors duration-150 ease-soft hover:bg-white hover:text-ink">
@@ -199,8 +209,8 @@ export function AppShell() {
                 <span className="mr-1 rounded-full bg-white px-3 py-1.5 text-[12px] font-medium text-ink-soft shadow-sm">
                   {entitlements.chatRemaining === null ? '∞' : entitlements.chatRemaining} msgs
                 </span>
-                <NavLink
-                to="/app/notifications"
+                <Link
+                href="/notifications"
                 aria-label="Notifications"
                 className="relative rounded-full p-2 text-ink-soft transition-colors duration-150 ease-soft hover:bg-white">
                 
@@ -208,13 +218,13 @@ export function AppShell() {
                   {!!unreadNotifications &&
                 <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-berry-500" />
                 }
-                </NavLink>
+                </Link>
               </div>
             </header>
           }
 
           <main className={cn('min-h-[60vh]', !isChat && 'pb-24 lg:pb-10')}>
-            <Outlet />
+            {children}
           </main>
         </div>
       </div>
@@ -226,25 +236,26 @@ export function AppShell() {
         className="fixed bottom-0 left-0 right-0 z-40 border-t border-sand/80 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
         
           <ul className="flex items-stretch">
-            {mobileNav.map((item) =>
-          <li key={item.to} className="flex-1">
-                <NavLink
-              to={item.to}
-              className={({ isActive }) =>
-              cn(
-                'relative flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors duration-150 ease-soft',
-                isActive ? 'text-berry-500' : 'text-ink-muted'
-              )
-              }>
-              
-                  {item.icon}
-                  {item.label}
-                  {!!item.badge &&
-              <span className="absolute right-[22%] top-1.5 h-2 w-2 rounded-full bg-berry-500" />
-              }
-                </NavLink>
-              </li>
-          )}
+            {mobileNav.map((item) => {
+              const isActive = pathname.startsWith(item.to);
+              return (
+                <li key={item.to} className="flex-1">
+                  <Link
+                    href={item.to}
+                    className={cn(
+                      'relative flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors duration-150 ease-soft',
+                      isActive ? 'text-berry-500' : 'text-ink-muted'
+                    )}>
+                    
+                    {item.icon}
+                    {item.label}
+                    {!!item.badge &&
+                      <span className="absolute right-[22%] top-1.5 h-2 w-2 rounded-full bg-berry-500" />
+                    }
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </nav>
       }
@@ -256,10 +267,6 @@ export function PageHeader({
   title,
   body,
   action
-
-
-
-
 }: {title: string;body?: string;action?: React.ReactNode;}) {
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -269,7 +276,6 @@ export function PageHeader({
       </div>
       {action}
     </div>);
-
 }
 
 export function Page({ children, className }: {children: React.ReactNode;className?: string;}) {

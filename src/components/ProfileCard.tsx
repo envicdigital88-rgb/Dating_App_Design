@@ -1,7 +1,9 @@
+'use client';
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeftIcon, ChevronRightIcon, HeartIcon, MapPinIcon, SendIcon, XIcon } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { Badge, VerifiedMark } from './ui/Bits';
 import { useStore } from '../contexts/StoreContext';
 import { presence } from '../utils/format';
@@ -23,7 +25,7 @@ export function ProfileCard({
 
 }: {user: User;onLike: () => void;onPass: () => void;onRequest: () => void;liked: boolean;requested: boolean;}) {
   const { photosOf } = useStore();
-  const navigate = useNavigate();
+  const router = useRouter();
   const photos = photosOf(user.id);
   const [index, setIndex] = useState(0);
   const photo = photos[index];
@@ -136,7 +138,7 @@ export function ProfileCard({
             {requested ? 'Request sent' : 'Send request'}
           </button>
           <button
-            onClick={() => navigate(`/app/profile/${user.id}`)}
+            onClick={() => router.push(`/app/profile/${user.id}`)}
             className="h-12 shrink-0 rounded-full border border-sand bg-white px-4 text-sm font-medium text-ink transition-[border-color,color] duration-150 ease-soft hover:border-berry-300 hover:text-berry-600">
             
             View

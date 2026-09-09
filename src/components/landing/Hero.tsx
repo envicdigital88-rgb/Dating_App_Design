@@ -1,5 +1,6 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
+
 import { motion } from 'framer-motion';
 import { HeartIcon, ShieldCheckIcon } from 'lucide-react';
 import { Button } from '../ui/Button';
@@ -32,13 +33,13 @@ export function Hero() {
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link to="/join">
+            <Link href="/join">
               <Button size="lg" className="w-full sm:w-auto">
                 <HeartIcon className="h-4 w-4" />
                 Start dating
               </Button>
             </Link>
-            <Link to="/join">
+            <Link href="/join">
               <Button size="lg" variant="outline" className="w-full sm:w-auto">
                 Create your profile
               </Button>
