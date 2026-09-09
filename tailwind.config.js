@@ -1,36 +1,38 @@
 export default {content: [
   './index.html',
-  './src/**/*.{js,ts,jsx,tsx}'
+  './app/**/*.{js,ts,jsx,tsx}',
+  './components/**/*.{js,ts,jsx,tsx}',
+  './lib/**/*.{js,ts,jsx,tsx}'
 ],
   theme: {
     extend: {
       colors: {
         cream: {
-          DEFAULT: '#fbf7f3',
-          deep: '#f4ece5',
+          DEFAULT: '#F4F7F4', // Soft coconut green light
+          deep: '#E8EFE8',    // Coconut green deep
         },
         ink: {
-          DEFAULT: '#1d1420',
-          soft: '#4a3c46',
-          muted: '#7d707a',
+          DEFAULT: '#2B1C1A', // Warmer dark text
+          soft: '#5C4844',
+          muted: '#8F7C78',
         },
-        berry: {
-          50: '#fdf2f5',
-          100: '#fbe4ea',
-          200: '#f4c2d1',
-          300: '#e894ae',
-          400: '#d5607f',
-          500: '#ac2b57',
-          600: '#8f1f47',
-          700: '#711738',
+        berry: { // Terracotta tones (Primary Action)
+          50: '#FFF5F2',
+          100: '#FFE6DF',
+          200: '#FFC8B9',
+          300: '#FFA18A',
+          400: '#F87556',
+          500: '#E05A3B', // Terracotta
+          600: '#BE3E21',
+          700: '#992E16',
         },
-        plum: {
-          500: '#4c1630',
-          600: '#3a1025',
-          700: '#280a19',
+        plum: { // Maroon tones (Deep accents)
+          500: '#8C2730', // Maroon
+          600: '#6A1A21',
+          700: '#4D1016',
         },
-        sand: '#e8ddd2',
-        moss: '#3f6b52',
+        sand: '#E3D7AE', // Mustard tinted warm sand
+        moss: '#009688', // Vibrant teal
       },
       fontFamily: {
         display: ['Fraunces', 'Georgia', 'serif'],
