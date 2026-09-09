@@ -40,7 +40,7 @@ const baseLifestyle = {
   work: 'Product designer'
 };
 
-type SeedMember = Omit<User, 'password' | 'role' | 'onboarded'> & {photos: string[];};
+type SeedMember = Omit<User, 'password' | 'role' | 'onboarded' | 'traits' | 'prompts'> & {photos: string[];};
 
 const members: SeedMember[] = [
 {
@@ -214,6 +214,8 @@ export const seedUsers: User[] = [
   bio: 'Runs on flat whites and long walks. Looking for someone to lose a whole Saturday with.',
   intention: 'Long-term relationship',
   interests: ['Coffee', 'Live music', 'Hiking', 'Cooking', 'Film photography'],
+  traits: ['Coffee Lover', 'Early Bird', 'Go Out'],
+  prompts: [{ id: 'p1', question: 'I go crazy for...', answer: 'A good flat white.' }],
   lifestyle: { ...baseLifestyle, work: 'Product designer' },
   verified: true,
   suspended: false,
@@ -235,6 +237,8 @@ export const seedUsers: User[] = [
   bio: 'Trust & safety.',
   intention: 'Long-term relationship',
   interests: [],
+  traits: [],
+  prompts: [],
   lifestyle: { ...baseLifestyle, work: 'Trust & Safety Lead' },
   verified: true,
   suspended: false,
@@ -247,6 +251,8 @@ export const seedUsers: User[] = [
   ...m,
   password: 'member123',
   role: 'member' as const,
+  traits: [],
+  prompts: [],
   onboarded: true
 }))];
 

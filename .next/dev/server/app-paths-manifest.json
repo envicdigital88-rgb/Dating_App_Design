@@ -1,3 +1,21 @@
 {
-  "/page": "app/page.js"
+  "/(app)/discover/page": "app/(app)/discover/page.js",
+  "/(app)/messages/[conversationId]/page": "app/(app)/messages/[conversationId]/page.js",
+  "/(app)/messages/page": "app/(app)/messages/page.js",
+  "/(app)/notifications/page": "app/(app)/notifications/page.js",
+  "/(app)/packages/page": "app/(app)/packages/page.js",
+  "/(app)/photos/page": "app/(app)/photos/page.js",
+  "/(app)/profile/[userId]/page": "app/(app)/profile/[userId]/page.js",
+  "/(app)/profile/page": "app/(app)/profile/page.js",
+  "/(app)/requests/page": "app/(app)/requests/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/admin/activity/page": "app/admin/activity/page.js",
+  "/admin/packages/page": "app/admin/packages/page.js",
+  "/admin/page": "app/admin/page.js",
+  "/admin/payments/page": "app/admin/payments/page.js",
+  "/admin/users/page": "app/admin/users/page.js",
+  "/onboarding/page": "app/onboarding/page.js",
+  "/page": "app/page.js",
+  "/sign-in/page": "app/sign-in/page.js",
+  "/sign-up/page": "app/sign-up/page.js"
 }

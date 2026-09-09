@@ -21,8 +21,8 @@
   "/admin/page": "app/admin/page.js",
   "/admin/payments/page": "app/admin/payments/page.js",
   "/admin/users/page": "app/admin/users/page.js",
-  "/join/page": "app/join/page.js",
   "/onboarding/page": "app/onboarding/page.js",
   "/page": "app/page.js",
-  "/signin/page": "app/signin/page.js"
+  "/sign-in/page": "app/sign-in/page.js",
+  "/sign-up/page": "app/sign-up/page.js"
 }

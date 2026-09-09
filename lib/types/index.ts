@@ -28,6 +28,12 @@ export interface Lifestyle {
   work: string;
 }
 
+export interface Prompt {
+  id: string;
+  question: string;
+  answer: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -41,6 +47,8 @@ export interface User {
   bio: string;
   intention: DatingIntention;
   interests: string[];
+  traits: string[];
+  prompts: Prompt[];
   lifestyle: Lifestyle;
   verified: boolean;
   suspended: boolean;

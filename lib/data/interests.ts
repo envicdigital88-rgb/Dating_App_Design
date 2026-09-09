@@ -40,3 +40,27 @@ export const lifestyleFields = [
 { key: 'children', label: 'Children', options: ['None', 'Have kids', 'Want kids', 'Open to kids'] },
 { key: 'education', label: 'Education', options: ['College', 'Undergraduate', 'Postgraduate', 'Doctorate'] }] as
 const;
+
+export const traitOptions = [
+  'Night Owl',
+  'Early Bird',
+  'Introvert',
+  'Extrovert',
+  'Ambivert',
+  'Coffee Lover',
+  'Tea Drinker',
+  'Beach Person',
+  'Mountain Person',
+  'Stay In',
+  'Go Out'
+];
+
+export const promptQuestions = [
+  'A controversial opinion I have is...',
+  'I go crazy for...',
+  'My ideal first date in Colombo...',
+  'A random fact I love...',
+  'The best place to eat in town is...',
+  'If I won the lottery tomorrow I would...',
+  'My most irrational fear is...'
+];

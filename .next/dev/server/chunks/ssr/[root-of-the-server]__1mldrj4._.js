@@ -733,7 +733,7 @@ function StoreProvider({ children }) {
                 type: 'connection',
                 title: 'New connection',
                 body: 'You can start a conversation whenever you are ready.',
-                href: '/app/messages'
+                href: '/messages'
             });
         }
     }, [
@@ -833,7 +833,7 @@ function StoreProvider({ children }) {
                 type: 'chat_limit_reached',
                 title: 'Chat limit reached',
                 body: 'Upgrade your package to keep your conversations going.',
-                href: '/app/packages'
+                href: '/packages'
             });
         } else if (remainingAfter !== null && remainingAfter <= 3) {
             notify({
@@ -841,7 +841,7 @@ function StoreProvider({ children }) {
                 type: 'chat_limit_warning',
                 title: `${remainingAfter} messages left`,
                 body: 'Your chat allowance is nearly used up.',
-                href: '/app/packages'
+                href: '/packages'
             });
         }
         // Simulated partner reply with a typing indicator.
@@ -1030,7 +1030,7 @@ function StoreProvider({ children }) {
             type: 'package_activated',
             title: `${pkg.name} activated`,
             body: 'Your allowances have been topped up and incoming requests are unlocked.',
-            href: '/app/subscription'
+            href: '/subscription'
         });
         return {
             ok: true,
@@ -1829,7 +1829,7 @@ const seedNotifications = [
         body: 'A new dating request is waiting for you.',
         createdAt: minsAgo(180),
         read: false,
-        href: '/app/requests'
+        href: '/requests'
     },
     {
         id: 'nt-2',
@@ -1839,7 +1839,7 @@ const seedNotifications = [
         body: 'Sunday, 11am?',
         createdAt: minsAgo(8),
         read: false,
-        href: '/app/messages'
+        href: '/messages'
     },
     {
         id: 'nt-3',
@@ -1849,7 +1849,7 @@ const seedNotifications = [
         body: 'Have a look and like back if you are curious.',
         createdAt: daysAgo(1),
         read: true,
-        href: '/app/likes'
+        href: '/likes'
     }
 ];
 const seedPayments = [

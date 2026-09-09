@@ -9,8 +9,10 @@ import {
   HeartIcon,
   MapPinIcon,
   MessageCircleIcon,
-  SendIcon } from
-'lucide-react';
+  SendIcon,
+  ZapIcon,
+  SparklesIcon
+} from 'lucide-react';
 import { Page } from '@/components/AppShell';
 import { PhotoGallery } from '@/components/PhotoGallery';
 import { Button } from '@/components/ui/Button';
@@ -21,13 +23,15 @@ import { RequestDialog } from '@/components/RequestDialog';
 import { UpgradeDialog, type UpgradeReason } from '@/components/UpgradeDialog';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { presence } from '@/lib/utils/format';
+import { calculateVibeMatch } from '@/lib/utils/matching';
 import { lifestyleFields } from '@/lib/data/interests';
 import type { Lifestyle } from '@/lib/types';
 
 export function ProfileDetail() {
-  const { userId } = useParams();
+  const params = useParams();
+  const userId = Array.isArray(params.userId) ? params.userId[0] : params.userId;
   const router = useRouter();
-    const navigate = router.push;
+  const navigate = router.push;
   const {
     userById,
     photosOf,
@@ -63,12 +67,14 @@ export function ProfileDetail() {
     navigate(`/messages/${conversation.id}`);
   };
 
+  const matchResult = calculateVibeMatch(currentUser, user);
+
   return (
     <Page>
       <button
-        onClick={() => navigate(-1)}
-        className="mb-5 inline-flex items-center gap-1.5 text-[13px] text-ink-soft transition-colors duration-150 ease-soft hover:text-berry-600">
-        
+        onClick={() => router.back()}
+        className="mb-5 inline-flex items-center gap-1.5 text-[13px] text-ink-soft transition-colors duration-150 ease-soft hover:text-berry-600"
+      >
         <ArrowLeftIcon className="h-3.5 w-3.5" />
         Back
       </button>
@@ -89,22 +95,31 @@ export function ProfileDetail() {
               </div>
               <p className="mt-2 flex items-center gap-1.5 text-[14px] text-ink-soft">
                 <MapPinIcon className="h-4 w-4" />
-                {user.location} ,%V% {presence(user.online, user.lastActiveAt)}
+                {user.location} · {presence(user.online, user.lastActiveAt)}
               </p>
             </div>
-            {request &&
-            <Badge
-              tone={
-              request.status === 'accepted' ?
-              'moss' :
-              request.status === 'declined' ?
-              'red' :
-              'amber'
-              }>
-              
-                Request {request.status}
-              </Badge>
-            }
+            
+            <div className="flex flex-col items-end gap-2">
+              {request && (
+                <Badge
+                  tone={
+                    request.status === 'accepted'
+                      ? 'moss'
+                      : request.status === 'declined'
+                        ? 'red'
+                        : 'amber'
+                  }
+                >
+                  Request {request.status}
+                </Badge>
+              )}
+              {matchResult && matchResult.score > 0 && (
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-berry-500/10 px-3 py-1.5 text-sm font-bold text-berry-600">
+                  <ZapIcon className="h-4 w-4 fill-berry-600" />
+                  {matchResult.score}% Vibe Match
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="mt-6 flex flex-wrap gap-2">
@@ -119,8 +134,8 @@ export function ProfileDetail() {
                   return;
                 }
                 setRequesting(true);
-              }}>
-              
+              }}
+            >
               <SendIcon className="h-4 w-4" />
               {request ? 'Request sent' : 'Send dating request'}
             </Button>
@@ -129,8 +144,8 @@ export function ProfileDetail() {
               onClick={() => {
                 likeUser(user.id);
                 toast.success(`You liked ${user.name}`);
-              }}>
-              
+              }}
+            >
               <HeartIcon className="h-4 w-4" fill={hasLiked(user.id) ? 'currentColor' : 'none'} />
               {hasLiked(user.id) ? 'Liked' : 'Like'}
             </Button>
@@ -140,10 +155,43 @@ export function ProfileDetail() {
             </Button>
           </div>
 
+          {matchResult && matchResult.reasons.length > 0 && (
+            <section className="mt-8 rounded-3xl bg-berry-50 p-5">
+              <h2 className="flex items-center gap-2 font-display text-xl text-berry-700">
+                <SparklesIcon className="h-5 w-5" />
+                Why you fit
+              </h2>
+              <ul className="mt-3 flex flex-col gap-2">
+                {matchResult.reasons.map((reason, i) => (
+                  <li key={i} className="flex items-start gap-2 text-[15px] text-berry-900/80">
+                    <span className="mt-2 block h-1.5 w-1.5 shrink-0 rounded-full bg-berry-400" />
+                    {reason}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           <section className="mt-8">
             <h2 className="font-display text-xl text-ink">About {user.name}</h2>
             <p className="mt-2 text-[15px] leading-relaxed text-ink-soft">{user.bio}</p>
           </section>
+
+          {user.prompts && user.prompts.length > 0 && (
+            <section className="mt-8">
+              <h2 className="font-display text-xl text-ink mb-4">Vibe Check</h2>
+              <div className="space-y-4">
+                {user.prompts.map((prompt) => (
+                  <div key={prompt.id} className="rounded-2xl border border-sand bg-cream px-5 py-4">
+                    <p className="mb-2 text-[13px] font-semibold tracking-wide text-ink-muted uppercase">
+                      {prompt.question}
+                    </p>
+                    <p className="text-[16px] text-ink">{prompt.answer}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           <section className="mt-8">
             <h2 className="font-display text-xl text-ink">Looking for</h2>
@@ -152,17 +200,33 @@ export function ProfileDetail() {
             </p>
           </section>
 
+          {user.traits && user.traits.length > 0 && (
+            <section className="mt-8">
+              <h2 className="font-display text-xl text-ink">Personality Traits</h2>
+              <ul className="mt-3 flex flex-wrap gap-2">
+                {user.traits.map((trait) => (
+                  <li
+                    key={trait}
+                    className="rounded-full border border-sand bg-white px-3.5 py-1.5 text-[14px] text-ink-soft"
+                  >
+                    {trait}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           <section className="mt-8">
             <h2 className="font-display text-xl text-ink">Interests</h2>
             <ul className="mt-3 flex flex-wrap gap-2">
-              {user.interests.map((interest) =>
-              <li
-                key={interest}
-                className="rounded-full border border-sand bg-white px-3.5 py-1.5 text-[14px] text-ink-soft">
-                
+              {user.interests.map((interest) => (
+                <li
+                  key={interest}
+                  className="rounded-full border border-sand bg-white px-3.5 py-1.5 text-[14px] text-ink-soft"
+                >
                   {interest}
                 </li>
-              )}
+              ))}
             </ul>
           </section>
 
@@ -173,17 +237,17 @@ export function ProfileDetail() {
                 <dt className="text-ink-muted">Work</dt>
                 <dd className="text-right font-medium text-ink">{user.lifestyle.work}</dd>
               </div>
-              {lifestyleFields.map((field) =>
-              <div
-                key={field.key}
-                className="flex justify-between gap-4 border-b border-sand py-2 text-[14px] sm:border-b-0">
-                
+              {lifestyleFields.map((field) => (
+                <div
+                  key={field.key}
+                  className="flex justify-between gap-4 border-b border-sand py-2 text-[14px] sm:border-b-0"
+                >
                   <dt className="text-ink-muted">{field.label}</dt>
                   <dd className="text-right font-medium text-ink">
                     {user.lifestyle[field.key as keyof Lifestyle]}
                   </dd>
                 </div>
-              )}
+              ))}
             </dl>
           </section>
 
@@ -211,18 +275,21 @@ export function ProfileDetail() {
         open={reporting}
         onClose={() => setReporting(false)}
         userId={user.id}
-        userName={user.name} />
+        userName={user.name}
+      />
       
       <RequestDialog
         open={requesting}
         target={user}
         onClose={() => setRequesting(false)}
-        onLimitReached={() => setUpgrade('request_limit')} />
+        onLimitReached={() => setUpgrade('request_limit')}
+      />
       
       <UpgradeDialog
         open={!!upgrade}
         reason={upgrade ?? 'request_limit'}
-        onClose={() => setUpgrade(null)} />
+        onClose={() => setUpgrade(null)}
+      />
       
       <Modal
         open={blocking}
@@ -230,24 +297,24 @@ export function ProfileDetail() {
         title={`Block ${user.name}?`}
         description="They will no longer be able to see your profile or contact you, and you will not see them again."
         footer={
-        <>
+          <>
             <Button variant="ghost" onClick={() => setBlocking(false)}>
               Cancel
             </Button>
             <Button
-            variant="danger"
-            onClick={() => {
-              blockUser(user.id);
-              setBlocking(false);
-              toast.success(`${user.name} blocked`);
-              navigate('/discover');
-            }}>
-            
+              variant="danger"
+              onClick={() => {
+                blockUser(user.id);
+                setBlocking(false);
+                toast.success(`${user.name} blocked`);
+                router.push('/discover');
+              }}
+            >
               Block {user.name}
             </Button>
           </>
-        } />
-      
-    </Page>);
-
+        }
+      />
+    </Page>
+  );
 }

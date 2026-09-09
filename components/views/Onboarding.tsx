@@ -5,16 +5,17 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { toast } from 'sonner';
-import { ArrowLeftIcon, ArrowRightIcon, CheckIcon, StarIcon, Trash2Icon } from 'lucide-react';
+import { ArrowLeftIcon, ArrowRightIcon, CheckIcon, StarIcon, Trash2Icon, PlusIcon } from 'lucide-react';
 import { BrandMark } from '@/components/BrandMark';
 import { Button } from '@/components/ui/Button';
 import { FieldError, Input, Label, Select, Textarea } from '@/components/ui/Field';
 import { PhotoUploader } from '@/components/PhotoUploader';
 import { useStore } from '@/lib/contexts/StoreContext';
-import { interestOptions, intentionOptions, lifestyleFields } from '@/lib/data/interests';
-import type { DatingIntention, Lifestyle, User } from '@/lib/types';
+import { interestOptions, intentionOptions, lifestyleFields, traitOptions, promptQuestions } from '@/lib/data/interests';
+import type { DatingIntention, Lifestyle, User, Prompt } from '@/lib/types';
+import { id as makeId } from '@/lib/utils/format';
 
-const steps = ['About you', 'Your words', 'Interests', 'Lifestyle', 'Photos'];
+const steps = ['About you', 'Your words', 'Interests', 'Personality', 'Lifestyle', 'Vibe Prompts', 'Photos'];
 
 export function Onboarding() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export function Onboarding() {
   const [bio, setBio] = useState('');
   const [intention, setIntention] = useState<DatingIntention>('Long-term relationship');
   const [interests, setInterests] = useState<string[]>([]);
+  const [traits, setTraits] = useState<string[]>([]);
   const [work, setWork] = useState('');
   const [lifestyle, setLifestyle] = useState<Lifestyle>({
     drinking: 'Socially',
@@ -38,6 +40,7 @@ export function Onboarding() {
     education: 'Undergraduate',
     work: ''
   });
+  const [prompts, setPrompts] = useState<Prompt[]>([{ id: makeId('p'), question: '', answer: '' }]);
   const [photos, setPhotos] = useState<string[]>([]);
 
   if (!currentUser) return <Navigate to="/sign-up" replace />;
@@ -51,7 +54,9 @@ export function Onboarding() {
     }
     if (step === 1 && bio.trim().length < 40) return 'Write at least 40 characters — it really helps.';
     if (step === 2 && interests.length < 3) return 'Pick at least three interests.';
-    if (step === 4 && photos.length < 1) return 'Add at least one photo to continue.';
+    if (step === 3 && traits.length < 3) return 'Pick at least three personality traits to define your vibe.';
+    if (step === 5 && prompts.some(p => !p.question || p.answer.trim().length < 5)) return 'Please complete your chosen vibe prompt(s) with at least a few words.';
+    if (step === 6 && photos.length < 1) return 'Add at least one photo to continue.';
     return '';
   };
 
@@ -73,6 +78,8 @@ export function Onboarding() {
       bio: bio.trim(),
       intention,
       interests,
+      traits,
+      prompts,
       lifestyle: { ...lifestyle, work: work.trim() },
       photoUrls: photos
     });
@@ -81,13 +88,38 @@ export function Onboarding() {
   };
 
   const toggleInterest = (interest: string) =>
-  setInterests((current) =>
-  current.includes(interest) ?
-  current.filter((i) => i !== interest) :
-  current.length >= 8 ?
-  current :
-  [...current, interest]
-  );
+    setInterests((current) =>
+      current.includes(interest)
+        ? current.filter((i) => i !== interest)
+        : current.length >= 8
+          ? current
+          : [...current, interest]
+    );
+
+  const toggleTrait = (trait: string) =>
+    setTraits((current) =>
+      current.includes(trait)
+        ? current.filter((t) => t !== trait)
+        : current.length >= 5
+          ? current
+          : [...current, trait]
+    );
+
+  const addPrompt = () => {
+    if (prompts.length < 3) {
+      setPrompts(p => [...p, { id: makeId('p'), question: '', answer: '' }]);
+    }
+  };
+
+  const removePrompt = (id: string) => {
+    if (prompts.length > 1) {
+      setPrompts(p => p.filter(prompt => prompt.id !== id));
+    }
+  };
+
+  const updatePrompt = (id: string, field: 'question' | 'answer', value: string) => {
+    setPrompts(p => p.map(prompt => prompt.id === id ? { ...prompt, [field]: value } : prompt));
+  };
 
   return (
     <div className="min-h-full w-full bg-cream">
@@ -102,27 +134,27 @@ export function Onboarding() {
 
       <div className="mx-auto max-w-3xl px-5 py-8 lg:px-8 lg:py-12">
         <ol className="mb-8 flex gap-1.5" aria-label="Profile setup progress">
-          {steps.map((label, i) =>
-          <li key={label} className="flex-1">
+          {steps.map((label, i) => (
+            <li key={label} className="flex-1">
               <span
-              className={`block h-1 rounded-full transition-colors duration-200 ease-soft ${
-              i <= step ? 'bg-berry-500' : 'bg-sand'}`
-              } />
-            
+                className={`block h-1 rounded-full transition-colors duration-200 ease-soft ${
+                  i <= step ? 'bg-berry-500' : 'bg-sand'
+                }`}
+              />
               <span
-              className={`mt-2 hidden text-[12px] sm:block ${
-              i === step ? 'font-medium text-ink' : 'text-ink-muted'}`
-              }>
-              
+                className={`mt-2 hidden text-[12px] sm:block ${
+                  i === step ? 'font-medium text-ink' : 'text-ink-muted'
+                }`}
+              >
                 {label}
               </span>
             </li>
-          )}
+          ))}
         </ol>
 
         <div className="rounded-4xl bg-white p-6 shadow-card sm:p-9">
-          {step === 0 &&
-          <div className="space-y-5">
+          {step === 0 && (
+            <div className="space-y-5">
               <div>
                 <h1 className="font-display text-[28px] leading-tight text-ink">
                   Hi {currentUser.name} — the basics first
@@ -135,22 +167,22 @@ export function Onboarding() {
                 <div>
                   <Label htmlFor="age">Age</Label>
                   <Input
-                  id="age"
-                  type="number"
-                  min={18}
-                  max={99}
-                  value={age}
-                  onChange={(e) => setAge(e.target.value)}
-                  placeholder="29" />
-                
+                    id="age"
+                    type="number"
+                    min={18}
+                    max={99}
+                    value={age}
+                    onChange={(e) => setAge(e.target.value)}
+                    placeholder="29"
+                  />
                 </div>
                 <div>
                   <Label htmlFor="gender">Gender</Label>
                   <Select
-                  id="gender"
-                  value={gender}
-                  onChange={(e) => setGender(e.target.value as User['gender'])}>
-                  
+                    id="gender"
+                    value={gender}
+                    onChange={(e) => setGender(e.target.value as User['gender'])}
+                  >
                     <option value="woman">Woman</option>
                     <option value="man">Man</option>
                     <option value="non-binary">Non-binary</option>
@@ -160,26 +192,26 @@ export function Onboarding() {
               <div>
                 <Label htmlFor="location">Where do you live?</Label>
                 <Input
-                id="location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Hackney, London" />
-              
+                  id="location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Hackney, London"
+                />
               </div>
               <div>
                 <Label htmlFor="work">What do you do?</Label>
                 <Input
-                id="work"
-                value={work}
-                onChange={(e) => setWork(e.target.value)}
-                placeholder="Product designer" />
-              
+                  id="work"
+                  value={work}
+                  onChange={(e) => setWork(e.target.value)}
+                  placeholder="Product designer"
+                />
               </div>
             </div>
-          }
+          )}
 
-          {step === 1 &&
-          <div className="space-y-5">
+          {step === 1 && (
+            <div className="space-y-5">
               <div>
                 <h1 className="font-display text-[28px] leading-tight text-ink">
                   Say something only you would say
@@ -191,32 +223,32 @@ export function Onboarding() {
               <div>
                 <Label htmlFor="bio">Your bio</Label>
                 <Textarea
-                id="bio"
-                value={bio}
-                maxLength={400}
-                onChange={(e) => setBio(e.target.value)}
-                placeholder="I cook far too much food for one person, so bring an appetite…"
-                className="min-h-[150px]" />
-              
+                  id="bio"
+                  value={bio}
+                  maxLength={400}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder="I cook far too much food for one person, so bring an appetite…"
+                  className="min-h-[150px]"
+                />
                 <p className="mt-1.5 text-[12px] text-ink-muted">{bio.length}/400</p>
               </div>
               <div>
                 <Label htmlFor="intention">What are you here for?</Label>
                 <Select
-                id="intention"
-                value={intention}
-                onChange={(e) => setIntention(e.target.value as DatingIntention)}>
-                
-                  {intentionOptions.map((option) =>
-                <option key={option}>{option}</option>
-                )}
+                  id="intention"
+                  value={intention}
+                  onChange={(e) => setIntention(e.target.value as DatingIntention)}
+                >
+                  {intentionOptions.map((option) => (
+                    <option key={option}>{option}</option>
+                  ))}
                 </Select>
               </div>
             </div>
-          }
+          )}
 
-          {step === 2 &&
-          <div>
+          {step === 2 && (
+            <div>
               <h1 className="font-display text-[28px] leading-tight text-ink">
                 What fills your weekends?
               </h1>
@@ -225,32 +257,66 @@ export function Onboarding() {
               </p>
               <ul className="mt-6 flex flex-wrap gap-2">
                 {interestOptions.map((interest) => {
-                const active = interests.includes(interest);
-                return (
-                  <li key={interest}>
+                  const active = interests.includes(interest);
+                  return (
+                    <li key={interest}>
                       <button
-                      type="button"
-                      onClick={() => toggleInterest(interest)}
-                      aria-pressed={active}
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-[14px] transition-[background-color,border-color,color] duration-150 ease-soft ${
-                      active ?
-                      'border-berry-500 bg-berry-500 text-white' :
-                      'border-sand bg-white text-ink-soft hover:border-berry-300'}`
-                      }>
-                      
+                        type="button"
+                        onClick={() => toggleInterest(interest)}
+                        aria-pressed={active}
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-[14px] transition-[background-color,border-color,color] duration-150 ease-soft ${
+                          active
+                            ? 'border-berry-500 bg-berry-500 text-white'
+                            : 'border-sand bg-white text-ink-soft hover:border-berry-300'
+                        }`}
+                      >
                         {active && <CheckIcon className="h-3.5 w-3.5" />}
                         {interest}
                       </button>
-                    </li>);
-
-              })}
+                    </li>
+                  );
+                })}
               </ul>
               <p className="mt-4 text-[13px] text-ink-muted">{interests.length} selected</p>
             </div>
-          }
+          )}
 
-          {step === 3 &&
-          <div>
+          {step === 3 && (
+            <div>
+              <h1 className="font-display text-[28px] leading-tight text-ink">
+                Define your vibe
+              </h1>
+              <p className="mt-2 text-[15px] text-ink-soft">
+                Choose three to five traits. This helps our algorithm find people who truly match your energy.
+              </p>
+              <ul className="mt-6 flex flex-wrap gap-2">
+                {traitOptions.map((trait) => {
+                  const active = traits.includes(trait);
+                  return (
+                    <li key={trait}>
+                      <button
+                        type="button"
+                        onClick={() => toggleTrait(trait)}
+                        aria-pressed={active}
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-[14px] transition-[background-color,border-color,color] duration-150 ease-soft ${
+                          active
+                            ? 'border-berry-500 bg-berry-500 text-white'
+                            : 'border-sand bg-white text-ink-soft hover:border-berry-300'
+                        }`}
+                      >
+                        {active && <CheckIcon className="h-3.5 w-3.5" />}
+                        {trait}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="mt-4 text-[13px] text-ink-muted">{traits.length} selected</p>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div>
               <h1 className="font-display text-[28px] leading-tight text-ink">
                 A little lifestyle detail
               </h1>
@@ -258,74 +324,137 @@ export function Onboarding() {
                 The practical things people would rather know upfront.
               </p>
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                {lifestyleFields.map((field) =>
-              <div key={field.key}>
+                {lifestyleFields.map((field) => (
+                  <div key={field.key}>
                     <Label htmlFor={field.key}>{field.label}</Label>
                     <Select
-                  id={field.key}
-                  value={lifestyle[field.key as keyof Lifestyle]}
-                  onChange={(e) =>
-                  setLifestyle((l) => ({ ...l, [field.key]: e.target.value }))
-                  }>
-                  
-                      {field.options.map((option) =>
-                  <option key={option}>{option}</option>
-                  )}
+                      id={field.key}
+                      value={lifestyle[field.key as keyof Lifestyle]}
+                      onChange={(e) =>
+                        setLifestyle((l) => ({ ...l, [field.key]: e.target.value }))
+                      }
+                    >
+                      {field.options.map((option) => (
+                        <option key={option}>{option}</option>
+                      ))}
                     </Select>
                   </div>
-              )}
+                ))}
               </div>
             </div>
-          }
+          )}
 
-          {step === 4 &&
-          <div>
+          {step === 5 && (
+            <div className="space-y-5">
+              <div>
+                <h1 className="font-display text-[28px] leading-tight text-ink">
+                  Vibe Prompts
+                </h1>
+                <p className="mt-2 text-[15px] text-ink-soft">
+                  Answer up to 3 playful prompts. These make great conversation starters!
+                </p>
+              </div>
+              <div className="space-y-6">
+                {prompts.map((prompt) => (
+                  <div key={prompt.id} className="relative rounded-2xl border border-sand bg-sand/20 p-4 pt-6">
+                    {prompts.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removePrompt(prompt.id)}
+                        className="absolute right-3 top-3 text-ink-muted hover:text-ink"
+                      >
+                        <Trash2Icon className="h-4 w-4" />
+                      </button>
+                    )}
+                    <div className="mb-3">
+                      <Label htmlFor={`prompt-q-${prompt.id}`}>Choose a prompt</Label>
+                      <Select
+                        id={`prompt-q-${prompt.id}`}
+                        value={prompt.question}
+                        onChange={(e) => updatePrompt(prompt.id, 'question', e.target.value)}
+                        className="font-medium text-berry-600 bg-white"
+                      >
+                        <option value="" disabled>Select a prompt...</option>
+                        {promptQuestions.map(q => (
+                          <option key={q} value={q}>{q}</option>
+                        ))}
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor={`prompt-a-${prompt.id}`}>Your answer</Label>
+                      <Textarea
+                        id={`prompt-a-${prompt.id}`}
+                        value={prompt.answer}
+                        onChange={(e) => updatePrompt(prompt.id, 'answer', e.target.value)}
+                        placeholder="Type your answer here..."
+                        className="bg-white min-h-[80px]"
+                      />
+                    </div>
+                  </div>
+                ))}
+                
+                {prompts.length < 3 && (
+                  <Button type="button" variant="outline" className="w-full border-dashed" onClick={addPrompt}>
+                    <PlusIcon className="mr-2 h-4 w-4" />
+                    Add another prompt
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {step === 6 && (
+            <div>
               <h1 className="font-display text-[28px] leading-tight text-ink">Add your photos</h1>
               <p className="mt-2 text-[15px] text-ink-soft">
                 Your first photo is your main one. Photos are cropped, compressed and reviewed by
                 moderation before they go live.
               </p>
               <ul className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
-                {photos.map((url, i) =>
-              <li key={url.slice(-24) + i} className="group relative overflow-hidden rounded-3xl">
-                    <img src={url} alt={`Your photo ${i + 1}`} className="aspect-[3/4] w-full object-cover" />
-                    {i === 0 &&
-                <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-ink">
+                {photos.map((url, i) => (
+                  <li key={url.slice(-24) + i} className="group relative overflow-hidden rounded-3xl">
+                    <img
+                      src={url}
+                      alt={`Your photo ${i + 1}`}
+                      className="aspect-[3/4] w-full object-cover"
+                    />
+                    {i === 0 && (
+                      <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-ink">
                         <StarIcon className="h-3 w-3 text-berry-500" fill="currentColor" />
                         Main
                       </span>
-                }
+                    )}
                     <div className="absolute inset-x-2 bottom-2 flex gap-1.5">
-                      {i !== 0 &&
-                  <button
-                    type="button"
-                    onClick={() =>
-                    setPhotos((p) => [p[i], ...p.filter((_, index) => index !== i)])
-                    }
-                    className="flex-1 rounded-full bg-white/95 py-1.5 text-[11px] font-medium text-ink">
-                    
+                      {i !== 0 && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setPhotos((p) => [p[i], ...p.filter((_, index) => index !== i)])
+                          }
+                          className="flex-1 rounded-full bg-white/95 py-1.5 text-[11px] font-medium text-ink"
+                        >
                           Make main
                         </button>
-                  }
+                      )}
                       <button
-                    type="button"
-                    aria-label="Delete photo"
-                    onClick={() => setPhotos((p) => p.filter((_, index) => index !== i))}
-                    className="rounded-full bg-white/95 p-1.5 text-ink">
-                    
+                        type="button"
+                        aria-label="Delete photo"
+                        onClick={() => setPhotos((p) => p.filter((_, index) => index !== i))}
+                        className="rounded-full bg-white/95 p-1.5 text-ink"
+                      >
                         <Trash2Icon className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   </li>
-              )}
-                {photos.length < 6 &&
-              <li>
+                ))}
+                {photos.length < 6 && (
+                  <li>
                     <PhotoUploader onPhotos={(urls) => setPhotos((p) => [...p, ...urls].slice(0, 6))} />
                   </li>
-              }
+                )}
               </ul>
             </div>
-          }
+          )}
 
           <FieldError>{error}</FieldError>
 
@@ -333,8 +462,8 @@ export function Onboarding() {
             <Button
               variant="ghost"
               onClick={() => setStep((s) => Math.max(0, s - 1))}
-              disabled={step === 0}>
-              
+              disabled={step === 0}
+            >
               <ArrowLeftIcon className="h-4 w-4" />
               Back
             </Button>
@@ -345,6 +474,6 @@ export function Onboarding() {
           </div>
         </div>
       </div>
-    </div>);
-
+    </div>
+  );
 }

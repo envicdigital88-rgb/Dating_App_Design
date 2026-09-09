@@ -18,7 +18,8 @@ import type {
   ServerResult,
   Subscription,
   Usage,
-  User } from
+  User,
+  Prompt } from
 '@/lib/types';
 import { seedPackages } from '@/lib/data/packages';
 import {
@@ -91,6 +92,8 @@ interface OnboardingInput {
   bio: string;
   intention: User['intention'];
   interests: string[];
+  traits: string[];
+  prompts: Prompt[];
   lifestyle: User['lifestyle'];
   photoUrls: string[];
 }
@@ -260,6 +263,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         bio: '',
         intention: 'Long-term relationship',
         interests: [],
+        traits: [],
+        prompts: [],
         lifestyle: {
           drinking: 'Socially',
           smoking: 'Never',
@@ -318,6 +323,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
           bio: input.bio,
           intention: input.intention,
           interests: input.interests,
+          traits: input.traits,
+          prompts: input.prompts,
           lifestyle: input.lifestyle,
           onboarded: true
         } :

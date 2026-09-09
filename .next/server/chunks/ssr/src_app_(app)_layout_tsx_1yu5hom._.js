@@ -1,3 +1,0 @@
-module.exports=[48102,a=>{"use strict";var b=a.i(87924),c=a.i(72131),d=a.i(50944),e=a.i(23408),f=a.i(90688);a.s(["default",0,function({children:a}){let{currentUser:g}=(0,e.useStore)(),h=(0,d.useRouter)(),i=(0,d.usePathname)();return((0,c.useEffect)(()=>{g?g.onboarded||h.replace("/onboarding"):h.replace(`/signin?from=${i}`)},[g,h,i]),g&&g.onboarded)?(0,b.jsx)(f.AppShell,{children:a}):null}])}];
-
-//# sourceMappingURL=src_app_%28app%29_layout_tsx_1yu5hom._.js.map
