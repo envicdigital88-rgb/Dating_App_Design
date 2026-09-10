@@ -11,7 +11,7 @@ import { presence, shortDate } from '@/lib/utils/format';
 
 export function Connections() {
   const router = useRouter();
-  const { db, currentUser, userById, photosOf, ensureConversation } = useStore();
+  const { db, currentUser, userById, photosOf, ensureConversation, openChatPopup } = useStore();
   if (!currentUser) return null;
 
   const connections = db.connections.
@@ -62,7 +62,11 @@ export function Connections() {
                     size="sm"
                     onClick={() => {
                       const conversation = ensureConversation(user.id);
-                      router.push(`/messages/${conversation.id}`);
+                      if (window.innerWidth >= 1024) {
+                        openChatPopup(conversation.id);
+                      } else {
+                        router.push(`/messages/${conversation.id}`);
+                      }
                     }}>
                     
                       Message

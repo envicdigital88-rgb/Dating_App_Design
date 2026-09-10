@@ -12,7 +12,7 @@ import { relativeTime } from '@/lib/utils/format';
 
 export function Messages() {
   const router = useRouter();
-  const { conversationsOf, messagesOf, currentUser, userById, photosOf, entitlements } = useStore();
+  const { conversationsOf, messagesOf, currentUser, userById, photosOf, entitlements, openChatPopup } = useStore();
   if (!currentUser || !entitlements) return null;
 
   const conversations = conversationsOf();
@@ -54,7 +54,13 @@ export function Messages() {
               return (
                 <li key={conversation.id}>
                     <button
-                    onClick={() => router.push(`/messages/${conversation.id}`)}
+                    onClick={() => {
+                      if (window.innerWidth >= 1024) {
+                        openChatPopup(conversation.id);
+                      } else {
+                        router.push(`/messages/${conversation.id}`);
+                      }
+                    }}
                     className="flex w-full items-center gap-4 px-4 py-4 text-left transition-colors duration-150 ease-soft hover:bg-cream">
                     
                       <Avatar src={photo?.url} name={user.name} size={52} online={user.online} />

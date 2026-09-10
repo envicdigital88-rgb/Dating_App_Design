@@ -23,6 +23,7 @@ import {
 import { BrandMark } from './BrandMark';
 import { UsageMeter } from './UsageMeter';
 import { Avatar, Badge } from './ui/Bits';
+import { ChatPopup } from './ui/ChatPopup';
 import { Button } from './ui/Button';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { usePwa } from './PwaProvider';
@@ -229,6 +230,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           </main>
         </div>
       </div>
+
+      <ChatPopup />
 
       {/* Mobile bottom navigation */}
       {!isChat &&

@@ -41,6 +41,7 @@ export function ProfileDetail() {
     conversationWith,
     ensureConversation,
     blockUser,
+    openChatPopup,
     entitlements,
     currentUser
   } = useStore();
@@ -64,7 +65,11 @@ export function ProfileDetail() {
       return;
     }
     const conversation = ensureConversation(user.id);
-    navigate(`/messages/${conversation.id}`);
+    if (window.innerWidth >= 1024) {
+      openChatPopup(conversation.id);
+    } else {
+      navigate(`/messages/${conversation.id}`);
+    }
   };
 
   const matchResult = calculateVibeMatch(currentUser, user);

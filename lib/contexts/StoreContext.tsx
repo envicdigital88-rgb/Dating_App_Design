@@ -138,6 +138,9 @@ interface StoreValue {
   markConversationRead: (conversationId: string) => void;
   deleteMessage: (messageId: string) => void;
   typingIn: string | null;
+  activePopupChatId: string | null;
+  openChatPopup: (conversationId: string) => void;
+  closeChatPopup: () => void;
   // safety
   blockUser: (userId: string) => void;
   unblockUser: (userId: string) => void;
@@ -171,6 +174,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   const [db, setDb] = useState<Db>(initialDb);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [typingIn, setTypingIn] = useState<string | null>(null);
+  const [activePopupChatId, setActivePopupChatId] = useState<string | null>(null);
   const timers = useRef<number[]>([]);
   const sessionIdRef = useRef<string | null>(null);
   sessionIdRef.current = sessionId;
@@ -752,6 +756,14 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     }));
   }, []);
 
+  const openChatPopup = useCallback((conversationId: string) => {
+    setActivePopupChatId(conversationId);
+  }, []);
+
+  const closeChatPopup = useCallback(() => {
+    setActivePopupChatId(null);
+  }, []);
+
   /* -------------------------------------------------------------- safety */
 
   const blockUser = useCallback<StoreValue['blockUser']>((userId) => {
@@ -989,6 +1001,9 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     markConversationRead,
     deleteMessage,
     typingIn,
+    activePopupChatId,
+    openChatPopup,
+    closeChatPopup,
     blockUser,
     unblockUser,
     isBlocked,
