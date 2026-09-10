@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import {
   ArrowLeftIcon,
   BanIcon,
+  CheckIcon,
   CheckCheckIcon,
   FlagIcon,
   ImageIcon,
@@ -25,7 +26,8 @@ import { useStore } from '@/lib/contexts/StoreContext';
 import { dayLabel, messageTime, presence } from '@/lib/utils/format';
 import { processPhoto, screenPhoto } from '@/lib/utils/image';
 
-const emojis = [')"U%', 'a"', 'a"', ')"U%', 'a"', 'a"b%', 'a"', 'a"', 'a"', 'a"', '', 'a"'];
+import EmojiPicker from 'emoji-picker-react';
+
 
 export function Chat() {
   const { conversationId } = useParams();
@@ -214,11 +216,15 @@ export function Chat() {
                         }>
                         
                           {messageTime(message.createdAt)}
-                          {mine &&
-                        <CheckCheckIcon
-                          className={`h-3 w-3 ${message.readAt ? '' : 'opacity-50'}`} />
-
-                        }
+                          {mine && (
+                            message.readAt ? (
+                              <CheckCheckIcon className="h-3.5 w-3.5 text-blue-300" />
+                            ) : other?.online ? (
+                              <CheckCheckIcon className="h-3.5 w-3.5 opacity-50" />
+                            ) : (
+                              <CheckIcon className="h-3 w-3 opacity-50" />
+                            )
+                          )}
                         </p>
                       </>
                     }
@@ -276,20 +282,16 @@ export function Chat() {
         </div> :
 
       <div className="border-t border-sand/70 bg-white px-3 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-5">
-          <div className="mx-auto max-w-2xl">
-            {showEmoji &&
-          <div className="mb-2 flex flex-wrap gap-1 rounded-3xl border border-sand bg-cream p-2">
-                {emojis.map((emoji) =>
-            <button
-              key={emoji}
-              onClick={() => setDraft((d) => d + emoji)}
-              className="rounded-full px-2 py-1 text-lg transition-colors duration-150 ease-soft hover:bg-white">
-              
-                    {emoji}
-                  </button>
-            )}
+          <div className="mx-auto max-w-2xl relative">
+            {showEmoji && (
+              <div className="absolute bottom-full right-0 mb-2 z-50 shadow-xl rounded-2xl overflow-hidden animate-in slide-in-from-bottom-2 fade-in duration-200">
+                <EmojiPicker 
+                  onEmojiClick={(emojiData) => {
+                    setDraft((d) => d + emojiData.emoji);
+                  }}
+                />
               </div>
-          }
+            )}
             <form
             onSubmit={(e) => {
               e.preventDefault();

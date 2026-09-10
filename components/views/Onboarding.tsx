@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { toast } from 'sonner';
-import { ArrowLeftIcon, ArrowRightIcon, CheckIcon, StarIcon, Trash2Icon, PlusIcon } from 'lucide-react';
+import { ArrowLeftIcon, ArrowRightIcon, CheckIcon, StarIcon, Trash2Icon } from 'lucide-react';
 import { BrandMark } from '@/components/BrandMark';
 import { Button } from '@/components/ui/Button';
 import { FieldError, Input, Label, Select, Textarea } from '@/components/ui/Field';
@@ -356,7 +356,7 @@ export function Onboarding() {
                 {prompts.map((prompt) => (
                   <div key={prompt.id} className="relative rounded-2xl border border-sand bg-sand/20 p-4">
                     <div className="mb-2">
-                      <Label htmlFor={`prompt-a-${prompt.id}`} className="text-base font-semibold text-ink">
+                      <Label htmlFor={`prompt-a-${prompt.id}`}>
                         {prompt.question}
                       </Label>
                     </div>
