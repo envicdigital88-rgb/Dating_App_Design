@@ -77,6 +77,15 @@ export function Chat() {
   const limitReached = entitlements.chatRemaining !== null && entitlements.chatRemaining <= 0;
 
   const submit = (imageUrl?: string) => {
+    if (!imageUrl && !draft.trim()) return;
+
+    // Prevent sending ANY numbers for strict privacy
+    const hasNumbersRegex = /\d/;
+    if (hasNumbersRegex.test(draft)) {
+      toast.error('Sharing numbers is not allowed for privacy reasons.');
+      return;
+    }
+
     const result = sendMessage(conversation.id, draft, imageUrl);
     if (!result.ok) {
       if (result.reason === 'chat_limit') setUpgradeOpen(true);else
