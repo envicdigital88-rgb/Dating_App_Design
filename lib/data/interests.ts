@@ -64,3 +64,38 @@ export const promptQuestions = [
   'If I won the lottery tomorrow I would...',
   'My most irrational fear is...'
 ];
+
+export const promptAnswers: Record<string, string[]> = {
+  'What are your main hobbies?': [
+    'Reading & Writing',
+    'Sports & Fitness',
+    'Gaming & Tech',
+    'Arts & Crafts',
+    'Travel & Outdoors',
+    'Cooking & Baking',
+    'Music & Concerts'
+  ],
+  'What\'s your favorite movie or book?': [
+    'Sci-Fi / Fantasy',
+    'Romance / Drama',
+    'Action / Thriller',
+    'Comedy',
+    'Documentary / Non-fiction',
+    'Horror / Mystery'
+  ],
+  'A typical weekend for me looks like...': [
+    'Relaxing at home',
+    'Out with friends',
+    'Exploring the city',
+    'Working on personal projects',
+    'Outdoor adventures',
+    'Catching up on sleep'
+  ],
+  'The most spontaneous thing I\'ve done recently is...': [
+    'Booked a last-minute trip',
+    'Tried a completely new hobby',
+    'Stayed up all night talking',
+    'Went to an event I knew nothing about',
+    'Ate at a random restaurant'
+  ]
+};

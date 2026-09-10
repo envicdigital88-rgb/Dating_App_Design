@@ -104,6 +104,17 @@ export function calculateVibeMatch(userA: User, userB: User): VibeMatchResult {
     reasons.push('Live in the same area');
   }
 
+  // 6. Prompts (15% per shared answer)
+  const aPrompts = userA.prompts || [];
+  const bPrompts = userB.prompts || [];
+  aPrompts.forEach(aPrompt => {
+    const shared = bPrompts.find(bPrompt => bPrompt.question === aPrompt.question && bPrompt.answer === aPrompt.answer);
+    if (shared) {
+      score += 15;
+      reasons.unshift(`Both chose "${aPrompt.answer}"`); // unshift to put it at the top of the reasons list
+    }
+  });
+
   // Cap at 99% for realism (nobody is 100% perfect match)
   // Or 100% if they literally match on everything, but 98-99 is better visually.
   score = Math.min(99, Math.round(score));

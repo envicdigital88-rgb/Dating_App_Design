@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { FieldError, Input, Label, Select, Textarea } from '@/components/ui/Field';
 import { PhotoUploader } from '@/components/PhotoUploader';
 import { useStore } from '@/lib/contexts/StoreContext';
-import { interestOptions, intentionOptions, lifestyleFields, traitOptions, promptQuestions } from '@/lib/data/interests';
+import { interestOptions, intentionOptions, lifestyleFields, traitOptions, promptAnswers } from '@/lib/data/interests';
 import type { DatingIntention, Lifestyle, User, Prompt } from '@/lib/types';
 import { id as makeId } from '@/lib/utils/format';
 
@@ -40,7 +40,12 @@ export function Onboarding() {
     education: 'Undergraduate',
     work: ''
   });
-  const [prompts, setPrompts] = useState<Prompt[]>([{ id: makeId('p'), question: '', answer: '' }]);
+  const [prompts, setPrompts] = useState<Prompt[]>([
+    { id: makeId('p'), question: 'What are your main hobbies?', answer: '' },
+    { id: makeId('p'), question: 'What\'s your favorite movie or book?', answer: '' },
+    { id: makeId('p'), question: 'A typical weekend for me looks like...', answer: '' },
+    { id: makeId('p'), question: 'The most spontaneous thing I\'ve done recently is...', answer: '' }
+  ]);
   const [photos, setPhotos] = useState<string[]>([]);
 
   if (!currentUser) return <Navigate to="/sign-up" replace />;
@@ -52,10 +57,13 @@ export function Onboarding() {
       if (!numeric || numeric < 18 || numeric > 99) return 'Enter an age between 18 and 99.';
       if (!location.trim()) return 'Add the area you live in.';
     }
-    if (step === 1 && bio.trim().length < 40) return 'Write at least 40 characters — it really helps.';
+    if (step === 1 && bio.trim().length > 0 && bio.trim().length < 40) return 'Write at least 40 characters — it really helps.';
     if (step === 2 && interests.length < 3) return 'Pick at least three interests.';
     if (step === 3 && traits.length < 3) return 'Pick at least three personality traits to define your vibe.';
-    if (step === 5 && prompts.some(p => !p.question || p.answer.trim().length < 5)) return 'Please complete your chosen vibe prompt(s) with at least a few words.';
+    if (step === 5) {
+      const answered = prompts.filter(p => p.answer.trim().length > 0);
+      if (answered.length === 0) return 'Please select an answer for at least one prompt.';
+    }
     if (step === 6 && photos.length < 1) return 'Add at least one photo to continue.';
     return '';
   };
@@ -79,7 +87,7 @@ export function Onboarding() {
       intention,
       interests,
       traits,
-      prompts,
+      prompts: prompts.filter(p => p.answer.trim().length > 0),
       lifestyle: { ...lifestyle, work: work.trim() },
       photoUrls: photos
     });
@@ -105,17 +113,7 @@ export function Onboarding() {
           : [...current, trait]
     );
 
-  const addPrompt = () => {
-    if (prompts.length < 3) {
-      setPrompts(p => [...p, { id: makeId('p'), question: '', answer: '' }]);
-    }
-  };
 
-  const removePrompt = (id: string) => {
-    if (prompts.length > 1) {
-      setPrompts(p => p.filter(prompt => prompt.id !== id));
-    }
-  };
 
   const updatePrompt = (id: string, field: 'question' | 'answer', value: string) => {
     setPrompts(p => p.map(prompt => prompt.id === id ? { ...prompt, [field]: value } : prompt));
@@ -221,7 +219,7 @@ export function Onboarding() {
                 </p>
               </div>
               <div>
-                <Label htmlFor="bio">Your bio</Label>
+                <Label htmlFor="bio">Your bio <span className="text-ink-muted font-normal">(Optional)</span></Label>
                 <Textarea
                   id="bio"
                   value={bio}
@@ -351,54 +349,32 @@ export function Onboarding() {
                   Vibe Prompts
                 </h1>
                 <p className="mt-2 text-[15px] text-ink-soft">
-                  Answer up to 3 playful prompts. These make great conversation starters!
+                  Answer at least one of these prompts to help people get to know you better.
                 </p>
               </div>
               <div className="space-y-6">
                 {prompts.map((prompt) => (
-                  <div key={prompt.id} className="relative rounded-2xl border border-sand bg-sand/20 p-4 pt-6">
-                    {prompts.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removePrompt(prompt.id)}
-                        className="absolute right-3 top-3 text-ink-muted hover:text-ink"
-                      >
-                        <Trash2Icon className="h-4 w-4" />
-                      </button>
-                    )}
-                    <div className="mb-3">
-                      <Label htmlFor={`prompt-q-${prompt.id}`}>Choose a prompt</Label>
-                      <Select
-                        id={`prompt-q-${prompt.id}`}
-                        value={prompt.question}
-                        onChange={(e) => updatePrompt(prompt.id, 'question', e.target.value)}
-                        className="font-medium text-berry-600 bg-white"
-                      >
-                        <option value="" disabled>Select a prompt...</option>
-                        {promptQuestions.map(q => (
-                          <option key={q} value={q}>{q}</option>
-                        ))}
-                      </Select>
+                  <div key={prompt.id} className="relative rounded-2xl border border-sand bg-sand/20 p-4">
+                    <div className="mb-2">
+                      <Label htmlFor={`prompt-a-${prompt.id}`} className="text-base font-semibold text-ink">
+                        {prompt.question}
+                      </Label>
                     </div>
                     <div>
-                      <Label htmlFor={`prompt-a-${prompt.id}`}>Your answer</Label>
-                      <Textarea
+                      <Select
                         id={`prompt-a-${prompt.id}`}
                         value={prompt.answer}
                         onChange={(e) => updatePrompt(prompt.id, 'answer', e.target.value)}
-                        placeholder="Type your answer here..."
-                        className="bg-white min-h-[80px]"
-                      />
+                        className="font-medium text-berry-600 bg-white"
+                      >
+                        <option value="" disabled>Select an answer...</option>
+                        {promptAnswers[prompt.question]?.map((ans) => (
+                          <option key={ans} value={ans}>{ans}</option>
+                        ))}
+                      </Select>
                     </div>
                   </div>
                 ))}
-                
-                {prompts.length < 3 && (
-                  <Button type="button" variant="outline" className="w-full border-dashed" onClick={addPrompt}>
-                    <PlusIcon className="mr-2 h-4 w-4" />
-                    Add another prompt
-                  </Button>
-                )}
               </div>
             </div>
           )}
