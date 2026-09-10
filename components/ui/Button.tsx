@@ -2,7 +2,7 @@ import React from 'react';
 import { Loader2Icon } from 'lucide-react';
 import { cn } from '@/lib/utils/format';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'outline' | 'danger';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'outline' | 'danger' | 'inverse';
 type Size = 'sm' | 'md' | 'lg';
 
 const variants: Record<Variant, string> = {
@@ -10,7 +10,8 @@ const variants: Record<Variant, string> = {
   secondary: 'bg-plum-500 text-cream hover:bg-plum-600',
   ghost: 'text-ink-soft hover:bg-cream-deep',
   outline: 'border border-sand bg-white text-ink hover:border-berry-300 hover:text-berry-600',
-  danger: 'border border-red-200 bg-white text-red-700 hover:bg-red-50'
+  danger: 'border border-red-200 bg-white text-red-700 hover:bg-red-50',
+  inverse: 'bg-cream text-plum-500 hover:bg-white'
 };
 
 const sizes: Record<Size, string> = {

@@ -211,7 +211,7 @@ export function Requests() {
                 </p>
               </div>
               <Button
-            className="bg-cream text-plum-500 hover:bg-white"
+            variant="inverse"
             onClick={() => router.push('/packages')}>
             
                 See packages

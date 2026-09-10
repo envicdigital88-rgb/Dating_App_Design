@@ -258,7 +258,7 @@ export function Chat() {
               </p>
             </div>
             <Button
-            className="bg-cream text-plum-500 hover:bg-white"
+            variant="inverse"
             onClick={() => navigate('/packages')}>
             
               Upgrade package

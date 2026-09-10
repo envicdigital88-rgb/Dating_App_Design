@@ -20,11 +20,11 @@ export function UsageMeter({
   return (
     <div>
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[13px] text-ink-soft">{label}</span>
+        <span className={cn("text-[13px]", tone === 'plum' ? 'text-cream/70' : 'text-ink-soft')}>{label}</span>
         <span
           className={cn(
             'font-display text-[15px]',
-            low ? 'text-berry-500' : tone === 'plum' ? 'text-cream' : 'text-ink'
+            tone === 'plum' ? (low ? 'text-cream' : 'text-cream') : (low ? 'text-berry-500' : 'text-ink')
           )}>
           
           {unlimited ? 'Unlimited' : remaining}
@@ -41,7 +41,7 @@ export function UsageMeter({
         <div
           className={cn(
             'h-full rounded-full transition-[width] duration-300 ease-soft',
-            low ? 'bg-berry-500' : tone === 'plum' ? 'bg-cream' : 'bg-moss'
+            tone === 'plum' ? (low ? 'bg-berry-300' : 'bg-cream') : (low ? 'bg-berry-500' : 'bg-moss')
           )}
           style={{ width: `${pct}%` }} />
         

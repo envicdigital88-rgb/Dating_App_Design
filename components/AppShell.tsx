@@ -105,7 +105,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       }
       <div className="mx-auto flex w-full max-w-[1400px]">
         {/* Desktop sidebar */}
-        <aside className="sticky top-0 hidden h-screen w-[272px] shrink-0 flex-col border-r border-sand/70 bg-cream-deep/40 px-5 py-6 lg:flex">
+        <aside className="sticky top-0 hidden h-screen w-[272px] shrink-0 flex-col overflow-y-auto border-r border-sand/70 bg-cream-deep/40 px-5 py-6 lg:flex">
           <button onClick={() => router.push('/discover')} className="mb-8 px-1 text-left">
             <BrandMark />
           </button>
@@ -170,9 +170,10 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
               </div>
               {entitlements.subscriptionStatus === 'free' &&
               <Button
+                variant="inverse"
                 size="sm"
                 block
-                className="mt-4 bg-cream text-plum-500 hover:bg-white"
+                className="mt-4"
                 onClick={() => router.push('/packages')}>
                 
                   Upgrade

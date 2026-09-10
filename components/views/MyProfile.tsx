@@ -102,9 +102,10 @@ export function MyProfile() {
               
             </div>
             <Button
+              variant="inverse"
               size="sm"
               block
-              className="mt-5 bg-cream text-plum-500 hover:bg-white"
+              className="mt-5"
               onClick={() => router.push('/packages')}>
               
               {entitlements.subscriptionStatus === 'free' ? 'Upgrade package' : 'Manage package'}

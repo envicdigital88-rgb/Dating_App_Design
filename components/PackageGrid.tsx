@@ -94,8 +94,7 @@ export function PackageGrid({
               <Button
                 block
                 size="md"
-                variant={featured ? 'primary' : pkg.price === 0 ? 'outline' : 'secondary'}
-                className={featured ? 'bg-cream text-plum-500 hover:bg-white' : undefined}
+                variant={featured ? 'inverse' : pkg.price === 0 ? 'outline' : 'secondary'}
                 disabled={current}
                 onClick={() => onSelect(pkg)}>
                 
