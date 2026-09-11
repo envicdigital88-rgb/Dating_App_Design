@@ -2,9 +2,9 @@ import type {
   AppNotification,
   Connection,
   Conversation,
-  DatingRequest,
+  WinglingWingle,
   Like,
-  Message,
+  Mingle,
   Payment,
   Photo,
   Report,
@@ -297,7 +297,7 @@ export const seedLikes: Like[] = [
 { id: 'lk-4', fromUserId: DEMO_USER_ID, toUserId: 'u-1', createdAt: daysAgo(3) }];
 
 
-export const seedRequests: DatingRequest[] = [
+export const seedWingles: WinglingWingle[] = [
 {
   id: 'rq-1',
   fromUserId: DEMO_USER_ID,
@@ -359,19 +359,19 @@ export const seedConnections: Connection[] = [
 
 
 export const seedConversations: Conversation[] = [
-{ id: 'cv-1', userIds: [DEMO_USER_ID, 'u-1'], createdAt: daysAgo(4), lastMessageAt: minsAgo(8) },
-{ id: 'cv-2', userIds: [DEMO_USER_ID, 'u-2'], createdAt: daysAgo(2), lastMessageAt: hoursAgo(12) },
-{ id: 'cv-3', userIds: [DEMO_USER_ID, 'u-3'], createdAt: daysAgo(1), lastMessageAt: minsAgo(45) },
-{ id: 'cv-4', userIds: [DEMO_USER_ID, 'u-5'], createdAt: hoursAgo(5), lastMessageAt: hoursAgo(2) }
+{ id: 'cv-1', userIds: [DEMO_USER_ID, 'u-1'], createdAt: daysAgo(4), lastMingleAt: minsAgo(8) },
+{ id: 'cv-2', userIds: [DEMO_USER_ID, 'u-2'], createdAt: daysAgo(2), lastMingleAt: hoursAgo(12) },
+{ id: 'cv-3', userIds: [DEMO_USER_ID, 'u-3'], createdAt: daysAgo(1), lastMingleAt: minsAgo(45) },
+{ id: 'cv-4', userIds: [DEMO_USER_ID, 'u-5'], createdAt: hoursAgo(5), lastMingleAt: hoursAgo(2) }
 ];
 
 
-export const seedMessages: Message[] = [
+export const seedMingles: Mingle[] = [
 {
   id: 'ms-1',
   conversationId: 'cv-1',
   senderId: 'u-1',
-  body: 'Okay, request accepted — mostly for the karaoke potential.',
+  body: 'Okay, wingle accepted — mostly for the karaoke potential.',
   createdAt: daysAgo(4),
   readAt: daysAgo(4),
   deleted: false
@@ -446,22 +446,22 @@ export const seedNotifications: AppNotification[] = [
 {
   id: 'nt-1',
   userId: DEMO_USER_ID,
-  type: 'request_received',
+  type: 'wingle_received',
   title: 'Someone wants to connect',
-  body: 'A new dating request is waiting for you.',
+  body: 'A new wingling wingle is waiting for you.',
   createdAt: minsAgo(180),
   read: false,
-  href: '/requests'
+  href: '/wingles'
 },
 {
   id: 'nt-2',
   userId: DEMO_USER_ID,
-  type: 'message',
-  title: 'New message from Priya',
+  type: 'mingle',
+  title: 'New mingle from Priya',
   body: 'Sunday, 11am?',
   createdAt: minsAgo(8),
   read: false,
-  href: '/messages'
+  href: '/mingles'
 },
 {
   id: 'nt-3',
@@ -544,18 +544,18 @@ export const seedReports: Report[] = [
 export const testimonials = [
 {
   quote:
-  'The locked requests actually made me slow down. I read three profiles properly instead of swiping through ninety.',
+  'The locked wingles actually made me slow down. I read three profiles properly instead of swiping through ninety.',
   name: 'Hana & Joe',
   detail: 'Together 14 months · met on Kindred'
 },
 {
   quote:
-  'Paying for messages sounds odd until you realise every conversation you have is with someone who also meant it.',
+  'Paying for mingles sounds odd until you realise every conversation you have is with someone who also meant it.',
   name: 'Femi',
   detail: 'Bristol · Premium member'
 },
 {
-  quote: 'I sent four requests, had two real dates, and deleted the app. That is the point, right?',
+  quote: 'I sent four wingles, had two real dates, and deleted the app. That is the point, right?',
   name: 'Cora',
   detail: 'Manchester · Basic member'
 }];
@@ -563,16 +563,16 @@ export const testimonials = [
 
 export const faqs = [
 {
-  q: 'Why do I pay for messages instead of a flat subscription?',
-  a: 'Every package includes a message allowance held on your account. It keeps conversations deliberate and stops the copy-paste openers most apps drown in. Your remaining balance is always visible in your dashboard.'
+  q: 'Why do I pay for mingles instead of a flat subscription?',
+  a: 'Every package includes a mingle allowance held on your account. It keeps conversations deliberate and stops the copy-paste openers most apps drown in. Your remaining balance is always visible in your dashboard.'
 },
 {
   q: 'What happens when my chat allowance runs out?',
   a: 'Sending pauses immediately and we show you your package options. Nothing is deleted, your conversations stay exactly where they are, and the moment a payment is verified your balance updates.'
 },
 {
-  q: 'Why can I not see who sent me a request?',
-  a: 'Incoming requests are a paid feature. Free members see that a request exists and a blurred preview; Basic and Premium members see the person, their note and can reply.'
+  q: 'Why can I not see who sent me a wingle?',
+  a: 'Incoming wingles are a paid feature. Free members see that a wingle exists and a blurred preview; Basic and Premium members see the person, their note and can reply.'
 },
 {
   q: 'How is my identity protected?',

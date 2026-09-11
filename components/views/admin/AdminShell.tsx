@@ -21,7 +21,7 @@ const items = [
 { to: '/admin', label: 'Overview', icon: <BarChart3Icon className="h-[18px] w-[18px]" />, end: true },
 { to: '/admin/users', label: 'Users', icon: <UsersIcon className="h-[18px] w-[18px]" /> },
 { to: '/admin/moderation', label: 'Moderation', icon: <ImageIcon className="h-[18px] w-[18px]" /> },
-{ to: '/admin/activity', label: 'Requests & chat', icon: <SendIcon className="h-[18px] w-[18px]" /> },
+{ to: '/admin/activity', label: 'Wingles & chat', icon: <SendIcon className="h-[18px] w-[18px]" /> },
 { to: '/admin/packages', label: 'Packages', icon: <LayersIcon className="h-[18px] w-[18px]" /> },
 { to: '/admin/payments', label: 'Payments', icon: <CreditCardIcon className="h-[18px] w-[18px]" /> }];
 

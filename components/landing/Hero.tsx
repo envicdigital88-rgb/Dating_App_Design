@@ -21,14 +21,14 @@ export function Hero() {
           transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}>
           
           <h1 className="font-display text-[42px] leading-[1.02] tracking-[-0.02em] text-ink sm:text-[58px] lg:text-[68px]">
-            Dating for people
+            Wingling for people
             <br />
             who actually
             <em className="italic text-berry-500"> mean it</em>.
           </h1>
           <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-ink-soft">
             No questionnaires. No compatibility scores. You write a real profile, look at real
-            people, and send a request to the ones you want to meet. Every message you send is one
+            people, and send a wingle to the ones you want to meet. Every mingle you send is one
             you chose to spend.
           </p>
 
@@ -36,7 +36,7 @@ export function Hero() {
             <Link href="/sign-up">
               <Button size="lg" className="w-full sm:w-auto">
                 <HeartIcon className="h-4 w-4" />
-                Start dating
+                Start wingling
               </Button>
             </Link>
             <Link href="/sign-up">

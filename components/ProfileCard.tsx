@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { HeartIcon, SendIcon, XIcon, ZapIcon, SparklesIcon, Trash2Icon } from 'lucide-react';
+import { HeartIcon, SendIcon, XIcon, ZapIcon, SparklesIcon, HeartCrackIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Badge } from './ui/Bits';
 import { useStore } from '@/lib/contexts/StoreContext';
@@ -15,11 +15,11 @@ export function ProfileCard({
   user,
   onLike,
   onPass,
-  onRequest,
+  onWingle,
   onHeartBucket,
   onRecycleBin,
   liked,
-  requested,
+  wingleed,
   // Drag-and-drop props from Discover
   heartZoneRef,
   recycleZoneRef,
@@ -34,11 +34,11 @@ export function ProfileCard({
   user: User;
   onLike: () => void;
   onPass: () => void;
-  onRequest: () => void;
+  onWingle: () => void;
   onHeartBucket?: () => void;
   onRecycleBin?: () => void;
   liked: boolean;
-  requested: boolean;
+  wingleed: boolean;
   heartZoneRef?: React.RefObject<HTMLDivElement>;
   recycleZoneRef?: React.RefObject<HTMLDivElement>;
   activeZone?: 'heart' | 'recycle' | null;
@@ -181,7 +181,7 @@ export function ProfileCard({
             </div>
           </div>
 
-          {/* Recycle Bin — RIGHT */}
+          {/* Broken Heart — RIGHT */}
           <div
             ref={recycleZoneRef}
             onDragOver={onRecycleDragOver}
@@ -203,14 +203,14 @@ export function ProfileCard({
                   : 'bg-slate-50 group-hover:bg-slate-100'
               }`}
             >
-              <Trash2Icon className={`h-7 w-7 transition-all duration-200 ${
+              <HeartCrackIcon className={`h-7 w-7 transition-all duration-200 ${
                 isRecycleActive ? 'text-white' : 'text-slate-400'
               }`} />
             </motion.div>
             <span className={`text-[11px] font-semibold transition-colors duration-200 ${
               isRecycleActive ? 'text-slate-300' : 'text-ink-muted group-hover:text-slate-400'
             }`}>
-              {isRecycleActive && draggingUserName ? `Skip ${draggingUserName}` : 'Recycle Bin'}
+              {isRecycleActive && draggingUserName ? `Skip ${draggingUserName}` : 'Broken Heart'}
             </span>
           </div>
         </div>
@@ -261,18 +261,18 @@ export function ProfileCard({
           </div>
         )}
 
-        {/* Action row: Pass · Like · Request */}
+        {/* Action row: Pass · Like · Wingle */}
         <div className="mt-3 flex items-center gap-2">
           <div className="hidden lg:flex items-center gap-2">
             {PassAndLikeButtons}
           </div>
           <button
-            onClick={onRequest}
-            disabled={requested}
+            onClick={onWingle}
+            disabled={wingleed}
             className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-berry-500 to-berry-600 px-4 text-sm font-semibold text-white shadow-sm transition-all duration-150 ease-soft hover:opacity-90 active:scale-[0.98] disabled:from-cream-deep disabled:to-cream-deep disabled:text-ink-muted"
           >
             <SendIcon className="h-4 w-4" />
-            {requested ? 'Request sent' : 'Send request'}
+            {wingleed ? 'Wingle sent' : 'Send wingle'}
           </button>
           <button
             onClick={() => router.push(`/profile/${user.id}`)}

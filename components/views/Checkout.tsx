@@ -62,15 +62,15 @@ export function Checkout() {
           <h1 className="font-display text-3xl leading-tight text-ink">Payment confirmed</h1>
           <p className="mt-3 text-[15px] leading-relaxed text-ink-soft">
             Your {pkg.name} package is active. Your allowances have been topped up and incoming
-            requests are unlocked.
+            wingles are unlocked.
           </p>
 
           <dl className="mt-7 divide-y divide-sand border-y border-sand text-left text-[14px]">
             {[
             ['Package', pkg.name],
             ['Amount paid', money(pkg.price)],
-            ['Chat messages', pkg.chatLimit === null ? 'Unlimited' : String(pkg.chatLimit)],
-            ['Dating requests', pkg.requestLimit === null ? 'Unlimited' : String(pkg.requestLimit)],
+            ['Chat mingles', pkg.chatLimit === null ? 'Unlimited' : String(pkg.chatLimit)],
+            ['Wingling wingles', pkg.wingleLimit === null ? 'Unlimited' : String(pkg.wingleLimit)],
             [
             'Renews / expires',
             shortDate(new Date(Date.now() + pkg.durationDays * 86_400_000).toISOString())],
@@ -85,11 +85,11 @@ export function Checkout() {
           </dl>
 
           <div className="mt-7 flex flex-col gap-2 sm:flex-row">
-            <Button block onClick={() => navigate('/requests')}>
-              See who sent requests
+            <Button block onClick={() => navigate('/wingles')}>
+              See who sent wingles
             </Button>
-            <Button block variant="outline" onClick={() => navigate('/messages')}>
-              Go to messages
+            <Button block variant="outline" onClick={() => navigate('/mingles')}>
+              Go to mingles
             </Button>
           </div>
         </div>
@@ -199,18 +199,18 @@ export function Checkout() {
 
           <dl className="mt-6 space-y-2 border-t border-cream/15 pt-5 text-[14px]">
             <div className="flex justify-between gap-4">
-              <dt className="text-cream/70">Chat messages</dt>
+              <dt className="text-cream/70">Chat mingles</dt>
               <dd className="font-medium">{pkg.chatLimit === null ? 'Unlimited' : pkg.chatLimit}</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-cream/70">Dating requests</dt>
+              <dt className="text-cream/70">Wingling wingles</dt>
               <dd className="font-medium">
-                {pkg.requestLimit === null ? 'Unlimited' : pkg.requestLimit}
+                {pkg.wingleLimit === null ? 'Unlimited' : pkg.wingleLimit}
               </dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-cream/70">Incoming requests</dt>
-              <dd className="font-medium">{pkg.incomingRequestsUnlocked ? 'Revealed' : 'Locked'}</dd>
+              <dt className="text-cream/70">Incoming wingles</dt>
+              <dd className="font-medium">{pkg.incomingWinglesUnlocked ? 'Revealed' : 'Locked'}</dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-cream/70">Current package</dt>

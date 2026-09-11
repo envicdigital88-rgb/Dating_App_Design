@@ -10,9 +10,9 @@ import { UsageMeter } from '@/components/UsageMeter';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { relativeTime } from '@/lib/utils/format';
 
-export function Messages() {
+export function Mingles() {
   const router = useRouter();
-  const { conversationsOf, messagesOf, currentUser, userById, photosOf, entitlements, openChatPopup } = useStore();
+  const { conversationsOf, minglesOf, currentUser, userById, photosOf, entitlements, openChatPopup } = useStore();
   if (!currentUser || !entitlements) return null;
 
   const conversations = conversationsOf();
@@ -20,13 +20,13 @@ export function Messages() {
   return (
     <Page>
       <PageHeader
-        title="Messages"
-        body="Conversations open as soon as a dating request is accepted."
+        title="Mingles"
+        body="Conversations open as soon as a wingling wingle is accepted."
         action={
         entitlements.chatRemaining !== null && entitlements.chatRemaining <= 5 ?
         <Button onClick={() => router.push('/packages')}>
               <SparklesIcon className="h-4 w-4" />
-              Top up messages
+              Top up mingles
             </Button> :
         undefined
         } />
@@ -38,7 +38,7 @@ export function Messages() {
           <EmptyState
             icon={<MessageCircleIcon className="h-5 w-5" />}
             title="No conversations yet"
-            body="Send a dating request, and the moment it is accepted a conversation opens right here."
+            body="Send a wingling wingle, and the moment it is accepted a conversation opens right here."
             action={<Button onClick={() => router.push('/discover')}>Discover people</Button>} /> :
 
 
@@ -47,9 +47,9 @@ export function Messages() {
               const otherId = conversation.userIds.find((uid) => uid !== currentUser.id) as string;
               const user = userById(otherId);
               const photo = user ? photosOf(otherId)[0] : undefined;
-              const messages = messagesOf(conversation.id);
-              const last = messages[messages.length - 1];
-              const unread = messages.filter((m) => m.senderId !== currentUser.id && !m.readAt).length;
+              const mingles = minglesOf(conversation.id);
+              const last = mingles[mingles.length - 1];
+              const unread = mingles.filter((m) => m.senderId !== currentUser.id && !m.readAt).length;
               if (!user) return null;
               return (
                 <li key={conversation.id} className="overflow-hidden rounded-4xl bg-white/15 backdrop-blur-md ring-1 ring-white/10 shadow-sm">
@@ -58,7 +58,7 @@ export function Messages() {
                       if (window.innerWidth >= 1024) {
                         openChatPopup(conversation.id);
                       } else {
-                        router.push(`/messages/${conversation.id}`);
+                        router.push(`/mingles/${conversation.id}`);
                       }
                     }}
                     className="flex w-full items-center gap-4 px-4 py-4 text-left transition-colors duration-150 ease-soft hover:bg-white/15">
@@ -79,7 +79,7 @@ export function Messages() {
                           
                             {last ?
                           last.deleted ?
-                          'Message deleted' :
+                          'Mingle deleted' :
                           last.imageUrl && !last.body ?
                           'Sent a photo' :
                           last.body :
@@ -104,14 +104,14 @@ export function Messages() {
           <div className="rounded-4xl bg-cream-deep p-5 shadow-card">
             <h2 className="mb-4 font-display text-lg text-ink">Chat allowance</h2>
             <UsageMeter
-              label="Messages remaining"
+              label="Mingles remaining"
               used={entitlements.chatUsed}
               limit={entitlements.chatLimit} />
             
             <p className="mt-4 text-[13px] leading-relaxed text-ink-soft">
               {entitlements.chatLimit === null ?
-              'Your package includes unlimited messages.' :
-              `You have used ${entitlements.chatUsed} of ${entitlements.chatLimit} messages on the ${entitlements.packageName} package.`}
+              'Your package includes unlimited mingles.' :
+              `You have used ${entitlements.chatUsed} of ${entitlements.chatLimit} mingles on the ${entitlements.packageName} package.`}
             </p>
             {entitlements.chatRemaining !== null &&
             <Button

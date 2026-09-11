@@ -71,7 +71,7 @@ export function Settings() {
             ['discoverable', 'Show me in Discover', 'Turn off to hide your profile completely.'],
             ['showOnline', 'Show when I am online', 'Others see “Online now” on your profile.'],
             ['showDistance', 'Show my area', 'Only ever your area, never an exact location.'],
-            ['readReceipts', 'Read receipts', 'Let connections see when you have read a message.']] as
+            ['readReceipts', 'Read receipts', 'Let connections see when you have read a mingle.']] as
             const).
             map(([key, label, hint]) =>
             <li key={key} className="flex items-start justify-between gap-4 py-3.5">
@@ -106,7 +106,7 @@ export function Settings() {
           </h2>
           {blocked.length === 0 ?
           <p className="mt-3 text-[14px] leading-relaxed text-ink-soft">
-              You have not blocked anyone. Blocking removes someone from your Discover, requests and
+              You have not blocked anyone. Blocking removes someone from your Discover, wingles and
               inbox at once.
             </p> :
 
@@ -171,7 +171,7 @@ export function Settings() {
         open={deleting}
         onClose={() => setDeleting(false)}
         title="Delete your account?"
-        description="Your profile, photos, requests and conversations are permanently removed. This cannot be undone."
+        description="Your profile, photos, wingles and conversations are permanently removed. This cannot be undone."
         footer={
         <>
             <Button variant="ghost" onClick={() => setDeleting(false)}>

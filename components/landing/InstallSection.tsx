@@ -21,7 +21,7 @@ export function InstallSection() {
           </h2>
           <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-ink-soft">
             Kindred installs straight from your browser and runs full screen, with push notifications
-            for new requests and messages, and an offline fallback for the tube.
+            for new wingles and mingles, and an offline fallback for the tube.
           </p>
 
           <ul className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -72,7 +72,7 @@ export function InstallSection() {
                 </div>
               </div>
               <div className="flex justify-around border-t border-sand bg-cream-deep px-4 py-2.5 text-ink-muted">
-                {['Discover', 'Requests', 'Chat', 'You'].map((tab, i) =>
+                {['Discover', 'Wingles', 'Chat', 'You'].map((tab, i) =>
                 <span
                   key={tab}
                   className={`text-[10px] font-medium ${i === 0 ? 'text-berry-500' : ''}`}>

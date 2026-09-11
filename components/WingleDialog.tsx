@@ -8,7 +8,7 @@ import { Label, Textarea } from './ui/Field';
 import { useStore } from '@/lib/contexts/StoreContext';
 import type { User } from '@/lib/types';
 
-export function RequestDialog({
+export function WingleDialog({
   open,
   onClose,
   target,
@@ -19,7 +19,7 @@ export function RequestDialog({
 
 
 }: {open: boolean;onClose: () => void;target: User | null;onLimitReached: () => void;}) {
-  const { sendRequest, entitlements } = useStore();
+  const { sendWingle, entitlements } = useStore();
   const [note, setNote] = useState('');
   const [sending, setSending] = useState(false);
 
@@ -27,24 +27,24 @@ export function RequestDialog({
 
   const submit = () => {
     setSending(true);
-    const result = sendRequest(target.id, note);
+    const result = sendWingle(target.id, note);
     setSending(false);
     if (!result.ok) {
       onClose();
-      if (result.reason === 'request_limit') onLimitReached();else
+      if (result.reason === 'wingle_limit') onLimitReached();else
       toast.error(result.error);
       return;
     }
     setNote('');
     onClose();
-    toast.success(`Request sent to ${target.name}`);
+    toast.success(`Wingle sent to ${target.name}`);
   };
 
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title={`Send ${target.name} a dating request`}
+      title={`Send ${target.name} a wingling wingle`}
       description="A short, specific note gets a reply far more often than “hey”."
       footer={
       <>
@@ -52,14 +52,14 @@ export function RequestDialog({
             Cancel
           </Button>
           <Button onClick={submit} loading={sending}>
-            Send request
+            Send wingle
           </Button>
         </>
       }>
       
-      <Label htmlFor="request-note">Your note</Label>
+      <Label htmlFor="wingle-note">Your note</Label>
       <Textarea
-        id="request-note"
+        id="wingle-note"
         value={note}
         maxLength={280}
         onChange={(e) => setNote(e.target.value)}
@@ -68,9 +68,9 @@ export function RequestDialog({
       <div className="mt-2 flex items-center justify-between text-[13px] text-ink-muted">
         <span>{note.length}/280</span>
         <span>
-          {entitlements?.requestsRemaining === null ?
-          'Unlimited requests' :
-          `${entitlements?.requestsRemaining ?? 0} requests remaining`}
+          {entitlements?.winglesRemaining === null ?
+          'Unlimited wingles' :
+          `${entitlements?.winglesRemaining ?? 0} wingles remaining`}
         </span>
       </div>
     </Modal>);

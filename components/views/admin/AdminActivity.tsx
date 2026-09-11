@@ -9,10 +9,10 @@ import { relativeTime } from '@/lib/utils/format';
 export function AdminActivity() {
   const { db, freePackage } = useStore();
 
-  const requests = db.requests;
-  const accepted = requests.filter((r) => r.status === 'accepted');
-  const declined = requests.filter((r) => r.status === 'declined');
-  const acceptRate = requests.length ?
+  const wingles = db.wingles;
+  const accepted = wingles.filter((r) => r.status === 'accepted');
+  const declined = wingles.filter((r) => r.status === 'declined');
+  const acceptRate = wingles.length ?
   Math.round(accepted.length / (accepted.length + declined.length || 1) * 100) :
   0;
 
@@ -24,12 +24,12 @@ export function AdminActivity() {
       (s) => s.userId === user.id && s.status === 'active' && new Date(s.expiresAt) > new Date()
     );
     const pkg = sub ? db.packages.find((p) => p.id === sub.packageId) ?? freePackage : freePackage;
-    const sent = db.messages.filter((m) => m.senderId === user.id).length;
+    const sent = db.mingles.filter((m) => m.senderId === user.id).length;
     return {
       user,
       pkg,
       chatUsed: usage?.chatUsed ?? 0,
-      requestsUsed: usage?.requestsUsed ?? 0,
+      winglesUsed: usage?.winglesUsed ?? 0,
       sent
     };
   }).
@@ -38,14 +38,14 @@ export function AdminActivity() {
   return (
     <div>
       <AdminHeader
-        title="Requests & chat"
-        body="Request throughput, chat consumption per member, and abuse signals. Usage is metered server-side against each member's package." />
+        title="Wingles & chat"
+        body="Wingle throughput, chat consumption per member, and abuse signals. Usage is metered server-side against each member's package." />
       
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatTile label="Total requests" value={requests.length} />
+        <StatTile label="Total wingles" value={wingles.length} />
         <StatTile label="Accepted" value={accepted.length} hint={`${acceptRate}% accept rate`} />
-        <StatTile label="Messages sent" value={db.messages.length} emphasis />
+        <StatTile label="Mingles sent" value={db.mingles.length} emphasis />
         <StatTile
           label="Blocks"
           value={db.blocks.length}
@@ -62,8 +62,8 @@ export function AdminActivity() {
             <tr>
               <th scope="col" className="px-5 py-3 font-semibold">Member</th>
               <th scope="col" className="px-5 py-3 font-semibold">Package</th>
-              <th scope="col" className="px-5 py-3 font-semibold">Messages used</th>
-              <th scope="col" className="hidden px-5 py-3 font-semibold md:table-cell">Requests used</th>
+              <th scope="col" className="px-5 py-3 font-semibold">Mingles used</th>
+              <th scope="col" className="hidden px-5 py-3 font-semibold md:table-cell">Wingles used</th>
               <th scope="col" className="px-5 py-3 font-semibold">Status</th>
             </tr>
           </thead>
@@ -84,7 +84,7 @@ export function AdminActivity() {
                     {row.chatUsed} / {row.pkg.chatLimit === null ? '∞' : row.pkg.chatLimit}
                   </td>
                   <td className="hidden px-5 py-3.5 text-ink-soft md:table-cell">
-                    {row.requestsUsed} / {row.pkg.requestLimit === null ? '∞' : row.pkg.requestLimit}
+                    {row.winglesUsed} / {row.pkg.wingleLimit === null ? '∞' : row.pkg.wingleLimit}
                   </td>
                   <td className="px-5 py-3.5">
                     <Badge tone={exhausted ? 'red' : 'moss'}>
@@ -100,35 +100,35 @@ export function AdminActivity() {
 
       <section className="mt-5 overflow-hidden rounded-4xl bg-cream-deep shadow-card">
         <h2 className="border-b border-sand px-5 py-4 font-display text-xl text-ink">
-          Recent requests
+          Recent wingles
         </h2>
         <ul className="divide-y divide-sand">
-          {[...requests].
+          {[...wingles].
           sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).
           slice(0, 10).
-          map((request) => {
-            const from = db.users.find((u) => u.id === request.fromUserId);
-            const to = db.users.find((u) => u.id === request.toUserId);
+          map((wingle) => {
+            const from = db.users.find((u) => u.id === wingle.fromUserId);
+            const to = db.users.find((u) => u.id === wingle.toUserId);
             return (
-              <li key={request.id} className="flex items-center justify-between gap-4 px-5 py-3.5">
+              <li key={wingle.id} className="flex items-center justify-between gap-4 px-5 py-3.5">
                   <div className="min-w-0">
                     <p className="truncate text-[14px] text-ink">
                       {from?.name ?? 'Member'} → {to?.name ?? 'Member'}
                     </p>
                     <p className="truncate text-[12px] text-ink-muted">
-                      {request.note || 'No note'} · {relativeTime(request.createdAt)}
+                      {wingle.note || 'No note'} · {relativeTime(wingle.createdAt)}
                     </p>
                   </div>
                   <Badge
                   tone={
-                  request.status === 'accepted' ?
+                  wingle.status === 'accepted' ?
                   'moss' :
-                  request.status === 'declined' ?
+                  wingle.status === 'declined' ?
                   'red' :
                   'amber'
                   }>
                   
-                    {request.status}
+                    {wingle.status}
                   </Badge>
                 </li>);
 

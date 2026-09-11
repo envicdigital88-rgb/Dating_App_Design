@@ -176,9 +176,9 @@ export function AdminUsers() {
               {[
             ['Location', detailUser.location],
             ['Intention', detailUser.intention],
-            ['Requests sent', String(db.requests.filter((r) => r.fromUserId === detailUser.id).length)],
-            ['Requests received', String(db.requests.filter((r) => r.toUserId === detailUser.id).length)],
-            ['Messages sent', String(db.messages.filter((m) => m.senderId === detailUser.id).length)],
+            ['Wingles sent', String(db.wingles.filter((r) => r.fromUserId === detailUser.id).length)],
+            ['Wingles received', String(db.wingles.filter((r) => r.toUserId === detailUser.id).length)],
+            ['Mingles sent', String(db.mingles.filter((m) => m.senderId === detailUser.id).length)],
             ['Reports against', String(db.reports.filter((r) => r.targetUserId === detailUser.id).length)]].
             map(([label, value]) =>
             <div key={label} className="flex justify-between gap-4 py-2.5">

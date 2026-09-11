@@ -4,7 +4,7 @@ export const relativeTime = (iso: string) => `${formatDistanceToNowStrict(new Da
 
 export const shortDate = (iso: string) => format(new Date(iso), 'd MMM yyyy');
 
-export const messageTime = (iso: string) => format(new Date(iso), 'HH:mm');
+export const mingleTime = (iso: string) => format(new Date(iso), 'HH:mm');
 
 export const dayLabel = (iso: string) => {
   const d = new Date(iso);

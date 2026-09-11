@@ -61,7 +61,7 @@ export function Likes() {
 
   return (
     <Page>
-      <PageHeader title="Likes" body="A like is a quiet nudge. A request is the actual ask." />
+      <PageHeader title="Likes" body="A like is a quiet nudge. A wingle is the actual ask." />
 
       <section className="mb-10">
         <h2 className="mb-4 font-display text-xl text-ink">Liked you · {received.length}</h2>

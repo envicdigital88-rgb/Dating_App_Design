@@ -67,7 +67,7 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
           <p className="mt-2 text-[15px] leading-relaxed text-ink-soft">
             {isRegister ?
             'Two minutes here, then we will set up your profile and photos.' :
-            'Sign in to pick up your requests and conversations.'}
+            'Sign in to pick up your wingles and conversations.'}
           </p>
 
           <form onSubmit={submit} className="mt-8 space-y-4" noValidate>
@@ -170,7 +170,7 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
         
         <div className="absolute inset-x-8 bottom-8 rounded-4xl bg-plum-600/85 p-7 text-cream backdrop-blur-sm">
           <p className="font-display text-2xl leading-snug">
-            “I sent four requests, had two real dates, and deleted the app.”
+            “I sent four wingles, had two real dates, and deleted the app.”
           </p>
           <p className="mt-3 text-[13px] text-cream/70">Cora · Manchester</p>
         </div>

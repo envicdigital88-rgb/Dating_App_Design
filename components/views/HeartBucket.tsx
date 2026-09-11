@@ -7,15 +7,15 @@ import { Page, PageHeader } from '@/components/AppShell';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/Bits';
 import { useStore } from '@/lib/contexts/StoreContext';
-import { RequestDialog } from '@/components/RequestDialog';
+import { WingleDialog } from '@/components/WingleDialog';
 import { UpgradeDialog, type UpgradeReason } from '@/components/UpgradeDialog';
 import type { User } from '@/lib/types';
 
 export function HeartBucket() {
   const router = useRouter();
-  const { heartBucketOf, currentUser, photosOf, removeFromHeartBucket, requestStatusWith, entitlements } = useStore();
+  const { heartBucketOf, currentUser, photosOf, removeFromHeartBucket, wingleStatusWith, entitlements } = useStore();
   
-  const [requestTarget, setRequestTarget] = useState<User | null>(null);
+  const [wingleTarget, setWingleTarget] = useState<User | null>(null);
   const [upgrade, setUpgrade] = useState<UpgradeReason | null>(null);
 
   if (!currentUser || !entitlements) return null;
@@ -23,7 +23,7 @@ export function HeartBucket() {
 
   return (
     <Page>
-      <PageHeader title="In Your Heart" body="Profiles you have saved to review and send requests to." />
+      <PageHeader title="In Your Heart" body="Profiles you have saved to review and send wingles to." />
 
       <section className="mb-10">
         <h2 className="mb-4 font-display text-xl text-ink">Saved Profiles · {bucket.length}</h2>
@@ -38,7 +38,7 @@ export function HeartBucket() {
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {bucket.map((user) => {
               const photo = photosOf(user.id)[0];
-              const requested = !!requestStatusWith(user.id);
+              const wingleed = !!wingleStatusWith(user.id);
               return (
                 <li key={user.id} className="group relative block w-full overflow-hidden rounded-4xl bg-cream-deep text-left shadow-card">
                   <button
@@ -73,19 +73,19 @@ export function HeartBucket() {
                     <button
                       onClick={() => {
                         if (
-                          entitlements.requestsRemaining !== null &&
-                          entitlements.requestsRemaining <= 0
+                          entitlements.winglesRemaining !== null &&
+                          entitlements.winglesRemaining <= 0
                         ) {
-                          setUpgrade('request_limit');
+                          setUpgrade('wingle_limit');
                           return;
                         }
-                        setRequestTarget(user);
+                        setWingleTarget(user);
                       }}
-                      disabled={requested}
+                      disabled={wingleed}
                       className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-berry-500 text-sm font-semibold text-white transition-colors hover:bg-berry-600 disabled:bg-cream-deep disabled:text-ink-muted"
                     >
                       <SendIcon className="h-4 w-4" />
-                      {requested ? 'Request sent' : 'Send request'}
+                      {wingleed ? 'Wingle sent' : 'Send wingle'}
                     </button>
                   </div>
                 </li>
@@ -95,16 +95,16 @@ export function HeartBucket() {
         )}
       </section>
 
-      <RequestDialog
-        open={!!requestTarget}
-        target={requestTarget}
-        onClose={() => setRequestTarget(null)}
-        onLimitReached={() => setUpgrade('request_limit')}
+      <WingleDialog
+        open={!!wingleTarget}
+        target={wingleTarget}
+        onClose={() => setWingleTarget(null)}
+        onLimitReached={() => setUpgrade('wingle_limit')}
       />
       
       <UpgradeDialog
         open={!!upgrade}
-        reason={upgrade ?? 'request_limit'}
+        reason={upgrade ?? 'wingle_limit'}
         onClose={() => setUpgrade(null)}
       />
     </Page>

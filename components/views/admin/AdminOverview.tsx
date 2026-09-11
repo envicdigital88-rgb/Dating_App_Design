@@ -16,7 +16,7 @@ export function AdminOverview() {
   const newThisMonth = members.filter(
     (u) => Date.now() - new Date(u.createdAt).getTime() < 30 * 86_400_000
   );
-  const acceptedRequests = db.requests.filter((r) => r.status === 'accepted');
+  const acceptedWingles = db.wingles.filter((r) => r.status === 'accepted');
   const succeeded = db.payments.filter((p) => p.status === 'succeeded');
   const revenue = succeeded.reduce((total, p) => total + p.amount, 0);
   const activeSubs = db.subscriptions.filter(
@@ -53,11 +53,11 @@ export function AdminOverview() {
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
-          label="Dating requests"
-          value={db.requests.length}
-          hint={`${acceptedRequests.length} accepted`} />
+          label="Wingling wingles"
+          value={db.wingles.length}
+          hint={`${acceptedWingles.length} accepted`} />
         
-        <StatTile label="Messages sent" value={db.messages.length} />
+        <StatTile label="Mingles sent" value={db.mingles.length} />
         <StatTile label="Connections" value={db.connections.length} />
         <StatTile
           label="Open reports"
@@ -92,32 +92,32 @@ export function AdminOverview() {
         <section className="rounded-4xl bg-cream-deep p-6 shadow-card">
           <h2 className="font-display text-xl text-ink">Latest activity</h2>
           <ul className="mt-4 divide-y divide-sand">
-            {[...db.requests].
+            {[...db.wingles].
             sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).
             slice(0, 6).
-            map((request) => {
-              const from = db.users.find((u) => u.id === request.fromUserId);
-              const to = db.users.find((u) => u.id === request.toUserId);
+            map((wingle) => {
+              const from = db.users.find((u) => u.id === wingle.fromUserId);
+              const to = db.users.find((u) => u.id === wingle.toUserId);
               return (
-                <li key={request.id} className="flex items-center justify-between gap-3 py-3">
+                <li key={wingle.id} className="flex items-center justify-between gap-3 py-3">
                     <div className="min-w-0">
                       <p className="truncate text-[14px] text-ink">
                         {from?.name ?? 'Member'} → {to?.name ?? 'Member'}
                       </p>
                       <p className="text-[12px] text-ink-muted">
-                        Request · {relativeTime(request.createdAt)}
+                        Wingle · {relativeTime(wingle.createdAt)}
                       </p>
                     </div>
                     <Badge
                     tone={
-                    request.status === 'accepted' ?
+                    wingle.status === 'accepted' ?
                     'moss' :
-                    request.status === 'declined' ?
+                    wingle.status === 'declined' ?
                     'red' :
                     'amber'
                     }>
                     
-                      {request.status}
+                      {wingle.status}
                     </Badge>
                   </li>);
 

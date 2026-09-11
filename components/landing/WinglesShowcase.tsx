@@ -6,23 +6,23 @@ import { seedPhotos } from '@/lib/data/seed';
 const blurred = seedPhotos.find((p) => p.userId === 'u-7')?.url;
 const accepted = seedPhotos.find((p) => p.userId === 'u-1' && p.isPrimary)?.url;
 
-export function RequestsShowcase() {
+export function WinglesShowcase() {
   return (
-    <section id="requests" className="border-b border-sand/60 py-16 lg:py-24">
+    <section id="wingles" className="border-b border-sand/60 py-16 lg:py-24">
       <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 lg:grid-cols-2 lg:gap-20 lg:px-8">
         <div>
           <SectionHeading
             align="left"
-            overline="Dating requests"
+            overline="Wingling wingles"
             title="Interest you can see, and interest you unlock"
-            body="Requests you send are always visible to you, with their status. Requests you receive are a paid feature — you will know someone is there, and one upgrade reveals who." />
+            body="Wingles you send are always visible to you, with their status. Wingles you receive are a paid feature — you will know someone is there, and one upgrade reveals who." />
           
           <ul className="mt-8 space-y-4">
             {[
-            'Send a request with a note — no more shouting into a void',
+            'Send a wingle with a note — no more shouting into a void',
             'Track pending, accepted and declined in one place',
-            'Incoming requests stay anonymous until you upgrade',
-            'Accepting a request opens a conversation instantly'].
+            'Incoming wingles stay anonymous until you upgrade',
+            'Accepting a wingle opens a conversation instantly'].
             map((point) =>
             <li key={point} className="flex gap-3 text-[15px] leading-relaxed text-ink-soft">
                 <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-moss" />
@@ -51,7 +51,7 @@ export function RequestsShowcase() {
                   Someone wants to connect ❤
                 </p>
                 <p className="mt-1 text-[13px] text-ink-soft">
-                  Upgrade your package to see who sent this request.
+                  Upgrade your package to see who sent this wingle.
                 </p>
               </div>
             </div>
@@ -81,7 +81,7 @@ export function RequestsShowcase() {
 
           <div className="flex items-center gap-3 rounded-4xl border border-sand bg-cream-deep/60 px-5 py-4 text-[13px] text-ink-soft">
             <ClockIcon className="h-4 w-4 shrink-0 text-ink-muted" />
-            Requests expire quietly after 30 days, so nobody is left waiting on a maybe.
+            Wingles expire quietly after 30 days, so nobody is left waiting on a maybe.
           </div>
         </div>
       </div>

@@ -12,17 +12,17 @@ import { Input, Label, Select, Textarea } from '@/components/ui/Field';
 import { UsageMeter } from '@/components/UsageMeter';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { interestOptions, intentionOptions, lifestyleFields } from '@/lib/data/interests';
-import type { DatingIntention, Lifestyle } from '@/lib/types';
+import type { WinglingIntention, Lifestyle } from '@/lib/types';
 
 export function MyProfile() {
   const router = useRouter();
-  const { currentUser, photosOf, updateProfile, entitlements, likesReceived, sentRequests } =
+  const { currentUser, photosOf, updateProfile, entitlements, likesReceived, sentWingles } =
   useStore();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({
     location: currentUser?.location ?? '',
     bio: currentUser?.bio ?? '',
-    intention: (currentUser?.intention ?? 'Long-term relationship') as DatingIntention,
+    intention: (currentUser?.intention ?? 'Long-term relationship') as WinglingIntention,
     interests: currentUser?.interests ?? [],
     lifestyle: (currentUser?.lifestyle ?? {
       drinking: 'Socially',
@@ -43,7 +43,7 @@ export function MyProfile() {
     updateProfile({
       location: draft.location.trim(),
       bio: draft.bio.trim(),
-      intention: draft.intention as DatingIntention,
+      intention: draft.intention as WinglingIntention,
       interests: draft.interests,
       lifestyle: draft.lifestyle
     });
@@ -55,7 +55,7 @@ export function MyProfile() {
     <Page>
       <PageHeader
         title="My profile"
-        body="This is what other members see. Keep it current — active, complete profiles get far more requests."
+        body="This is what other members see. Keep it current — active, complete profiles get far more wingles."
         action={
         <div className="flex gap-2">
             <Button variant="outline" onClick={() => router.push('/photos')}>
@@ -89,15 +89,15 @@ export function MyProfile() {
             </div>
             <div className="space-y-4">
               <UsageMeter
-                label="Chat messages remaining"
+                label="Chat mingles remaining"
                 used={entitlements.chatUsed}
                 limit={entitlements.chatLimit}
                 tone="plum" />
               
               <UsageMeter
-                label="Requests remaining"
-                used={entitlements.requestsUsed}
-                limit={entitlements.requestLimit}
+                label="Wingles remaining"
+                used={entitlements.winglesUsed}
+                limit={entitlements.wingleLimit}
                 tone="plum" />
               
             </div>
@@ -114,7 +114,7 @@ export function MyProfile() {
           <dl className="grid grid-cols-3 gap-3">
             {[
             { label: 'Likes', value: likesReceived().length },
-            { label: 'Requests sent', value: sentRequests().length },
+            { label: 'Wingles sent', value: sentWingles().length },
             { label: 'Photos', value: photos.length }].
             map((stat) =>
             <div key={stat.label} className="rounded-3xl bg-cream-deep p-4 text-center shadow-card">
@@ -147,12 +147,12 @@ export function MyProfile() {
                 <p className="mt-1.5 text-[12px] text-ink-muted">{draft.bio.length}/400</p>
               </div>
               <div>
-                <Label htmlFor="my-intention">Dating intention</Label>
+                <Label htmlFor="my-intention">Wingling intention</Label>
                 <Select
                 id="my-intention"
                 value={draft.intention}
                 onChange={(e) =>
-                setDraft((d) => ({ ...d, intention: e.target.value as DatingIntention }))
+                setDraft((d) => ({ ...d, intention: e.target.value as WinglingIntention }))
                 }>
                 
                   {intentionOptions.map((option) =>

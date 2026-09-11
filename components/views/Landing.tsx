@@ -5,7 +5,7 @@ import { SiteNav } from '@/components/landing/SiteNav';
 import { Hero } from '@/components/landing/Hero';
 import { HowItWorks } from '@/components/landing/HowItWorks';
 import { DiscoverPreview } from '@/components/landing/DiscoverPreview';
-import { RequestsShowcase } from '@/components/landing/RequestsShowcase';
+import { WinglesShowcase } from '@/components/landing/WinglesShowcase';
 import { Safety } from '@/components/landing/Safety';
 import { Testimonials } from '@/components/landing/Testimonials';
 import { Faq } from '@/components/landing/Faq';
@@ -26,14 +26,14 @@ export function Landing() {
         <Hero />
         <HowItWorks />
         <DiscoverPreview />
-        <RequestsShowcase />
+        <WinglesShowcase />
 
         <section id="packages" className="border-b border-sand/60 py-16 lg:py-24">
           <div className="mx-auto max-w-6xl px-5 lg:px-8">
             <SectionHeading
               overline="Packages"
               title="Pay for conversations, not for hope"
-              body="Start free and see the whole community. Upgrade when you have someone you actually want to talk to — every package includes a message allowance held on your account." />
+              body="Start free and see the whole community. Upgrade when you have someone you actually want to talk to — every package includes a mingle allowance held on your account." />
             
             <div className="mt-12">
               <PackageGrid

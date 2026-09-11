@@ -21,9 +21,9 @@ import { relativeTime } from '@/lib/utils/format';
 import type { NotificationType } from '@/lib/types';
 
 const icons: Record<NotificationType, React.ReactNode> = {
-  request_received: <SendIcon className="h-4 w-4" />,
-  request_accepted: <SendIcon className="h-4 w-4" />,
-  message: <MessageCircleIcon className="h-4 w-4" />,
+  wingle_received: <SendIcon className="h-4 w-4" />,
+  wingle_accepted: <SendIcon className="h-4 w-4" />,
+  mingle: <MessageCircleIcon className="h-4 w-4" />,
   connection: <UsersIcon className="h-4 w-4" />,
   like: <HeartIcon className="h-4 w-4" />,
   package_activated: <SparklesIcon className="h-4 w-4" />,
@@ -60,7 +60,7 @@ export function Notifications() {
             <div>
               <p className="font-display text-lg text-ink">Turn on push notifications</p>
               <p className="mt-1 text-[13px] text-ink-soft">
-                Get told about new requests and messages without opening the app.
+                Get told about new wingles and mingles without opening the app.
               </p>
             </div>
             <Button onClick={enableNotifications}>Enable</Button>
@@ -71,7 +71,7 @@ export function Notifications() {
         <EmptyState
           icon={<BellIcon className="h-5 w-5" />}
           title="Nothing here yet"
-          body="Requests, accepted connections, new messages and package updates all land here." /> :
+          body="Wingles, accepted connections, new mingles and package updates all land here." /> :
 
 
         <ul className="flex flex-col gap-4">

@@ -8,7 +8,7 @@ const columns = [
   title: 'Kindred',
   links: [
   { label: 'How it works', href: '#how' },
-  { label: 'Dating requests', href: '#requests' },
+  { label: 'Wingling wingles', href: '#wingles' },
   { label: 'Packages', href: '#packages' },
   { label: 'Install the app', href: '#install' }]
 
@@ -41,7 +41,7 @@ export function SiteFooter() {
           <div>
             <BrandMark />
             <p className="mt-4 max-w-xs text-[14px] leading-relaxed">
-              Dating for people who actually mean it. Profiles, photos, requests and real
+              Wingling for people who actually mean it. Profiles, photos, wingles and real
               conversations — no questionnaires, no compatibility scores.
             </p>
             <div className="mt-6 flex gap-3">
@@ -82,7 +82,7 @@ export function SiteFooter() {
         </div>
 
         <div className="mt-12 flex flex-col justify-between gap-3 border-t border-cream/12 pt-6 text-[13px] sm:flex-row">
-          <p>© {new Date().getFullYear()} Kindred Dating Ltd. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Kindred Wingling Ltd. All rights reserved.</p>
           <p className="flex gap-5">
             <a href="#" className="hover:text-cream">
               Terms

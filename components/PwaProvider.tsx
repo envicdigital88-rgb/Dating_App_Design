@@ -15,9 +15,9 @@ interface PwaValue {
 const PwaContext = createContext<PwaValue | null>(null);
 
 const MANIFEST = {
-  name: 'Kindred — Dating, deliberately',
+  name: 'Kindred — Wingling, deliberately',
   short_name: 'Kindred',
-  description: 'Meet people properly. Profiles, photos, requests and real conversations.',
+  description: 'Meet people properly. Profiles, photos, wingles and real conversations.',
   start_url: '/',
   display: 'standalone',
   orientation: 'portrait',
@@ -42,12 +42,12 @@ const CACHE = 'kindred-v1';
 self.addEventListener('install', (e) => self.skipWaiting());
 self.addEventListener('activate', (e) => self.clients.claim());
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
+  if (event.wingle.method !== 'GET') return;
   event.respondWith(
     caches.open(CACHE).then((cache) =>
-      fetch(event.request)
-        .then((res) => { cache.put(event.request, res.clone()); return res; })
-        .catch(() => cache.match(event.request))
+      fetch(event.wingle)
+        .then((res) => { cache.put(event.wingle, res.clone()); return res; })
+        .catch(() => cache.match(event.wingle))
     )
   );
 });
@@ -136,8 +136,8 @@ export function PwaProvider({ children }: {children: React.ReactNode;}) {
           return;
         }
         try {
-          const result = await Notification.requestPermission();
-          setNotificationsEnabled(result === 'granted');
+          const permission = await window.Notification.requestPermission();
+          setNotificationsEnabled(permission === 'granted');
         } catch {
           setNotificationsEnabled(true);
         }

@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge, VerifiedMark } from '@/components/ui/Bits';
 import { Modal } from '@/components/ui/Modal';
 import { ReportDialog } from '@/components/ReportDialog';
-import { RequestDialog } from '@/components/RequestDialog';
+import { WingleDialog } from '@/components/WingleDialog';
 import { UpgradeDialog, type UpgradeReason } from '@/components/UpgradeDialog';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { presence } from '@/lib/utils/format';
@@ -37,7 +37,7 @@ export function ProfileDetail() {
     photosOf,
     hasLiked,
     likeUser,
-    requestStatusWith,
+    wingleStatusWith,
     conversationWith,
     ensureConversation,
     blockUser,
@@ -48,7 +48,7 @@ export function ProfileDetail() {
 
   const [reporting, setReporting] = useState(false);
   const [blocking, setBlocking] = useState(false);
-  const [requesting, setRequesting] = useState(false);
+  const [wingleing, setWingleing] = useState(false);
   const [upgrade, setUpgrade] = useState<UpgradeReason | null>(null);
 
   const user = userId ? userById(userId) : undefined;
@@ -56,19 +56,19 @@ export function ProfileDetail() {
   if (user.id === currentUser.id) { redirect("/profile"); return null as any; }
 
   const photos = photosOf(user.id);
-  const request = requestStatusWith(user.id);
-  const connected = !!conversationWith(user.id) && request?.status === 'accepted';
+  const wingle = wingleStatusWith(user.id);
+  const connected = !!conversationWith(user.id) && wingle?.status === 'accepted';
 
   const openChat = () => {
     if (!connected) {
-      toast.error('You can chat once your request has been accepted.');
+      toast.error('You can chat once your wingle has been accepted.');
       return;
     }
     const conversation = ensureConversation(user.id);
     if (window.innerWidth >= 1024) {
       openChatPopup(conversation.id);
     } else {
-      navigate(`/messages/${conversation.id}`);
+      navigate(`/mingles/${conversation.id}`);
     }
   };
 
@@ -105,17 +105,17 @@ export function ProfileDetail() {
             </div>
             
             <div className="flex flex-col items-end gap-2">
-              {request && (
+              {wingle && (
                 <Badge
                   tone={
-                    request.status === 'accepted'
+                    wingle.status === 'accepted'
                       ? 'moss'
-                      : request.status === 'declined'
+                      : wingle.status === 'declined'
                         ? 'red'
                         : 'amber'
                   }
                 >
-                  Request {request.status}
+                  Wingle {wingle.status}
                 </Badge>
               )}
               {matchResult && matchResult.score > 0 && (
@@ -130,19 +130,19 @@ export function ProfileDetail() {
           <div className="mt-6 flex flex-wrap gap-2">
             <Button
               onClick={() => {
-                if (request) {
-                  toast.info('You already have a request with this person.');
+                if (wingle) {
+                  toast.info('You already have a wingle with this person.');
                   return;
                 }
-                if (entitlements.requestsRemaining !== null && entitlements.requestsRemaining <= 0) {
-                  setUpgrade('request_limit');
+                if (entitlements.winglesRemaining !== null && entitlements.winglesRemaining <= 0) {
+                  setUpgrade('wingle_limit');
                   return;
                 }
-                setRequesting(true);
+                setWingleing(true);
               }}
             >
               <SendIcon className="h-4 w-4" />
-              {request ? 'Request sent' : 'Send dating request'}
+              {wingle ? 'Wingle sent' : 'Send wingling wingle'}
             </Button>
             <Button
               variant="outline"
@@ -259,7 +259,7 @@ export function ProfileDetail() {
           <section className="mt-10 rounded-4xl border border-sand bg-cream-deep p-5">
             <h2 className="font-display text-lg text-ink">Not right for you?</h2>
             <p className="mt-1.5 text-[13px] leading-relaxed text-ink-soft">
-              Blocking removes {user.name} from your Discover, requests and inbox. Reports are
+              Blocking removes {user.name} from your Discover, wingles and inbox. Reports are
               anonymous and reviewed by our moderation team.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -283,16 +283,16 @@ export function ProfileDetail() {
         userName={user.name}
       />
       
-      <RequestDialog
-        open={requesting}
+      <WingleDialog
+        open={wingleing}
         target={user}
-        onClose={() => setRequesting(false)}
-        onLimitReached={() => setUpgrade('request_limit')}
+        onClose={() => setWingleing(false)}
+        onLimitReached={() => setUpgrade('wingle_limit')}
       />
       
       <UpgradeDialog
         open={!!upgrade}
-        reason={upgrade ?? 'request_limit'}
+        reason={upgrade ?? 'wingle_limit'}
         onClose={() => setUpgrade(null)}
       />
       

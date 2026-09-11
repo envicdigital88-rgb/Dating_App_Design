@@ -22,15 +22,15 @@ export function Connections() {
     <Page>
       <PageHeader
         title="Connections"
-        body="People who accepted your request, or whose request you accepted." />
+        body="People who accepted your wingle, or whose wingle you accepted." />
       
 
       {connections.length === 0 ?
       <EmptyState
         icon={<UsersIcon className="h-5 w-5" />}
         title="No connections yet"
-        body="A connection is made the moment a dating request is accepted. Your sent requests are still pending — give it a day."
-        action={<Button onClick={() => router.push('/requests')}>See my requests</Button>} /> :
+        body="A connection is made the moment a wingling wingle is accepted. Your sent wingles are still pending — give it a day."
+        action={<Button onClick={() => router.push('/wingles')}>See my wingles</Button>} /> :
 
 
       <ul className="grid max-w-4xl gap-4 sm:grid-cols-2">
@@ -65,11 +65,11 @@ export function Connections() {
                       if (window.innerWidth >= 1024) {
                         openChatPopup(conversation.id);
                       } else {
-                        router.push(`/messages/${conversation.id}`);
+                        router.push(`/mingles/${conversation.id}`);
                       }
                     }}>
                     
-                      Message
+                      Mingle
                     </Button>
                     <Button
                     size="sm"

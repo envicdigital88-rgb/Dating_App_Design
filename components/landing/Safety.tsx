@@ -17,12 +17,12 @@ const items = [
 {
   icon: <BanIcon className="h-5 w-5" />,
   title: 'Block instantly',
-  body: 'Blocking removes someone from your Discover, your requests and your inbox at once.'
+  body: 'Blocking removes someone from your Discover, your wingles and your inbox at once.'
 },
 {
   icon: <FlagIcon className="h-5 w-5" />,
   title: 'Report anything',
-  body: 'Report a profile, a photo or a message. Reports are anonymous and always reviewed.'
+  body: 'Report a profile, a photo or a mingle. Reports are anonymous and always reviewed.'
 },
 {
   icon: <LockKeyholeIcon className="h-5 w-5" />,
@@ -32,7 +32,7 @@ const items = [
 {
   icon: <Trash2Icon className="h-5 w-5" />,
   title: 'Leave cleanly',
-  body: 'Delete your account whenever you want and your photos and messages go with it.'
+  body: 'Delete your account whenever you want and your photos and mingles go with it.'
 }];
 
 
@@ -47,7 +47,7 @@ export function Safety() {
               Built so you can be honest without being exposed
             </h2>
             <p className="mt-4 text-[15px] leading-relaxed text-cream/75">
-              Dating asks a lot of you. The least an app can do is keep your details, your photos and
+              Wingling asks a lot of you. The least an app can do is keep your details, your photos and
               your conversations under your control.
             </p>
             <img

@@ -12,7 +12,7 @@ import { FieldError, Input, Label, Select, Textarea } from '@/components/ui/Fiel
 import { PhotoUploader } from '@/components/PhotoUploader';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { interestOptions, intentionOptions, lifestyleFields, traitOptions, promptAnswers } from '@/lib/data/interests';
-import type { DatingIntention, Lifestyle, User, Prompt } from '@/lib/types';
+import type { WinglingIntention, Lifestyle, User, Prompt } from '@/lib/types';
 import { id as makeId } from '@/lib/utils/format';
 
 const steps = ['About you', 'Your words', 'Interests', 'Personality', 'Lifestyle', 'Vibe Prompts', 'Photos'];
@@ -27,7 +27,7 @@ export function Onboarding() {
   const [gender, setGender] = useState<User['gender']>('woman');
   const [location, setLocation] = useState('');
   const [bio, setBio] = useState('');
-  const [intention, setIntention] = useState<DatingIntention>('Long-term relationship');
+  const [intention, setIntention] = useState<WinglingIntention>('Long-term relationship');
   const [interests, setInterests] = useState<string[]>([]);
   const [traits, setTraits] = useState<string[]>([]);
   const [work, setWork] = useState('');
@@ -69,9 +69,9 @@ export function Onboarding() {
   };
 
   const next = () => {
-    const message = validate();
-    if (message) {
-      setError(message);
+    const mingle = validate();
+    if (mingle) {
+      setError(mingle);
       return;
     }
     setError('');
@@ -235,7 +235,7 @@ export function Onboarding() {
                 <Select
                   id="intention"
                   value={intention}
-                  onChange={(e) => setIntention(e.target.value as DatingIntention)}
+                  onChange={(e) => setIntention(e.target.value as WinglingIntention)}
                 >
                   {intentionOptions.map((option) => (
                     <option key={option}>{option}</option>

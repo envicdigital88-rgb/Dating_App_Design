@@ -100,7 +100,7 @@ export function AdminModeration() {
       <EmptyState
         icon={<FlagIcon className="h-5 w-5" />}
         title="No reports"
-        body="Reported profiles, photos and messages appear here with the reporter kept anonymous." /> :
+        body="Reported profiles, photos and mingles appear here with the reporter kept anonymous." /> :
 
 
       <ul className="space-y-3">

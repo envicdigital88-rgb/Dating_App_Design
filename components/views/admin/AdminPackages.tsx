@@ -18,8 +18,8 @@ const blank = (): Package => ({
   price: 9.99,
   durationDays: 30,
   chatLimit: 50,
-  requestLimit: 10,
-  incomingRequestsUnlocked: true,
+  wingleLimit: 10,
+  incomingWinglesUnlocked: true,
   priorityVisibility: false,
   tagline: '',
   features: [],
@@ -38,7 +38,7 @@ export function AdminPackages() {
     <div>
       <AdminHeader
         title="Package management"
-        body="Limits live here, not in the app. Changing a chat or request limit applies to every member on that package immediately."
+        body="Limits live here, not in the app. Changing a chat or wingle limit applies to every member on that package immediately."
         action={
         <Button onClick={() => setEditing(blank())}>
             <PlusIcon className="h-4 w-4" />
@@ -55,7 +55,7 @@ export function AdminPackages() {
               <th scope="col" className="px-5 py-3 font-semibold">Price</th>
               <th scope="col" className="px-5 py-3 font-semibold">Duration</th>
               <th scope="col" className="px-5 py-3 font-semibold">Chat limit</th>
-              <th scope="col" className="px-5 py-3 font-semibold">Request limit</th>
+              <th scope="col" className="px-5 py-3 font-semibold">Wingle limit</th>
               <th scope="col" className="px-5 py-3 font-semibold">Incoming</th>
               <th scope="col" className="px-5 py-3 font-semibold">State</th>
               <th scope="col" className="px-5 py-3 text-right font-semibold">Actions</th>
@@ -80,11 +80,11 @@ export function AdminPackages() {
                     {pkg.chatLimit === null ? 'Unlimited' : pkg.chatLimit}
                   </td>
                   <td className="px-5 py-3.5 text-ink-soft">
-                    {pkg.requestLimit === null ? 'Unlimited' : pkg.requestLimit}
+                    {pkg.wingleLimit === null ? 'Unlimited' : pkg.wingleLimit}
                   </td>
                   <td className="px-5 py-3.5">
-                    <Badge tone={pkg.incomingRequestsUnlocked ? 'moss' : 'neutral'}>
-                      {pkg.incomingRequestsUnlocked ? 'Revealed' : 'Locked'}
+                    <Badge tone={pkg.incomingWinglesUnlocked ? 'moss' : 'neutral'}>
+                      {pkg.incomingWinglesUnlocked ? 'Revealed' : 'Locked'}
                     </Badge>
                   </td>
                   <td className="px-5 py-3.5">
@@ -177,7 +177,7 @@ export function AdminPackages() {
               
               </div>
               <div>
-                <Label htmlFor="pkg-chat">Chat message limit</Label>
+                <Label htmlFor="pkg-chat">Chat mingle limit</Label>
                 <Input
                 id="pkg-chat"
                 type="number"
@@ -190,15 +190,15 @@ export function AdminPackages() {
               
               </div>
               <div>
-                <Label htmlFor="pkg-requests">Dating request limit</Label>
+                <Label htmlFor="pkg-wingles">Wingling wingle limit</Label>
                 <Input
-                id="pkg-requests"
+                id="pkg-wingles"
                 type="number"
                 min="0"
-                value={editing.requestLimit ?? ''}
+                value={editing.wingleLimit ?? ''}
                 placeholder="Leave empty for unlimited"
                 onChange={(e) =>
-                set('requestLimit', e.target.value === '' ? null : Number(e.target.value))
+                set('wingleLimit', e.target.value === '' ? null : Number(e.target.value))
                 } />
               
               </div>
@@ -225,7 +225,7 @@ export function AdminPackages() {
             <ul className="space-y-2">
               {(
             [
-            ['incomingRequestsUnlocked', 'Reveal incoming dating requests'],
+            ['incomingWinglesUnlocked', 'Reveal incoming wingling wingles'],
             ['priorityVisibility', 'Priority profile visibility in Discover'],
             ['active', 'Show this package to members']] as
             const).

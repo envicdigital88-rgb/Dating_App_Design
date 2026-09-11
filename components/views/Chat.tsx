@@ -23,7 +23,7 @@ import { Modal } from '@/components/ui/Modal';
 import { ReportDialog } from '@/components/ReportDialog';
 import { UpgradeDialog } from '@/components/UpgradeDialog';
 import { useStore } from '@/lib/contexts/StoreContext';
-import { dayLabel, messageTime, presence } from '@/lib/utils/format';
+import { dayLabel, mingleTime, presence } from '@/lib/utils/format';
 import { processPhoto, screenPhoto } from '@/lib/utils/image';
 
 import EmojiPicker from 'emoji-picker-react';
@@ -37,10 +37,10 @@ export function Chat() {
     db,
     currentUser,
     entitlements,
-    messagesOf,
-    sendMessage,
+    minglesOf,
+    sendMingle,
     markConversationRead,
-    deleteMessage,
+    deleteMingle,
     userById,
     photosOf,
     blockUser,
@@ -58,20 +58,20 @@ export function Chat() {
   const endRef = useRef<HTMLDivElement>(null);
 
   const conversation = db.conversations.find((c) => c.id === conversationId);
-  const messages = useMemo(
-    () => conversation ? messagesOf(conversation.id) : [],
-    [conversation, messagesOf]
+  const mingles = useMemo(
+    () => conversation ? minglesOf(conversation.id) : [],
+    [conversation, minglesOf]
   );
 
   useEffect(() => {
     if (conversation) markConversationRead(conversation.id);
-  }, [conversation, messages.length, markConversationRead]);
+  }, [conversation, mingles.length, markConversationRead]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [messages.length, typingIn]);
+  }, [mingles.length, typingIn]);
 
-  if (!conversation || !currentUser || !entitlements) { redirect("/messages"); return null as any; }
+  if (!conversation || !currentUser || !entitlements) { redirect("/mingles"); return null as any; }
 
   const otherId = conversation.userIds.find((uid) => uid !== currentUser.id) as string;
   const other = userById(otherId);
@@ -88,7 +88,7 @@ export function Chat() {
       return;
     }
 
-    const result = sendMessage(conversation.id, draft, imageUrl);
+    const result = sendMingle(conversation.id, draft, imageUrl);
     if (!result.ok) {
       if (result.reason === 'chat_limit') setUpgradeOpen(true);else
       toast.error(result.error);
@@ -120,8 +120,8 @@ export function Chat() {
     <div className="flex h-[100dvh] flex-col bg-cream">
       <header className="flex items-center gap-3 border-b border-sand/70 bg-cream-deep px-3 py-2.5 sm:px-5">
         <button
-          onClick={() => navigate('/messages')}
-          aria-label="Back to messages"
+          onClick={() => navigate('/mingles')}
+          aria-label="Back to mingles"
           className="rounded-full p-2 text-ink-soft transition-colors duration-150 ease-soft hover:bg-cream">
           
           <ArrowLeftIcon className="h-5 w-5" />
@@ -160,13 +160,13 @@ export function Chat() {
 
       <div className="flex-1 overflow-y-auto px-3 py-5 sm:px-6">
         <div className="mx-auto max-w-2xl space-y-2">
-          {messages.map((message) => {
-            const mine = message.senderId === currentUser.id;
-            const day = dayLabel(message.createdAt);
+          {mingles.map((mingle) => {
+            const mine = mingle.senderId === currentUser.id;
+            const day = dayLabel(mingle.createdAt);
             const showDay = day !== lastDay;
             lastDay = day;
             return (
-              <React.Fragment key={message.id}>
+              <React.Fragment key={mingle.id}>
                 {showDay &&
                 <p className="py-3 text-center text-[12px] font-medium text-ink-muted">{day}</p>
                 }
@@ -176,10 +176,10 @@ export function Chat() {
                   transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
                   className={`group flex items-end gap-2 ${mine ? 'justify-end' : 'justify-start'}`}>
                   
-                  {mine && !message.deleted &&
+                  {mine && !mingle.deleted &&
                   <button
-                    onClick={() => setPendingDelete(message.id)}
-                    aria-label="Delete message"
+                    onClick={() => setPendingDelete(mingle.id)}
+                    aria-label="Delete mingle"
                     className="mb-1 rounded-full p-1.5 text-ink-muted opacity-0 transition-opacity duration-150 ease-soft hover:bg-cream-deep group-hover:opacity-100">
                     
                       <Trash2Icon className="h-3.5 w-3.5" />
@@ -187,27 +187,27 @@ export function Chat() {
                   }
                   <div
                     className={`max-w-[78%] rounded-3xl px-4 py-2.5 ${
-                    message.deleted ?
+                    mingle.deleted ?
                     'border border-dashed border-sand bg-transparent text-ink-muted' :
                     mine ?
                     'bg-berry-500 text-white' :
                     'bg-cream-deep text-ink shadow-sm'}`
                     }>
                     
-                    {message.deleted ?
-                    <p className="text-[13px] italic">Message deleted</p> :
+                    {mingle.deleted ?
+                    <p className="text-[13px] italic">Mingle deleted</p> :
 
                     <>
-                        {message.imageUrl &&
+                        {mingle.imageUrl &&
                       <img
-                        src={message.imageUrl}
+                        src={mingle.imageUrl}
                         alt="Shared photo"
                         className="mb-2 max-h-72 w-full rounded-2xl object-cover" />
 
                       }
-                        {message.body &&
+                        {mingle.body &&
                       <p className="whitespace-pre-wrap text-[15px] leading-relaxed">
-                            {message.body}
+                            {mingle.body}
                           </p>
                       }
                         <p
@@ -215,9 +215,9 @@ export function Chat() {
                         mine ? 'text-white/70' : 'text-ink-muted'}`
                         }>
                         
-                          {messageTime(message.createdAt)}
+                          {mingleTime(mingle.createdAt)}
                           {mine && (
-                            message.readAt ? (
+                            mingle.readAt ? (
                               <CheckCheckIcon className="h-3.5 w-3.5 text-blue-300" />
                             ) : other?.online ? (
                               <CheckCheckIcon className="h-3.5 w-3.5 opacity-50" />
@@ -268,7 +268,7 @@ export function Chat() {
             <div className="min-w-0 flex-1">
               <p className="font-display text-lg leading-tight">Your chat limit has been reached</p>
               <p className="mt-1 text-[13px] text-cream/75">
-                You have used all {entitlements.chatLimit} messages on the {entitlements.packageName}{' '}
+                You have used all {entitlements.chatLimit} mingles on the {entitlements.packageName}{' '}
                 package. Upgrade to keep this conversation going.
               </p>
             </div>
@@ -333,18 +333,18 @@ export function Chat() {
                 }
               }}
               rows={1}
-              placeholder={`Message ${other?.name}`}
-              aria-label="Message"
+              placeholder={`Mingle ${other?.name}`}
+              aria-label="Mingle"
               className="max-h-32 min-h-[44px] flex-1 resize-none rounded-3xl border border-sand bg-cream px-4 py-3 text-[15px] text-ink placeholder:text-ink-muted/70 focus:border-berry-400 focus:outline-none focus:ring-2 focus:ring-berry-100" />
             
-              <Button type="submit" className="h-11 w-11 shrink-0 px-0" aria-label="Send message">
+              <Button type="submit" className="h-11 w-11 shrink-0 px-0" aria-label="Send mingle">
                 <SendIcon className="h-4 w-4" />
               </Button>
             </form>
             <p className="mt-2 text-center text-[12px] text-ink-muted">
               {entitlements.chatRemaining === null ?
-            'Unlimited messages on your package' :
-            `${entitlements.chatRemaining} messages remaining ,%V% each message you send uses one`}
+            'Unlimited mingles on your package' :
+            `${entitlements.chatRemaining} mingles remaining ,%V% each mingle you send uses one`}
             </p>
           </div>
         </div>
@@ -395,8 +395,8 @@ export function Chat() {
       <Modal
         open={!!pendingDelete}
         onClose={() => setPendingDelete(null)}
-        title="Delete this message?"
-        description="It will be replaced with Message deleted for both of you."
+        title="Delete this mingle?"
+        description="It will be replaced with Mingle deleted for both of you."
         footer={
         <>
             <Button variant="ghost" onClick={() => setPendingDelete(null)}>
@@ -405,9 +405,9 @@ export function Chat() {
             <Button
             variant="danger"
             onClick={() => {
-              deleteMessage(pendingDelete as string);
+              deleteMingle(pendingDelete as string);
               setPendingDelete(null);
-              toast.success('Message deleted');
+              toast.success('Mingle deleted');
             }}>
             
               Delete
@@ -431,7 +431,7 @@ export function Chat() {
             onClick={() => {
               blockUser(otherId);
               toast.success(`${other?.name} blocked`);
-              navigate('/messages');
+              navigate('/mingles');
             }}>
             
               Block

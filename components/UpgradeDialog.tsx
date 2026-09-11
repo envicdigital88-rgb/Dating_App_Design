@@ -8,22 +8,22 @@ import { Button } from './ui/Button';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { money } from '@/lib/utils/format';
 
-export type UpgradeReason = 'chat_limit' | 'request_limit' | 'incoming_locked';
+export type UpgradeReason = 'chat_limit' | 'wingle_limit' | 'incoming_locked';
 
 const copy: Record<UpgradeReason, {title: string;body: string;icon: React.ReactNode;}> = {
   chat_limit: {
     title: 'Your chat limit has been reached',
-    body: 'You have used every message in your current package. Your conversations are safe — upgrade to keep replying.',
+    body: 'You have used every mingle in your current package. Your conversations are safe — upgrade to keep replying.',
     icon: <MessageCircleIcon className="h-5 w-5" />
   },
-  request_limit: {
-    title: 'You are out of dating requests',
-    body: 'Requests reset with a new package. Upgrade to reach more of the people you have been looking at.',
+  wingle_limit: {
+    title: 'You are out of wingling wingles',
+    body: 'Wingles reset with a new package. Upgrade to reach more of the people you have been looking at.',
     icon: <SendIcon className="h-5 w-5" />
   },
   incoming_locked: {
     title: 'Someone wants to connect with you',
-    body: 'Seeing who sent you a request is a paid feature. Upgrade your package to reveal their profile and reply.',
+    body: 'Seeing who sent you a wingle is a paid feature. Upgrade your package to reveal their profile and reply.',
     icon: <LockIcon className="h-5 w-5" />
   }
 };
@@ -60,9 +60,9 @@ export function UpgradeDialog({
             <span className="min-w-0 flex-1">
               <span className="block font-display text-lg text-ink">{pkg.name}</span>
               <span className="block truncate text-[13px] text-ink-soft">
-                {pkg.chatLimit === null ? 'Unlimited messages' : `${pkg.chatLimit} messages`} ·{' '}
-                {pkg.requestLimit === null ? 'Unlimited requests' : `${pkg.requestLimit} requests`}
-                {pkg.incomingRequestsUnlocked ? ' · see who sent requests' : ''}
+                {pkg.chatLimit === null ? 'Unlimited mingles' : `${pkg.chatLimit} mingles`} ·{' '}
+                {pkg.wingleLimit === null ? 'Unlimited wingles' : `${pkg.wingleLimit} wingles`}
+                {pkg.incomingWinglesUnlocked ? ' · see who sent wingles' : ''}
               </span>
             </span>
             <span className="text-right">

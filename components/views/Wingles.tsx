@@ -10,41 +10,41 @@ import { Badge, EmptyState } from '@/components/ui/Bits';
 import { UpgradeDialog } from '@/components/UpgradeDialog';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { relativeTime, shortDate } from '@/lib/utils/format';
-import type { DatingRequest } from '@/lib/types';
+import type { WinglingWingle } from '@/lib/types';
 
-export function Requests() {
+export function Wingles() {
   const router = useRouter();
   const {
-    sentRequests,
-    incomingRequests,
+    sentWingles,
+    incomingWingles,
     entitlements,
     userById,
     photosOf,
-    respondToRequest
+    respondToWingle
   } = useStore();
   const [tab, setTab] = useState<'incoming' | 'sent'>('incoming');
   const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   if (!entitlements) return null;
 
-  const sent = sentRequests();
-  const incoming = incomingRequests();
+  const sent = sentWingles();
+  const incoming = incomingWingles();
   const pendingIncoming = incoming.filter((r) => r.status === 'pending');
-  const unlocked = entitlements.incomingRequestsUnlocked;
+  const unlocked = entitlements.incomingWinglesUnlocked;
 
-  const statusTone = (status: DatingRequest['status']) =>
+  const statusTone = (status: WinglingWingle['status']) =>
   status === 'accepted' ? 'moss' : status === 'declined' ? 'red' : 'amber';
 
   return (
     <Page>
       <PageHeader
-        title="Dating requests"
+        title="Wingling wingles"
         body="Everything you have sent, and everyone who has asked to meet you."
         action={
         !unlocked ?
         <Button onClick={() => setUpgradeOpen(true)}>
               <SparklesIcon className="h-4 w-4" />
-              Unlock incoming requests
+              Unlock incoming wingles
             </Button> :
         undefined
         } />
@@ -52,7 +52,7 @@ export function Requests() {
 
       <div
         role="tablist"
-        aria-label="Request direction"
+        aria-label="Wingle direction"
         className="mb-6 inline-flex rounded-full bg-cream-deep p-1">
         
         {(
@@ -80,21 +80,21 @@ export function Requests() {
           {incoming.length === 0 ?
         <EmptyState
           icon={<SendIcon className="h-5 w-5" />}
-          title="No requests yet"
+          title="No wingles yet"
           body="When someone asks to meet you, it will appear here. A stronger main photo and a specific bio make a real difference."
           action={<Button onClick={() => router.push('/photos')}>Review my photos</Button>} /> :
 
 
         <ul className="space-y-3">
-              {incoming.map((request) => {
-            const sender = userById(request.fromUserId);
+              {incoming.map((wingle) => {
+            const sender = userById(wingle.fromUserId);
             const photo = sender ? photosOf(sender.id)[0] : undefined;
             if (!sender) return null;
 
             if (!unlocked) {
               return (
                 <li
-                  key={request.id}
+                  key={wingle.id}
                   className="flex flex-wrap items-center gap-4 rounded-4xl bg-cream-deep p-4 shadow-card sm:p-5">
                   
                       <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-3xl bg-cream-deep">
@@ -115,12 +115,12 @@ export function Requests() {
                           Someone wants to connect with you ❤
                         </p>
                         <p className="mt-1 text-[13px] text-ink-soft">
-                          Sent {relativeTime(request.createdAt)} · upgrade your package to see who
-                          sent this request.
+                          Sent {relativeTime(wingle.createdAt)} · upgrade your package to see who
+                          sent this wingle.
                         </p>
                         <p className="mt-2 rounded-2xl bg-cream px-3.5 py-2 text-[13px] text-ink-muted">
-                          “{request.note.slice(0, 14)}
-                          {request.note.length > 14 ? ' ▒▒▒▒▒▒▒▒▒▒' : ''}”
+                          “{wingle.note.slice(0, 14)}
+                          {wingle.note.length > 14 ? ' ▒▒▒▒▒▒▒▒▒▒' : ''}”
                         </p>
                       </div>
                       <Button size="sm" onClick={() => setUpgradeOpen(true)}>
@@ -132,7 +132,7 @@ export function Requests() {
 
             return (
               <li
-                key={request.id}
+                key={wingle.id}
                 className="flex flex-wrap items-center gap-4 rounded-4xl bg-cream-deep p-4 shadow-card sm:p-5">
                 
                     <button
@@ -149,25 +149,25 @@ export function Requests() {
                         <p className="font-display text-[19px] leading-tight text-ink">
                           {sender.name}, {sender.age}
                         </p>
-                        <Badge tone={statusTone(request.status)}>{request.status}</Badge>
+                        <Badge tone={statusTone(wingle.status)}>{wingle.status}</Badge>
                       </div>
                       <p className="mt-1 text-[13px] text-ink-soft">
-                        {sender.location} · sent {relativeTime(request.createdAt)}
+                        {sender.location} · sent {relativeTime(wingle.createdAt)}
                       </p>
-                      {request.note &&
+                      {wingle.note &&
                   <p className="mt-2 rounded-2xl bg-cream px-3.5 py-2 text-[13px] leading-relaxed text-ink-soft">
-                          “{request.note}”
+                          “{wingle.note}”
                         </p>
                   }
                     </div>
-                    {request.status === 'pending' ?
+                    {wingle.status === 'pending' ?
                 <div className="flex gap-2">
                         <Button
                     size="sm"
                     variant="outline"
                     onClick={() => {
-                      respondToRequest(request.id, 'declined');
-                      toast.success('Request declined');
+                      respondToWingle(wingle.id, 'declined');
+                      toast.success('Wingle declined');
                     }}>
                     
                           <XIcon className="h-3.5 w-3.5" />
@@ -176,7 +176,7 @@ export function Requests() {
                         <Button
                     size="sm"
                     onClick={() => {
-                      respondToRequest(request.id, 'accepted');
+                      respondToWingle(wingle.id, 'accepted');
                       toast.success(`You are connected with ${sender.name}`);
                     }}>
                     
@@ -226,19 +226,19 @@ export function Requests() {
           {sent.length === 0 ?
         <EmptyState
           icon={<SendIcon className="h-5 w-5" />}
-          title="You have not sent any requests"
-          body="Requests with a specific note get replies far more often. Head to Discover and pick someone worth writing to."
+          title="You have not sent any wingles"
+          body="Wingles with a specific note get replies far more often. Head to Discover and pick someone worth writing to."
           action={<Button onClick={() => router.push('/discover')}>Discover people</Button>} /> :
 
 
         <ul className="space-y-3">
-              {sent.map((request) => {
-            const target = userById(request.toUserId);
+              {sent.map((wingle) => {
+            const target = userById(wingle.toUserId);
             const photo = target ? photosOf(target.id)[0] : undefined;
             if (!target) return null;
             return (
               <li
-                key={request.id}
+                key={wingle.id}
                 className="flex flex-wrap items-center gap-4 rounded-4xl bg-cream-deep p-4 shadow-card sm:p-5">
                 
                     {photo &&
@@ -249,12 +249,12 @@ export function Requests() {
                         {target.name}, {target.age}
                       </p>
                       <p className="mt-1 text-[13px] text-ink-soft">
-                        Sent {shortDate(request.createdAt)} · {relativeTime(request.createdAt)}
+                        Sent {shortDate(wingle.createdAt)} · {relativeTime(wingle.createdAt)}
                       </p>
                     </div>
-                    <Badge tone={statusTone(request.status)}>{request.status}</Badge>
-                    {request.status === 'accepted' &&
-                <Button size="sm" onClick={() => router.push('/messages')}>
+                    <Badge tone={statusTone(wingle.status)}>{wingle.status}</Badge>
+                    {wingle.status === 'accepted' &&
+                <Button size="sm" onClick={() => router.push('/mingles')}>
                         Open chat
                       </Button>
                 }

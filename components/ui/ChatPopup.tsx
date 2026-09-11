@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { XIcon, SendIcon, MinusIcon, Maximize2Icon, ChevronUpIcon } from 'lucide-react';
 import { Avatar } from './Bits';
 import { useStore } from '@/lib/contexts/StoreContext';
-import { dayLabel, messageTime, presence } from '@/lib/utils/format';
+import { dayLabel, mingleTime, presence } from '@/lib/utils/format';
 import { toast } from 'sonner';
 
 export function ChatPopup() {
@@ -16,8 +16,8 @@ export function ChatPopup() {
     currentUser,
     activePopupChatId,
     closeChatPopup,
-    messagesOf,
-    sendMessage,
+    minglesOf,
+    sendMingle,
     markConversationRead,
     userById,
     photosOf,
@@ -30,18 +30,18 @@ export function ChatPopup() {
   const endRef = useRef<HTMLDivElement>(null);
 
   const conversation = db.conversations.find((c) => c.id === activePopupChatId);
-  const messages = useMemo(
-    () => conversation ? messagesOf(conversation.id) : [],
-    [conversation, messagesOf]
+  const mingles = useMemo(
+    () => conversation ? minglesOf(conversation.id) : [],
+    [conversation, minglesOf]
   );
 
   useEffect(() => {
     if (conversation) markConversationRead(conversation.id);
-  }, [conversation, messages.length, markConversationRead]);
+  }, [conversation, mingles.length, markConversationRead]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [messages.length, typingIn, activePopupChatId]);
+  }, [mingles.length, typingIn, activePopupChatId]);
 
   if (!activePopupChatId || !conversation || !currentUser || !entitlements) return null;
 
@@ -57,7 +57,7 @@ export function ChatPopup() {
       return;
     }
 
-    const result = sendMessage(conversation.id, draft);
+    const result = sendMingle(conversation.id, draft);
     if (!result.ok) {
       toast.error(result.error);
       return;
@@ -86,7 +86,7 @@ export function ChatPopup() {
           </div>
           <div className="flex items-center gap-1">
             <button
-              onClick={(e) => { e.stopPropagation(); router.push(`/messages/${conversation.id}`); closeChatPopup(); }}
+              onClick={(e) => { e.stopPropagation(); router.push(`/mingles/${conversation.id}`); closeChatPopup(); }}
               className="rounded-full p-1.5 text-ink-muted hover:bg-cream hover:text-ink transition-colors"
             >
               <Maximize2Icon className="h-4 w-4" />
@@ -109,15 +109,15 @@ export function ChatPopup() {
         {!minimized && (
           <>
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
-          {messages.map((message) => {
-            if (message.deleted) return null;
-            const isMe = message.senderId === currentUser.id;
-            const day = dayLabel(message.createdAt);
+          {mingles.map((mingle) => {
+            if (mingle.deleted) return null;
+            const isMe = mingle.senderId === currentUser.id;
+            const day = dayLabel(mingle.createdAt);
             const showDay = day !== lastDay;
             if (showDay) lastDay = day;
 
             return (
-              <React.Fragment key={message.id}>
+              <React.Fragment key={mingle.id}>
                 {showDay && (
                   <div className="my-2 text-center text-[11px] font-medium uppercase tracking-wider text-ink-muted">
                     {day}
@@ -125,12 +125,12 @@ export function ChatPopup() {
                 )}
                 <div className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'}`}>
                   <div className={`relative max-w-[85%] rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed ${isMe ? 'bg-berry-500 text-white rounded-tr-sm' : 'bg-cream-deep text-ink border border-sand/40 rounded-tl-sm shadow-sm'}`}>
-                    {message.imageUrl && (
-                      <img src={message.imageUrl} alt="" className="mb-2 max-h-48 w-full rounded-xl object-cover" />
+                    {mingle.imageUrl && (
+                      <img src={mingle.imageUrl} alt="" className="mb-2 max-h-48 w-full rounded-xl object-cover" />
                     )}
-                    {message.body && <p className="whitespace-pre-wrap break-words">{message.body}</p>}
+                    {mingle.body && <p className="whitespace-pre-wrap break-words">{mingle.body}</p>}
                     <span className={`mt-1 block text-[10px] ${isMe ? 'text-white/70' : 'text-ink-muted'}`}>
-                      {messageTime(message.createdAt)}
+                      {mingleTime(mingle.createdAt)}
                     </span>
                   </div>
                 </div>
@@ -153,7 +153,7 @@ export function ChatPopup() {
           <div className="flex items-center gap-2 rounded-full border border-sand/60 bg-cream/50 px-3 py-1.5 focus-within:border-berry-500 focus-within:bg-cream-deep transition-colors">
             <input
               type="text"
-              placeholder="Type a message..."
+              placeholder="Type a mingle..."
               className="flex-1 bg-transparent px-2 py-1.5 text-[14px] text-ink placeholder:text-ink-muted focus:outline-none"
               value={draft}
               onChange={(e) => setDraft(e.target.value)}

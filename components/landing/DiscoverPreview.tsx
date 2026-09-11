@@ -63,7 +63,7 @@ export function DiscoverPreview() {
                   </span>
                   <span className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full bg-cream-deep text-[13px] font-medium text-ink-soft">
                     <SendIcon className="h-3.5 w-3.5" />
-                    Request
+                    Wingle
                   </span>
                 </div>
               </div>

@@ -9,7 +9,7 @@ import { Button } from '../ui/Button';
 
 const links = [
 { href: '#how', label: 'How it works' },
-{ href: '#requests', label: 'Requests' },
+{ href: '#wingles', label: 'Wingles' },
 { href: '#packages', label: 'Packages' },
 { href: '#safety', label: 'Safety' },
 { href: '#faq', label: 'FAQ' }];
@@ -44,7 +44,7 @@ export function SiteNav() {
             </Button>
           </Link>
           <Link href="/sign-up">
-            <Button size="sm">Start dating</Button>
+            <Button size="sm">Start wingling</Button>
           </Link>
         </div>
 
@@ -80,7 +80,7 @@ export function SiteNav() {
             </Link>
             <Link href="/sign-up" className="flex-1">
               <Button block size="sm">
-                Start dating
+                Start wingling
               </Button>
             </Link>
           </div>

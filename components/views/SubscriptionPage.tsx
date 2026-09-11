@@ -45,22 +45,22 @@ export function SubscriptionPage() {
 
           <div className="mt-6 space-y-4">
             <UsageMeter
-              label="Chat messages remaining"
+              label="Chat mingles remaining"
               used={entitlements.chatUsed}
               limit={entitlements.chatLimit} />
             
             <UsageMeter
-              label="Dating requests remaining"
-              used={entitlements.requestsUsed}
-              limit={entitlements.requestLimit} />
+              label="Wingling wingles remaining"
+              used={entitlements.winglesUsed}
+              limit={entitlements.wingleLimit} />
             
           </div>
 
           <dl className="mt-6 divide-y divide-sand border-t border-sand text-[14px]">
             <div className="flex justify-between gap-4 py-2.5">
-              <dt className="text-ink-muted">Incoming requests</dt>
+              <dt className="text-ink-muted">Incoming wingles</dt>
               <dd className="font-medium text-ink">
-                {entitlements.incomingRequestsUnlocked ? 'Unlocked' : 'Locked'}
+                {entitlements.incomingWinglesUnlocked ? 'Unlocked' : 'Locked'}
               </dd>
             </div>
             <div className="flex justify-between gap-4 py-2.5">

@@ -112,7 +112,7 @@ export function Photos() {
           },
           {
             title: 'Show your life',
-            body: 'A second and third photo doing something you actually do gets more requests.'
+            body: 'A second and third photo doing something you actually do gets more wingles.'
           },
           {
             title: 'Reviewed before live',

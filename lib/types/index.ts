@@ -1,6 +1,6 @@
 export type Gender = 'woman' | 'man' | 'non-binary';
 
-export type DatingIntention =
+export type WinglingIntention =
 'Long-term relationship' |
 'Long-term, open to short' |
 'Something casual' |
@@ -45,7 +45,7 @@ export interface User {
   gender: Gender;
   location: string;
   bio: string;
-  intention: DatingIntention;
+  intention: WinglingIntention;
   interests: string[];
   traits: string[];
   prompts: Prompt[];
@@ -65,8 +65,8 @@ export interface Package {
   durationDays: number;
   /** null means unlimited */
   chatLimit: number | null;
-  requestLimit: number | null;
-  incomingRequestsUnlocked: boolean;
+  wingleLimit: number | null;
+  incomingWinglesUnlocked: boolean;
   priorityVisibility: boolean;
   features: string[];
   active: boolean;
@@ -96,7 +96,7 @@ export interface Payment {
 export interface Usage {
   userId: string;
   chatUsed: number;
-  requestsUsed: number;
+  winglesUsed: number;
 }
 
 export interface Like {
@@ -106,7 +106,7 @@ export interface Like {
   createdAt: string;
 }
 
-export interface DatingRequest {
+export interface WinglingWingle {
   id: string;
   fromUserId: string;
   toUserId: string;
@@ -122,7 +122,7 @@ export interface Connection {
   createdAt: string;
 }
 
-export interface Message {
+export interface Mingle {
   id: string;
   conversationId: string;
   senderId: string;
@@ -137,13 +137,13 @@ export interface Conversation {
   id: string;
   userIds: [string, string];
   createdAt: string;
-  lastMessageAt: string;
+  lastMingleAt: string;
 }
 
 export type NotificationType =
-'request_received' |
-'request_accepted' |
-'message' |
+'wingle_received' |
+'wingle_accepted' |
+'mingle' |
 'connection' |
 'like' |
 'package_activated' |
@@ -187,10 +187,10 @@ export interface Entitlements {
   chatLimit: number | null;
   chatUsed: number;
   chatRemaining: number | null;
-  requestLimit: number | null;
-  requestsUsed: number;
-  requestsRemaining: number | null;
-  incomingRequestsUnlocked: boolean;
+  wingleLimit: number | null;
+  winglesUsed: number;
+  winglesRemaining: number | null;
+  incomingWinglesUnlocked: boolean;
   priorityVisibility: boolean;
   subscriptionStatus: 'free' | 'active' | 'expired';
   subscriptionExpiry: string | null;
@@ -198,4 +198,4 @@ export interface Entitlements {
 
 export type ServerResult<T = void> =
 {ok: true;data: T;} |
-{ok: false;error: string;reason?: 'chat_limit' | 'request_limit' | 'locked' | 'invalid';};
+{ok: false;error: string;reason?: 'chat_limit' | 'wingle_limit' | 'locked' | 'invalid';};

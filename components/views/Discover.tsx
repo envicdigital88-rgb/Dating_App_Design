@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Page, PageHeader } from '@/components/AppShell';
 import { ProfileCard } from '@/components/ProfileCard';
-import { RequestDialog } from '@/components/RequestDialog';
+import { WingleDialog } from '@/components/WingleDialog';
 import { UpgradeDialog, type UpgradeReason } from '@/components/UpgradeDialog';
 import { Button } from '@/components/ui/Button';
 import { EmptyState, Skeleton } from '@/components/ui/Bits';
@@ -22,13 +22,13 @@ export function Discover() {
   const router = useRouter();
   const {
     discoverFeed, entitlements, likeUser, passUser,
-    hasLiked, photosOf, requestStatusWith, currentUser,
+    hasLiked, photosOf, wingleStatusWith, currentUser,
     addToHeartBucket, heartBucketOf,
   } = useStore();
 
   const [tab, setTab] = useState<'nearby' | 'daily5'>('nearby');
   const [index, setIndex] = useState(0);
-  const [requestTarget, setRequestTarget] = useState<User | null>(null);
+  const [wingleTarget, setWingleTarget] = useState<User | null>(null);
   const [upgrade, setUpgrade] = useState<UpgradeReason | null>(null);
 
   const [draggingUser, setDraggingUser] = useState<User | null>(null);
@@ -121,14 +121,14 @@ export function Discover() {
                 key={current.id}
                 user={current}
                 liked={hasLiked(current.id)}
-                requested={!!requestStatusWith(current.id)}
+                wingleed={!!wingleStatusWith(current.id)}
                 onLike={() => { likeUser(current.id); toast.success(`You liked ${current.name}`); advance(); }}
                 onPass={() => { passUser(current.id); advance(); }}
                 onHeartBucket={() => { addToHeartBucket(current.id); toast.success(`${current.name} added to your heart bucket`); advance(); }}
                 onRecycleBin={() => { passUser(current.id); advance(); }}
-                onRequest={() => {
-                  if (entitlements.requestsRemaining !== null && entitlements.requestsRemaining <= 0) { setUpgrade('request_limit'); return; }
-                  setRequestTarget(current);
+                onWingle={() => {
+                  if (entitlements.winglesRemaining !== null && entitlements.winglesRemaining <= 0) { setUpgrade('wingle_limit'); return; }
+                  setWingleTarget(current);
                 }}
                 // Drag-and-drop handlers passed into the card
                 heartZoneRef={heartZoneRef}
@@ -258,12 +258,12 @@ export function Discover() {
           <div className="rounded-3xl bg-white/15 backdrop-blur-md ring-1 ring-white/10 p-4 shadow-card">
             <h2 className="mb-3 font-display text-[15px] font-semibold text-ink">Your allowance</h2>
             <div className="space-y-3">
-              <UsageMeter label="Chat messages remaining" used={entitlements.chatUsed} limit={entitlements.chatLimit} />
-              <UsageMeter label="Requests remaining" used={entitlements.requestsUsed} limit={entitlements.requestLimit} />
+              <UsageMeter label="Chat mingles remaining" used={entitlements.chatUsed} limit={entitlements.chatLimit} />
+              <UsageMeter label="Wingles remaining" used={entitlements.winglesUsed} limit={entitlements.wingleLimit} />
             </div>
             <p className="mt-3 text-[12px] leading-relaxed text-ink-soft">
               On the <span className="font-medium text-ink">{entitlements.packageName}</span> package.{' '}
-              {entitlements.incomingRequestsUnlocked ? 'Incoming requests unlocked.' : 'Incoming requests locked.'}
+              {entitlements.incomingWinglesUnlocked ? 'Incoming wingles unlocked.' : 'Incoming wingles locked.'}
             </p>
             {entitlements.subscriptionStatus === 'free' && (
               <Button size="sm" block className="mt-3" onClick={() => router.push('/packages')}>See packages</Button>
@@ -272,8 +272,8 @@ export function Discover() {
         </aside>
       </div>
 
-      <RequestDialog open={!!requestTarget} target={requestTarget} onClose={() => setRequestTarget(null)} onLimitReached={() => setUpgrade('request_limit')} />
-      <UpgradeDialog open={!!upgrade} reason={upgrade ?? 'request_limit'} onClose={() => setUpgrade(null)} />
+      <WingleDialog open={!!wingleTarget} target={wingleTarget} onClose={() => setWingleTarget(null)} onLimitReached={() => setUpgrade('wingle_limit')} />
+      <UpgradeDialog open={!!upgrade} reason={upgrade ?? 'wingle_limit'} onClose={() => setUpgrade(null)} />
     </Page>
   );
 }

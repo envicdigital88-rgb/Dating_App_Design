@@ -37,18 +37,18 @@ export function Packages() {
         {[
         {
           icon: <MessageCircleIcon className="h-5 w-5" />,
-          title: 'Messages are counted, not throttled',
-          body: 'Each message you send uses one from your allowance. Receiving is always free, and nothing is ever deleted when you run out.'
+          title: 'Mingles are counted, not throttled',
+          body: 'Each mingle you send uses one from your allowance. Receiving is always free, and nothing is ever deleted when you run out.'
         },
         {
           icon: <LockIcon className="h-5 w-5" />,
-          title: 'Incoming requests unlock instantly',
-          body: 'The moment a payment is verified, every request waiting for you is revealed — including ones sent while you were on Free.'
+          title: 'Incoming wingles unlock instantly',
+          body: 'The moment a payment is verified, every wingle waiting for you is revealed — including ones sent while you were on Free.'
         },
         {
           icon: <SendIcon className="h-5 w-5" />,
-          title: 'Requests reset with each package',
-          body: 'Buying or upgrading a package starts a new allowance period for both messages and dating requests.'
+          title: 'Wingles reset with each package',
+          body: 'Buying or upgrading a package starts a new allowance period for both mingles and wingling wingles.'
         }].
         map((item) =>
         <div key={item.title} className="rounded-4xl bg-cream-deep p-6 shadow-card">

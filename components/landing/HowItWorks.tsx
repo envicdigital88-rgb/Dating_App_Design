@@ -15,8 +15,8 @@ const steps = [
 },
 {
   icon: <SendIcon className="h-5 w-5" />,
-  title: 'Send a request',
-  body: 'A request with a note. Limited by your package, so you send them to people you mean.'
+  title: 'Send a wingle',
+  body: 'A wingle with a note. Limited by your package, so you send them to people you mean.'
 },
 {
   icon: <HeartHandshakeIcon className="h-5 w-5" />,

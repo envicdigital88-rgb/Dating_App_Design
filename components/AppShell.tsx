@@ -46,8 +46,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     entitlements,
     photosOf,
     conversationsOf,
-    messagesOf,
-    incomingRequests,
+    minglesOf,
+    incomingWingles,
     likesReceived,
     notificationsOf,
     logout
@@ -55,12 +55,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   if (!currentUser || !entitlements) return null;
 
-  const unreadMessages = conversationsOf().reduce(
+  const unreadMingles = conversationsOf().reduce(
     (total, c) =>
-    total + messagesOf(c.id).filter((m) => m.senderId !== currentUser.id && !m.readAt).length,
+    total + minglesOf(c.id).filter((m) => m.senderId !== currentUser.id && !m.readAt).length,
     0
   );
-  const pendingIncoming = incomingRequests().filter((r) => r.status === 'pending').length;
+  const pendingIncoming = incomingWingles().filter((r) => r.status === 'pending').length;
   const unreadNotifications = notificationsOf().filter((n) => !n.read).length;
   const primaryPhoto = photosOf(currentUser.id)[0];
 
@@ -68,9 +68,9 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   { to: '/discover', label: 'Discover', icon: <CompassIcon className="h-[18px] w-[18px]" /> },
   { to: '/heart-bucket', label: 'In Your Heart', icon: <ShoppingCartIcon className="h-[18px] w-[18px]" /> },
   { to: '/likes', label: 'Likes', icon: <HeartIcon className="h-[18px] w-[18px]" />, badge: likesReceived().length },
-  { to: '/requests', label: 'Requests', icon: <SendIcon className="h-[18px] w-[18px]" />, badge: pendingIncoming },
+  { to: '/wingles', label: 'Wingles', icon: <SendIcon className="h-[18px] w-[18px]" />, badge: pendingIncoming },
   { to: '/connections', label: 'Connections', icon: <UsersIcon className="h-[18px] w-[18px]" /> },
-  { to: '/messages', label: 'Messages', icon: <MessageCircleIcon className="h-[18px] w-[18px]" />, badge: unreadMessages },
+  { to: '/mingles', label: 'Mingles', icon: <MessageCircleIcon className="h-[18px] w-[18px]" />, badge: unreadMingles },
   { to: '/photos', label: 'Photos', icon: <ImageIcon className="h-[18px] w-[18px]" /> },
   { to: '/notifications', label: 'Notifications', icon: <BellIcon className="h-[18px] w-[18px]" />, badge: unreadNotifications }];
 
@@ -86,12 +86,12 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     main[0], // Discover
     main[1], // In Your Heart
     main[2], // Likes
-    main[5], // Messages
+    main[5], // Mingles
     { to: '/profile', label: 'You', icon: <UserIcon className="h-[18px] w-[18px]" /> }
   ];
 
 
-  const isChat = /^\/messages\/.+/.test(pathname);
+  const isChat = /^\/mingles\/.+/.test(pathname);
 
   const navClass = (isActive: boolean) =>
   cn(
@@ -104,7 +104,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       {offline &&
       <div className="flex items-center justify-center gap-2 bg-plum-500 px-4 py-2 text-[13px] text-cream">
           <WifiOffIcon className="h-3.5 w-3.5" />
-          You are offline — showing your last loaded profiles and messages.
+          You are offline — showing your last loaded profiles and mingles.
         </div>
       }
       <div className="mx-auto flex w-full max-w-[1400px]">
@@ -160,15 +160,15 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
               </div>
               <div className="space-y-3">
                 <UsageMeter
-                  label="Messages left"
+                  label="Mingles left"
                   used={entitlements.chatUsed}
                   limit={entitlements.chatLimit}
                   tone="plum" />
                 
                 <UsageMeter
-                  label="Requests left"
-                  used={entitlements.requestsUsed}
-                  limit={entitlements.requestLimit}
+                  label="Wingles left"
+                  used={entitlements.winglesUsed}
+                  limit={entitlements.wingleLimit}
                   tone="plum" />
                 
               </div>

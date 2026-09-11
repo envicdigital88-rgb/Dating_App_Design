@@ -64,18 +64,18 @@ export function PackageGrid({
 
             <dl className={`mt-6 space-y-2 border-y py-5 text-[13px] ${featured ? 'border-cream/15' : 'border-sand'}`}>
               <div className="flex justify-between gap-3">
-                <dt className={featured ? 'text-cream/70' : 'text-ink-muted'}>Chat messages</dt>
+                <dt className={featured ? 'text-cream/70' : 'text-ink-muted'}>Chat mingles</dt>
                 <dd className="font-medium">{pkg.chatLimit === null ? 'Unlimited' : pkg.chatLimit}</dd>
               </div>
               <div className="flex justify-between gap-3">
-                <dt className={featured ? 'text-cream/70' : 'text-ink-muted'}>Dating requests</dt>
+                <dt className={featured ? 'text-cream/70' : 'text-ink-muted'}>Wingling wingles</dt>
                 <dd className="font-medium">
-                  {pkg.requestLimit === null ? 'Unlimited' : pkg.requestLimit}
+                  {pkg.wingleLimit === null ? 'Unlimited' : pkg.wingleLimit}
                 </dd>
               </div>
               <div className="flex justify-between gap-3">
-                <dt className={featured ? 'text-cream/70' : 'text-ink-muted'}>Incoming requests</dt>
-                <dd className="font-medium">{pkg.incomingRequestsUnlocked ? 'Revealed' : 'Locked'}</dd>
+                <dt className={featured ? 'text-cream/70' : 'text-ink-muted'}>Incoming wingles</dt>
+                <dd className="font-medium">{pkg.incomingWinglesUnlocked ? 'Revealed' : 'Locked'}</dd>
               </div>
             </dl>
 

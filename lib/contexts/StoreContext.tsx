@@ -7,10 +7,10 @@ import type {
   Block,
   Connection,
   Conversation,
-  DatingRequest,
+  WinglingWingle,
   Entitlements,
   Like,
-  Message,
+  Mingle,
   Package,
   Payment,
   Photo,
@@ -28,12 +28,12 @@ import {
   seedConnections,
   seedConversations,
   seedLikes,
-  seedMessages,
+  seedMingles,
   seedNotifications,
   seedPayments,
   seedPhotos,
   seedReports,
-  seedRequests,
+  seedWingles,
   seedUsers } from
 '@/lib/data/seed';
 import { id as makeId } from '@/lib/utils/format';
@@ -52,10 +52,10 @@ interface Db {
   likes: Like[];
   passes: {userId: string;targetUserId: string;}[];
   heartBucket: {userId: string;targetUserId: string;}[];
-  requests: DatingRequest[];
+  wingles: WinglingWingle[];
   connections: Connection[];
   conversations: Conversation[];
-  messages: Message[];
+  mingles: Mingle[];
   notifications: AppNotification[];
   reports: Report[];
   blocks: Block[];
@@ -67,14 +67,14 @@ const initialDb: Db = {
   packages: seedPackages,
   subscriptions: [],
   payments: seedPayments,
-  usage: [{ userId: DEMO_USER_ID, chatUsed: 2, requestsUsed: 3 }],
+  usage: [{ userId: DEMO_USER_ID, chatUsed: 2, winglesUsed: 3 }],
   likes: seedLikes,
   passes: [],
   heartBucket: [],
-  requests: seedRequests,
+  wingles: seedWingles,
   connections: seedConnections,
   conversations: seedConversations,
-  messages: seedMessages,
+  mingles: seedMingles,
   notifications: seedNotifications,
   reports: seedReports,
   blocks: []
@@ -128,20 +128,20 @@ interface StoreValue {
   heartBucketOf: () => User[];
   addToHeartBucket: (userId: string) => void;
   removeFromHeartBucket: (userId: string) => void;
-  // requests
-  sendRequest: (toUserId: string, note: string) => ServerResult<DatingRequest>;
-  respondToRequest: (requestId: string, status: 'accepted' | 'declined') => void;
-  sentRequests: () => DatingRequest[];
-  incomingRequests: () => DatingRequest[];
-  requestStatusWith: (userId: string) => DatingRequest | undefined;
+  // wingles
+  sendWingle: (toUserId: string, note: string) => ServerResult<WinglingWingle>;
+  respondToWingle: (wingleId: string, status: 'accepted' | 'declined') => void;
+  sentWingles: () => WinglingWingle[];
+  incomingWingles: () => WinglingWingle[];
+  wingleStatusWith: (userId: string) => WinglingWingle | undefined;
   // chat
   conversationsOf: () => Conversation[];
   conversationWith: (userId: string) => Conversation | undefined;
   ensureConversation: (userId: string) => Conversation;
-  messagesOf: (conversationId: string) => Message[];
-  sendMessage: (conversationId: string, body: string, imageUrl?: string) => ServerResult<Message>;
+  minglesOf: (conversationId: string) => Mingle[];
+  sendMingle: (conversationId: string, body: string, imageUrl?: string) => ServerResult<Mingle>;
   markConversationRead: (conversationId: string) => void;
-  deleteMessage: (messageId: string) => void;
+  deleteMingle: (mingleId: string) => void;
   typingIn: string | null;
   activePopupChatId: string | null;
   openChatPopup: (conversationId: string) => void;
@@ -188,11 +188,11 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        const stored = localStorage.getItem('winglemingle_messages');
+        const stored = localStorage.getItem('winglemingle_mingles');
         if (stored) {
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed)) {
-            setDb(d => ({ ...d, messages: parsed }));
+            setDb(d => ({ ...d, mingles: parsed }));
           }
         }
       } catch (e) {}
@@ -200,10 +200,10 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   }, []);
 
   useEffect(() => {
-    if (db.messages !== initialDb.messages && typeof window !== 'undefined') {
-      localStorage.setItem('winglemingle_messages', JSON.stringify(db.messages));
+    if (db.mingles !== initialDb.mingles && typeof window !== 'undefined') {
+      localStorage.setItem('winglemingle_mingles', JSON.stringify(db.mingles));
     }
-  }, [db.messages]);
+  }, [db.mingles]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -215,15 +215,15 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
 
       peer.on('connection', (conn: any) => {
         conn.on('data', (data: any) => {
-          if (data.type === 'message') {
-            const message = data.message;
+          if (data.type === 'mingle') {
+            const mingle = data.mingle;
             setDb((d) => {
-              if (d.messages.find(m => m.id === message.id)) return d;
+              if (d.mingles.find(m => m.id === mingle.id)) return d;
               return {
                 ...d,
-                messages: [...d.messages, message],
+                mingles: [...d.mingles, mingle],
                 conversations: d.conversations.map((c) =>
-                  c.id === message.conversationId ? { ...c, lastMessageAt: message.createdAt } : c
+                  c.id === mingle.conversationId ? { ...c, lastMingleAt: mingle.createdAt } : c
                 )
               };
             });
@@ -266,18 +266,18 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     const pkg = sub ? db.packages.find((p) => p.id === sub.packageId) ?? freePackage : freePackage;
     const usage =
     db.usage.find((u) => u.userId === currentUser.id) ??
-    { userId: currentUser.id, chatUsed: 0, requestsUsed: 0 } as Usage;
+    { userId: currentUser.id, chatUsed: 0, winglesUsed: 0 } as Usage;
     return {
       packageId: pkg.id,
       packageName: pkg.name,
       chatLimit: pkg.chatLimit,
       chatUsed: usage.chatUsed,
       chatRemaining: pkg.chatLimit === null ? null : Math.max(0, pkg.chatLimit - usage.chatUsed),
-      requestLimit: pkg.requestLimit,
-      requestsUsed: usage.requestsUsed,
-      requestsRemaining:
-      pkg.requestLimit === null ? null : Math.max(0, pkg.requestLimit - usage.requestsUsed),
-      incomingRequestsUnlocked: pkg.incomingRequestsUnlocked,
+      wingleLimit: pkg.wingleLimit,
+      winglesUsed: usage.winglesUsed,
+      winglesRemaining:
+      pkg.wingleLimit === null ? null : Math.max(0, pkg.wingleLimit - usage.winglesUsed),
+      incomingWinglesUnlocked: pkg.incomingWinglesUnlocked,
       priorityVisibility: pkg.priorityVisibility,
       subscriptionStatus: sub ? 'active' : 'free',
       subscriptionExpiry: sub?.expiresAt ?? null
@@ -349,7 +349,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       setDb((d) => ({
         ...d,
         users: [...d.users, user],
-        usage: [...d.usage, { userId: user.id, chatUsed: 0, requestsUsed: 0 }]
+        usage: [...d.usage, { userId: user.id, chatUsed: 0, winglesUsed: 0 }]
       }));
       setSessionId(user.id);
       return { ok: true, data: user };
@@ -593,20 +593,20 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     });
   }, []);
 
-  /* ------------------------------------------------------------ requests */
+  /* ------------------------------------------------------------ wingles */
 
-  const sendRequest = useCallback<StoreValue['sendRequest']>(
+  const sendWingle = useCallback<StoreValue['sendWingle']>(
     (toUserId, note) => {
       if (!currentUser || !entitlements) return { ok: false, error: 'Sign in first.' };
-      if (db.requests.some((r) => r.fromUserId === currentUser.id && r.toUserId === toUserId))
-      return { ok: false, error: 'You have already sent this person a request.', reason: 'invalid' };
-      if (entitlements.requestsRemaining !== null && entitlements.requestsRemaining <= 0)
+      if (db.wingles.some((r) => r.fromUserId === currentUser.id && r.toUserId === toUserId))
+      return { ok: false, error: 'You have already sent this person a wingle.', reason: 'invalid' };
+      if (entitlements.winglesRemaining !== null && entitlements.winglesRemaining <= 0)
       return {
         ok: false,
-        error: 'You have used every dating request in your package.',
-        reason: 'request_limit'
+        error: 'You have used every wingling wingle in your package.',
+        reason: 'wingle_limit'
       };
-      const request: DatingRequest = {
+      const wingle: WinglingWingle = {
         id: makeId('rq'),
         fromUserId: currentUser.id,
         toUserId,
@@ -616,29 +616,29 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       };
       setDb((d) => ({
         ...d,
-        requests: [request, ...d.requests],
+        wingles: [wingle, ...d.wingles],
         usage: d.usage.map((u) =>
-        u.userId === currentUser.id ? { ...u, requestsUsed: u.requestsUsed + 1 } : u
+        u.userId === currentUser.id ? { ...u, winglesUsed: u.winglesUsed + 1 } : u
         )
       }));
-      return { ok: true, data: request };
+      return { ok: true, data: wingle };
     },
-    [currentUser, db.requests, entitlements]
+    [currentUser, db.wingles, entitlements]
   );
 
-  const respondToRequest = useCallback<StoreValue['respondToRequest']>(
-    (requestId, status) => {
+  const respondToWingle = useCallback<StoreValue['respondToWingle']>(
+    (wingleId, status) => {
       setDb((d) => {
-        const request = d.requests.find((r) => r.id === requestId);
-        if (!request) return d;
+        const wingle = d.wingles.find((r) => r.id === wingleId);
+        if (!wingle) return d;
         const next: Db = {
           ...d,
-          requests: d.requests.map((r) =>
-          r.id === requestId ? { ...r, status, respondedAt: new Date().toISOString() } : r
+          wingles: d.wingles.map((r) =>
+          r.id === wingleId ? { ...r, status, respondedAt: new Date().toISOString() } : r
           )
         };
         if (status === 'accepted') {
-          const pair: [string, string] = [request.fromUserId, request.toUserId];
+          const pair: [string, string] = [wingle.fromUserId, wingle.toUserId];
           next.connections = [
           ...d.connections,
           { id: makeId('cn'), userIds: pair, createdAt: new Date().toISOString() }];
@@ -653,7 +653,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
               id: makeId('cv'),
               userIds: pair,
               createdAt: new Date().toISOString(),
-              lastMessageAt: new Date().toISOString()
+              lastMingleAt: new Date().toISOString()
             }];
 
           }
@@ -666,37 +666,37 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
           type: 'connection',
           title: 'New connection',
           body: 'You can start a conversation whenever you are ready.',
-          href: '/messages'
+          href: '/mingles'
         });
       }
     },
     [notify]
   );
 
-  const sentRequests = useCallback<StoreValue['sentRequests']>(
+  const sentWingles = useCallback<StoreValue['sentWingles']>(
     () =>
-    db.requests.
+    db.wingles.
     filter((r) => r.fromUserId === sessionId).
     sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-    [db.requests, sessionId]
+    [db.wingles, sessionId]
   );
 
-  const incomingRequests = useCallback<StoreValue['incomingRequests']>(
+  const incomingWingles = useCallback<StoreValue['incomingWingles']>(
     () =>
-    db.requests.
+    db.wingles.
     filter((r) => r.toUserId === sessionId).
     sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-    [db.requests, sessionId]
+    [db.wingles, sessionId]
   );
 
-  const requestStatusWith = useCallback<StoreValue['requestStatusWith']>(
+  const wingleStatusWith = useCallback<StoreValue['wingleStatusWith']>(
     (userId) =>
-    db.requests.find(
+    db.wingles.find(
       (r) =>
       r.fromUserId === sessionId && r.toUserId === userId ||
       r.toUserId === sessionId && r.fromUserId === userId
     ),
-    [db.requests, sessionId]
+    [db.wingles, sessionId]
   );
 
   /* ---------------------------------------------------------------- chat */
@@ -705,7 +705,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     () =>
     db.conversations.
     filter((c) => c.userIds.includes(sessionId ?? '')).
-    sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()),
+    sort((a, b) => new Date(b.lastMingleAt).getTime() - new Date(a.lastMingleAt).getTime()),
     [db.conversations, sessionId]
   );
 
@@ -725,7 +725,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         id: makeId('cv'),
         userIds: [sessionId as string, userId],
         createdAt: new Date().toISOString(),
-        lastMessageAt: new Date().toISOString()
+        lastMingleAt: new Date().toISOString()
       };
       setDb((d) => ({ ...d, conversations: [...d.conversations, conversation] }));
       return conversation;
@@ -733,22 +733,22 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     [db.conversations, sessionId]
   );
 
-  const messagesOf = useCallback<StoreValue['messagesOf']>(
+  const minglesOf = useCallback<StoreValue['minglesOf']>(
     (conversationId) =>
-    db.messages.
+    db.mingles.
     filter((m) => m.conversationId === conversationId).
     sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
-    [db.messages]
+    [db.mingles]
   );
 
-  const sendMessage = useCallback<StoreValue['sendMessage']>(
+  const sendMingle = useCallback<StoreValue['sendMingle']>(
     (conversationId, body, imageUrl) => {
       if (!currentUser || !entitlements) return { ok: false, error: 'Sign in first.' };
       if (!body.trim() && !imageUrl) return { ok: false, error: 'Write something first.', reason: 'invalid' };
       if (entitlements.chatRemaining !== null && entitlements.chatRemaining <= 0)
       return { ok: false, error: 'Your chat limit has been reached.', reason: 'chat_limit' };
 
-      const message: Message = {
+      const mingle: Mingle = {
         id: makeId('ms'),
         conversationId,
         senderId: currentUser.id,
@@ -760,9 +760,9 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       };
       setDb((d) => ({
         ...d,
-        messages: [...d.messages, message],
+        mingles: [...d.mingles, mingle],
         conversations: d.conversations.map((c) =>
-        c.id === conversationId ? { ...c, lastMessageAt: message.createdAt } : c
+        c.id === conversationId ? { ...c, lastMingleAt: mingle.createdAt } : c
         ),
         usage: d.usage.map((u) =>
         u.userId === currentUser.id ? { ...u, chatUsed: u.chatUsed + 1 } : u
@@ -783,13 +783,13 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         notify({
           userId: currentUser.id,
           type: 'chat_limit_warning',
-          title: `${remainingAfter} messages left`,
+          title: `${remainingAfter} mingles left`,
           body: 'Your chat allowance is nearly used up.',
           href: '/packages'
         });
       }
 
-      // Send message via PeerJS to the other user
+      // Send mingle via PeerJS to the other user
       const conversation = db.conversations.find((c) => c.id === conversationId);
       const otherId = conversation?.userIds.find((uid) => uid !== currentUser.id);
       
@@ -797,14 +797,14 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         try {
           const conn = peerRef.current.connect(otherId, { reliable: true });
           conn.on('open', () => {
-            conn.send({ type: 'message', message });
+            conn.send({ type: 'mingle', mingle });
             setTimeout(() => conn.close(), 1000);
           });
         } catch (err) {
           console.error("PeerJS connect error", err);
         }
       }
-      return { ok: true, data: message };
+      return { ok: true, data: mingle };
     },
     [currentUser, db.conversations, entitlements, notify]
   );
@@ -812,7 +812,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   const markConversationRead = useCallback<StoreValue['markConversationRead']>((conversationId) => {
     setDb((d) => ({
       ...d,
-      messages: d.messages.map((m) =>
+      mingles: d.mingles.map((m) =>
       m.conversationId === conversationId && m.senderId !== sessionIdRef.current && !m.readAt ?
       { ...m, readAt: new Date().toISOString() } :
       m
@@ -820,11 +820,11 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     }));
   }, []);
 
-  const deleteMessage = useCallback<StoreValue['deleteMessage']>((messageId) => {
+  const deleteMingle = useCallback<StoreValue['deleteMingle']>((mingleId) => {
     setDb((d) => ({
       ...d,
-      messages: d.messages.map((m) =>
-      m.id === messageId ? { ...m, deleted: true, body: '', imageUrl: undefined } : m
+      mingles: d.mingles.map((m) =>
+      m.id === mingleId ? { ...m, deleted: true, body: '', imageUrl: undefined } : m
       )
     }));
   }, []);
@@ -937,14 +937,14 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
 
         // A new package resets the allowance counters for the new period.
         usage: d.usage.some((u) => u.userId === currentUser.id) ?
-        d.usage.map((u) => u.userId === currentUser.id ? { ...u, chatUsed: 0, requestsUsed: 0 } : u) :
-        [...d.usage, { userId: currentUser.id, chatUsed: 0, requestsUsed: 0 }]
+        d.usage.map((u) => u.userId === currentUser.id ? { ...u, chatUsed: 0, winglesUsed: 0 } : u) :
+        [...d.usage, { userId: currentUser.id, chatUsed: 0, winglesUsed: 0 }]
       }));
       notify({
         userId: currentUser.id,
         type: 'package_activated',
         title: `${pkg.name} activated`,
-        body: 'Your allowances have been topped up and incoming requests are unlocked.',
+        body: 'Your allowances have been topped up and incoming wingles are unlocked.',
         href: '/subscription'
       });
       return { ok: true, data: payment };
@@ -1064,18 +1064,18 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     heartBucketOf,
     addToHeartBucket,
     removeFromHeartBucket,
-    sendRequest,
-    respondToRequest,
-    sentRequests,
-    incomingRequests,
-    requestStatusWith,
+    sendWingle,
+    respondToWingle,
+    sentWingles,
+    incomingWingles,
+    wingleStatusWith,
     conversationsOf,
     conversationWith,
     ensureConversation,
-    messagesOf,
-    sendMessage,
+    minglesOf,
+    sendMingle,
     markConversationRead,
-    deleteMessage,
+    deleteMingle,
     typingIn,
     activePopupChatId,
     openChatPopup,
