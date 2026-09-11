@@ -18,7 +18,8 @@ import {
   SparklesIcon,
   UserIcon,
   UsersIcon,
-  WifiOffIcon } from
+  WifiOffIcon,
+  ShoppingCartIcon } from
 'lucide-react';
 import { BrandMark } from './BrandMark';
 import { UsageMeter } from './UsageMeter';
@@ -65,6 +66,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   const main: NavItem[] = [
   { to: '/discover', label: 'Discover', icon: <CompassIcon className="h-[18px] w-[18px]" /> },
+  { to: '/heart-bucket', label: 'In Your Heart', icon: <ShoppingCartIcon className="h-[18px] w-[18px]" /> },
   { to: '/likes', label: 'Likes', icon: <HeartIcon className="h-[18px] w-[18px]" />, badge: likesReceived().length },
   { to: '/requests', label: 'Requests', icon: <SendIcon className="h-[18px] w-[18px]" />, badge: pendingIncoming },
   { to: '/connections', label: 'Connections', icon: <UsersIcon className="h-[18px] w-[18px]" /> },
@@ -107,7 +109,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       <div className="mx-auto flex w-full max-w-[1400px]">
         {/* Desktop sidebar */}
         <aside className="sticky top-0 hidden h-screen w-[272px] shrink-0 flex-col overflow-y-auto border-r border-sand/70 bg-cream-deep/40 px-5 py-6 lg:flex">
-          <button onClick={() => router.push('/discover')} className="mb-8 px-1 text-left">
+          <button onClick={() => router.push('/discover')} className="mb-8 flex w-full justify-center">
             <BrandMark />
           </button>
 

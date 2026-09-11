@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import type {
   AppNotification,
@@ -51,6 +51,7 @@ interface Db {
   usage: Usage[];
   likes: Like[];
   passes: {userId: string;targetUserId: string;}[];
+  heartBucket: {userId: string;targetUserId: string;}[];
   requests: DatingRequest[];
   connections: Connection[];
   conversations: Conversation[];
@@ -69,6 +70,7 @@ const initialDb: Db = {
   usage: [{ userId: DEMO_USER_ID, chatUsed: 2, requestsUsed: 3 }],
   likes: seedLikes,
   passes: [],
+  heartBucket: [],
   requests: seedRequests,
   connections: seedConnections,
   conversations: seedConversations,
@@ -123,6 +125,9 @@ interface StoreValue {
   passUser: (userId: string) => void;
   hasLiked: (userId: string) => boolean;
   likesReceived: () => Like[];
+  heartBucketOf: () => User[];
+  addToHeartBucket: (userId: string) => void;
+  removeFromHeartBucket: (userId: string) => void;
   // requests
   sendRequest: (toUserId: string, note: string) => ServerResult<DatingRequest>;
   respondToRequest: (requestId: string, status: 'accepted' | 'declined') => void;
@@ -173,11 +178,67 @@ const StoreContext = createContext<StoreValue | null>(null);
 export function StoreProvider({ children }: {children: React.ReactNode;}) {
   const [db, setDb] = useState<Db>(initialDb);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [typingIn, setTypingIn] = useState<string | null>(null);
+  const [typingIn] = useState<string | null>(null);
   const [activePopupChatId, setActivePopupChatId] = useState<string | null>(null);
   const timers = useRef<number[]>([]);
   const sessionIdRef = useRef<string | null>(null);
   sessionIdRef.current = sessionId;
+  const peerRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('winglemingle_messages');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            setDb(d => ({ ...d, messages: parsed }));
+          }
+        }
+      } catch (e) {}
+    }
+  }, []);
+
+  useEffect(() => {
+    if (db.messages !== initialDb.messages && typeof window !== 'undefined') {
+      localStorage.setItem('winglemingle_messages', JSON.stringify(db.messages));
+    }
+  }, [db.messages]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    
+    let peer: any;
+    import('peerjs').then(({ default: Peer }) => {
+      peer = new Peer(sessionId);
+      peerRef.current = peer;
+
+      peer.on('connection', (conn: any) => {
+        conn.on('data', (data: any) => {
+          if (data.type === 'message') {
+            const message = data.message;
+            setDb((d) => {
+              if (d.messages.find(m => m.id === message.id)) return d;
+              return {
+                ...d,
+                messages: [...d.messages, message],
+                conversations: d.conversations.map((c) =>
+                  c.id === message.conversationId ? { ...c, lastMessageAt: message.createdAt } : c
+                )
+              };
+            });
+          }
+        });
+      });
+    });
+
+    return () => {
+      if (peer) {
+        peer.destroy();
+        peerRef.current = null;
+      }
+    };
+  }, [sessionId]);
 
   const currentUser = useMemo(
     () => db.users.find((u) => u.id === sessionId) ?? null,
@@ -503,6 +564,35 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     [db.likes, sessionId]
   );
 
+  const heartBucketOf = useCallback<StoreValue['heartBucketOf']>(() => {
+    if (!sessionId) return [];
+    const heartTargetIds = new Set(
+      db.heartBucket.filter((h) => h.userId === sessionId).map((h) => h.targetUserId)
+    );
+    return db.users.filter((u) => heartTargetIds.has(u.id));
+  }, [db.heartBucket, db.users, sessionId]);
+
+  const addToHeartBucket = useCallback<StoreValue['addToHeartBucket']>((userId) => {
+    setDb((d) => {
+      const uid = sessionIdRef.current as string;
+      if (d.heartBucket.some((h) => h.userId === uid && h.targetUserId === userId)) return d;
+      return {
+        ...d,
+        heartBucket: [...d.heartBucket, { userId: uid, targetUserId: userId }]
+      };
+    });
+  }, []);
+
+  const removeFromHeartBucket = useCallback<StoreValue['removeFromHeartBucket']>((userId) => {
+    setDb((d) => {
+      const uid = sessionIdRef.current as string;
+      return {
+        ...d,
+        heartBucket: d.heartBucket.filter((h) => !(h.userId === uid && h.targetUserId === userId))
+      };
+    });
+  }, []);
+
   /* ------------------------------------------------------------ requests */
 
   const sendRequest = useCallback<StoreValue['sendRequest']>(
@@ -699,37 +789,20 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         });
       }
 
-      // Simulated partner reply with a typing indicator.
+      // Send message via PeerJS to the other user
       const conversation = db.conversations.find((c) => c.id === conversationId);
       const otherId = conversation?.userIds.find((uid) => uid !== currentUser.id);
-      if (otherId) {
-        const t1 = window.setTimeout(() => setTypingIn(conversationId), 900);
-        const t2 = window.setTimeout(() => {
-          setTypingIn(null);
-          const replies = [
-          'That works for me — shall we say the weekend?',
-          'Ha, okay you have my attention.',
-          'Sending you a photo from the place I mentioned.',
-          'I am free Thursday evening if that suits?'];
-
-          const reply: Message = {
-            id: makeId('ms'),
-            conversationId,
-            senderId: otherId,
-            body: replies[Math.floor(Math.random() * replies.length)],
-            createdAt: new Date().toISOString(),
-            readAt: null,
-            deleted: false
-          };
-          setDb((d) => ({
-            ...d,
-            messages: [...d.messages, reply],
-            conversations: d.conversations.map((c) =>
-            c.id === conversationId ? { ...c, lastMessageAt: reply.createdAt } : c
-            )
-          }));
-        }, 2600);
-        timers.current.push(t1, t2);
+      
+      if (otherId && peerRef.current) {
+        try {
+          const conn = peerRef.current.connect(otherId, { reliable: true });
+          conn.on('open', () => {
+            conn.send({ type: 'message', message });
+            setTimeout(() => conn.close(), 1000);
+          });
+        } catch (err) {
+          console.error("PeerJS connect error", err);
+        }
       }
       return { ok: true, data: message };
     },
@@ -988,6 +1061,9 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     passUser,
     hasLiked,
     likesReceived,
+    heartBucketOf,
+    addToHeartBucket,
+    removeFromHeartBucket,
     sendRequest,
     respondToRequest,
     sentRequests,
