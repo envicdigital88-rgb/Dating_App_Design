@@ -37,7 +37,7 @@ function calculateGap(width: number) {
   const maxWidth = 1456;
   const minGap = 60;
   const maxGap = 86;
-  if (width <= minWidth) return minGap;
+  if (width <= minWidth) return Math.max(35, width * 0.12);
   if (width >= maxWidth)
     return Math.max(minGap, maxGap + 0.06018 * (width - maxWidth));
   return minGap + (maxGap - minGap) * ((width - minWidth) / (maxWidth - minWidth));
@@ -270,45 +270,50 @@ export const CircularTestimonials = ({
       <style jsx>{`
         .testimonial-container {
           width: 100%;
-          padding: 1rem 0;
+          padding: 0.5rem 0 1rem;
         }
         .testimonial-grid {
           display: grid;
-          gap: 2.5rem;
+          gap: 1.5rem;
         }
         .image-container {
           position: relative;
           width: 100%;
-          height: 24rem;
+          aspect-ratio: 4/5;
+          max-height: 22rem;
           perspective: 1000px;
+          margin: 0 auto;
         }
         .testimonial-image {
           position: absolute;
           width: 100%;
           height: 100%;
           object-fit: cover;
-          border-radius: 1.5rem;
+          border-radius: 1.25rem;
           box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
         }
         .testimonial-content {
           display: flex;
           flex-direction: column;
           justify-content: space-between;
+          padding: 0 0.5rem;
+          text-align: center;
         }
         .name {
           font-weight: bold;
           margin-bottom: 0.25rem;
         }
         .designation {
-          margin-bottom: 1.5rem;
+          margin-bottom: 1rem;
         }
         .quote {
-          line-height: 1.6;
+          line-height: 1.5;
         }
         .arrow-buttons {
           display: flex;
           gap: 1rem;
-          padding-top: 1.5rem;
+          justify-content: center;
+          padding-top: 1rem;
         }
         .arrow-button {
           width: 2.7rem;
@@ -329,10 +334,17 @@ export const CircularTestimonials = ({
           }
           .image-container {
              height: 28rem;
+             max-height: none;
+             aspect-ratio: auto;
+          }
+          .testimonial-content {
+            padding: 0;
+            text-align: left;
           }
           .arrow-buttons {
             padding-top: 0;
             margin-top: 2rem;
+            justify-content: flex-start;
           }
         }
       `}</style>
