@@ -58,16 +58,46 @@ export function ProfileCard({
   const isHeartActive = activeZone === 'heart';
   const isRecycleActive = activeZone === 'recycle';
 
+  const PassAndLikeButtons = (
+    <>
+      <button
+        onClick={onPass}
+        aria-label={`Pass on ${user.name}`}
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-sand bg-[#1a1a1a] text-white shadow-sm transition-all duration-150 ease-soft active:scale-95"
+      >
+        <XIcon className="h-5 w-5" />
+      </button>
+      <button
+        onClick={onLike}
+        aria-label={liked ? `You liked ${user.name}` : `Like ${user.name}`}
+        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border shadow-sm transition-all duration-150 ease-soft active:scale-95 ${
+          liked
+            ? 'border-berry-500 bg-berry-500 text-white'
+            : 'border-berry-200 bg-white text-berry-500'
+        }`}
+      >
+        <HeartIcon className="h-5 w-5" fill={liked ? 'currentColor' : 'none'} />
+      </button>
+    </>
+  );
+
   return (
     <motion.article
-      initial={{ opacity: 0, y: 18, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
+      layout
+      initial={{ opacity: 0, scale: 0.96, y: 10 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.96, y: -10 }}
       transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
-      className="overflow-hidden rounded-4xl bg-cream-deep shadow-card"
+      className="overflow-hidden rounded-4xl bg-cream-deep shadow-card relative"
     >
       {/* Photo & Details Carousel */}
       <div className="relative w-full bg-[#0a0a0a] pt-4">
+        
+        {/* Mobile floating actions (Top of image) */}
+        <div className="absolute right-4 top-4 z-20 flex gap-2 lg:hidden">
+          {PassAndLikeButtons}
+        </div>
+
         <CircularTestimonials
           testimonials={photos.map((photo) => ({
             src: photo.url,
@@ -233,24 +263,9 @@ export function ProfileCard({
 
         {/* Action row: Pass · Like · Request */}
         <div className="mt-3 flex items-center gap-2">
-          <button
-            onClick={onPass}
-            aria-label={`Pass on ${user.name}`}
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-sand bg-cream-deep text-ink-muted shadow-sm transition-all duration-150 ease-soft hover:border-slate-500 hover:text-slate-300 active:scale-95"
-          >
-            <XIcon className="h-5 w-5" />
-          </button>
-          <button
-            onClick={onLike}
-            aria-label={liked ? `You liked ${user.name}` : `Like ${user.name}`}
-            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border shadow-sm transition-all duration-150 ease-soft active:scale-95 ${
-              liked
-                ? 'border-berry-500 bg-berry-500 text-white'
-                : 'border-berry-200 bg-gradient-to-br from-white to-berry-50 text-berry-500 hover:border-berry-400'
-            }`}
-          >
-            <HeartIcon className="h-5 w-5" fill={liked ? 'currentColor' : 'none'} />
-          </button>
+          <div className="hidden lg:flex items-center gap-2">
+            {PassAndLikeButtons}
+          </div>
           <button
             onClick={onRequest}
             disabled={requested}
