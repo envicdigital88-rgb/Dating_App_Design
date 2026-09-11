@@ -16,20 +16,20 @@ export default {content: [
           soft: '#E2E8F0',    // Light slate for secondary text
           muted: '#94A3B8',   // Slate-400 for muted text
         },
-        berry: { // Magenta/Pink (Primary Action)
-          50: '#FDF2F8',
-          100: '#FCE7F3',
-          200: '#FBCFE8',
-          300: '#F9A8D4',
-          400: '#F472B6',
+        berry: { // Now Blue (Primary Action)
+          50: '#F0F9FF',
+          100: '#E0F2FE',
+          200: '#BAE6FD',
+          300: '#7DD3FC',
+          400: '#38BDF8',
+          500: '#0EA5E9', // Main Blue
+          600: '#0284C7',
+          700: '#0369A1',
+        },
+        plum: { // Now Pink (Accents)
           500: '#EC4899', // Main Pink
           600: '#DB2777',
           700: '#BE185D',
-        },
-        plum: { // Cyan/Blue (Deep accents)
-          500: '#0EA5E9', // Main Cyan/Blue
-          600: '#0284C7',
-          700: '#0369A1',
         },
         sand: '#1E293B', // dark slate for borders
         moss: '#06B6D4', // cyan-500
