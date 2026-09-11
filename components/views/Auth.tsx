@@ -18,9 +18,9 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
   const isRegister = mode === 'register';
 
   const [name, setName] = useState('');
-  const [email, setEmail] = useState(isRegister ? '' : 'demo@kindred.app');
+  const [email, setEmail] = useState(isRegister ? '' : 'demo@winglemingle.app');
   const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState(isRegister ? '' : 'kindred123');
+  const [password, setPassword] = useState(isRegister ? '' : 'winglemingle123');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -49,7 +49,7 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
     <div className="grid min-h-full w-full bg-cream lg:grid-cols-[1fr_1.05fr]">
       <div className="flex flex-col px-5 py-8 sm:px-10 lg:px-16 lg:py-12">
         <div className="flex items-center justify-between">
-          <Link href="/" aria-label="Kindred home">
+          <Link href="/" aria-label="Wingle Mingle home">
             <BrandMark />
           </Link>
           <Link href="/"
@@ -140,7 +140,7 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
           </form>
 
           <p className="mt-6 text-center text-[14px] text-ink-soft">
-            {isRegister ? 'Already a member? ' : 'New to Kindred? '}
+            {isRegister ? 'Already a member? ' : 'New to Wingle Mingle? '}
             <Link href={isRegister ? '/sign-in' : '/sign-up'}
               className="font-medium text-berry-600 underline decoration-berry-200 underline-offset-4">
               
@@ -151,11 +151,11 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
           <div className="mt-8 rounded-3xl border border-sand bg-cream-deep p-4 text-[13px] leading-relaxed text-ink-soft">
             <p className="font-medium text-ink">Demo accounts</p>
             <p className="mt-1">
-              Member — <span className="font-mono">demo@kindred.app</span> /{' '}
-              <span className="font-mono">kindred123</span>
+              Member — <span className="font-mono">demo@winglemingle.app</span> /{' '}
+              <span className="font-mono">winglemingle123</span>
             </p>
             <p>
-              Admin — <span className="font-mono">admin@kindred.app</span> /{' '}
+              Admin — <span className="font-mono">admin@winglemingle.app</span> /{' '}
               <span className="font-mono">admin123</span>
             </p>
           </div>

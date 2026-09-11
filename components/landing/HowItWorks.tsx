@@ -25,8 +25,8 @@ const steps = [
 },
 {
   icon: <MessageCircleIcon className="h-5 w-5" />,
-  title: 'Chat, then date',
-  body: 'Share photos, agree on a plan, and get off the app. That is the whole point.'
+  title: 'Mingling',
+  body: 'Chat, then date. Share photos, agree on a plan, and get off the app. That is the whole point.'
 }];
 
 
@@ -35,9 +35,9 @@ export function HowItWorks() {
     <section id="how" className="border-b border-sand/60 py-16 lg:py-24">
       <div className="mx-auto max-w-6xl px-5 lg:px-8">
         <SectionHeading
-          overline="How Kindred works"
+          overline="How Wingle Mingle works"
           title="Five steps, in the order they actually happen"
-          body="Kindred is deliberately linear. You are never guessing what the app wants from you next." />
+          body="Wingle Mingle is deliberately linear. You are never guessing what the app wants from you next." />
         
 
         <ol className="mt-12 space-y-4 lg:mt-16 lg:flex lg:space-y-0">

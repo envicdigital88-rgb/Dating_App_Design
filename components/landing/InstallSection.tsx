@@ -15,12 +15,12 @@ export function InstallSection() {
     <section className="border-b border-sand/60 py-16 lg:py-24">
       <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 lg:grid-cols-[1fr_0.8fr] lg:gap-20 lg:px-8">
         <div>
-          <p className="mb-3 text-[13px] font-semibold text-berry-500">Install Kindred</p>
+          <p className="mb-3 text-[13px] font-semibold text-berry-500">Install Wingle Mingle</p>
           <h2 className="font-display text-3xl leading-[1.1] text-ink sm:text-4xl">
             Put it on your home screen, skip the app store
           </h2>
           <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-ink-soft">
-            Kindred installs straight from your browser and runs full screen, with push notifications
+            Wingle Mingle installs straight from your browser and runs full screen, with push notifications
             for new wingles and mingles, and an offline fallback for the tube.
           </p>
 
@@ -42,7 +42,7 @@ export function InstallSection() {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button size="lg" onClick={promptInstall} disabled={installed}>
               <DownloadIcon className="h-4 w-4" />
-              {installed ? 'Installed' : 'Install Kindred'}
+              {installed ? 'Installed' : 'Install Wingle Mingle'}
             </Button>
             <Button
               size="lg"
@@ -60,7 +60,7 @@ export function InstallSection() {
             <div className="overflow-hidden rounded-[2rem] bg-cream">
               <div className="flex items-center justify-between px-4 py-2 text-[11px] font-medium text-ink-muted">
                 <span>9:41</span>
-                <span>Kindred</span>
+                <span>Wingle Mingle</span>
               </div>
               {preview && <img src={preview} alt="" className="aspect-[3/4] w-full object-cover" />}
               <div className="p-4">

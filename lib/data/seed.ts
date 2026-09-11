@@ -205,9 +205,9 @@ export const seedUsers: User[] = [
 {
   id: DEMO_USER_ID,
   name: 'Alex',
-  email: 'demo@kindred.app',
+  email: 'demo@winglemingle.app',
   phone: '+44 7700 900001',
-  password: 'kindred123',
+  password: 'winglemingle123',
   role: 'member',
   age: 30,
   gender: 'non-binary',
@@ -228,13 +228,13 @@ export const seedUsers: User[] = [
 {
   id: ADMIN_USER_ID,
   name: 'Rowan (Admin)',
-  email: 'admin@kindred.app',
+  email: 'admin@winglemingle.app',
   phone: '+44 7700 900000',
   password: 'admin123',
   role: 'admin',
   age: 38,
   gender: 'non-binary',
-  location: 'Kindred HQ',
+  location: 'Wingle Mingle HQ',
   bio: 'Trust & safety.',
   intention: 'Long-term relationship',
   interests: [],
@@ -546,7 +546,7 @@ export const testimonials = [
   quote:
   'The locked wingles actually made me slow down. I read three profiles properly instead of swiping through ninety.',
   name: 'Hana & Joe',
-  detail: 'Together 14 months · met on Kindred'
+  detail: 'Together 14 months · met on Wingle Mingle'
 },
 {
   quote:
@@ -583,6 +583,6 @@ export const faqs = [
   a: 'No. There is no questionnaire and no algorithmic score. You look at real profiles and real photos, and you decide.'
 },
 {
-  q: 'Can I install Kindred on my phone?',
-  a: 'Yes. Kindred is an installable app — add it to your home screen and it runs full screen with offline support and push notifications, no app store required.'
+  q: 'Can I install Wingle Mingle on my phone?',
+  a: 'Yes. Wingle Mingle is an installable app — add it to your home screen and it runs full screen with offline support and push notifications, no app store required.'
 }];

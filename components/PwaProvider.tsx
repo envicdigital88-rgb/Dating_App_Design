@@ -15,8 +15,8 @@ interface PwaValue {
 const PwaContext = createContext<PwaValue | null>(null);
 
 const MANIFEST = {
-  name: 'Kindred — Wingling, deliberately',
-  short_name: 'Kindred',
+  name: 'Wingle Mingle — Wingling, deliberately',
+  short_name: 'Wingle Mingle',
   description: 'Meet people properly. Profiles, photos, wingles and real conversations.',
   start_url: '/',
   display: 'standalone',
@@ -38,7 +38,7 @@ const MANIFEST = {
 };
 
 const SERVICE_WORKER = `
-const CACHE = 'kindred-v1';
+const CACHE = 'winglemingle-v1';
 self.addEventListener('install', (e) => self.skipWaiting());
 self.addEventListener('activate', (e) => self.clients.claim());
 self.addEventListener('fetch', (event) => {

@@ -21,7 +21,7 @@ export function SiteNav() {
   return (
     <header className="sticky top-0 z-40 border-b border-sand/60 bg-cream/85 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-5 py-3.5 lg:px-8">
-        <Link href="/" aria-label="Kindred home">
+        <Link href="/" aria-label="Wingle Mingle home">
           <BrandMark />
         </Link>
 

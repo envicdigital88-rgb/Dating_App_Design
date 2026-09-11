@@ -138,7 +138,7 @@ export function Settings() {
           <div className="mt-4 space-y-3">
             <Button variant="outline" block onClick={promptInstall} disabled={installed}>
               <DownloadIcon className="h-4 w-4" />
-              {installed ? 'Kindred is installed' : 'Install Kindred on this device'}
+              {installed ? 'Wingle Mingle is installed' : 'Install Wingle Mingle on this device'}
             </Button>
             <Button
               variant="outline"

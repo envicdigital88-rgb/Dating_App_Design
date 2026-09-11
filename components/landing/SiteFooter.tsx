@@ -5,7 +5,7 @@ import { BrandMark } from '../BrandMark';
 
 const columns = [
 {
-  title: 'Kindred',
+  title: 'Wingle Mingle',
   links: [
   { label: 'How it works', href: '#how' },
   { label: 'Wingling wingles', href: '#wingles' },
@@ -82,7 +82,7 @@ export function SiteFooter() {
         </div>
 
         <div className="mt-12 flex flex-col justify-between gap-3 border-t border-cream/12 pt-6 text-[13px] sm:flex-row">
-          <p>© {new Date().getFullYear()} Kindred Wingling Ltd. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Wingle Mingle Wingling Ltd. All rights reserved.</p>
           <p className="flex gap-5">
             <a href="#" className="hover:text-cream">
               Terms
