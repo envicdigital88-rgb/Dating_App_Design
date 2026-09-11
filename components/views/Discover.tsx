@@ -105,7 +105,7 @@ export function Discover() {
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_280px]">
 
         {/* Main — profile card with bucket zones INSIDE */}
-        <div className="mx-auto w-full max-w-lg lg:mx-0">
+        <div className="mx-auto w-full max-w-4xl lg:mx-0">
           {feed.length === 0 ? (
             <EmptyState icon={<CompassIcon className="h-5 w-5" />}
               title={tab === 'nearby' ? "That is everyone for now" : "No Daily 5 available"}

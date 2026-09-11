@@ -9,6 +9,7 @@ import { useStore } from '@/lib/contexts/StoreContext';
 import { presence } from '@/lib/utils/format';
 import { calculateVibeMatch } from '@/lib/utils/matching';
 import type { User } from '@/lib/types';
+import { CircularTestimonials } from './ui/circular-testimonials';
 
 export function ProfileCard({
   user,
@@ -70,59 +71,40 @@ export function ProfileCard({
       transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
       className="overflow-hidden rounded-4xl bg-cream-deep shadow-card"
     >
-      {/* Photo */}
-      <div className="relative w-full bg-cream-deep" style={{ aspectRatio: '3/5', maxHeight: '420px' }}>
-        {photo && (
-          <img
-            key={photo.id}
-            src={photo.url}
-            alt={`${user.name}, photo ${index + 1} of ${photos.length}`}
-            className="h-full w-full object-cover pointer-events-none"
-          />
-        )}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-plum-700/80 to-transparent" />
+      {/* Photo & Details Carousel */}
+      <div className="relative w-full bg-[#0a0a0a] pt-4">
+        <CircularTestimonials
+          testimonials={photos.map((photo) => ({
+            src: photo.url,
+            name: `${user.name}, ${user.age}`,
+            designation: `${user.location} · ${presence(user.online, user.lastActiveAt)}`,
+            quote: user.bio || '',
+          }))}
+          autoplay={false}
+          colors={{
+            name: "#f7f7ff",
+            designation: "#e1e1e1",
+            testimony: "#f1f1f7",
+            arrowBackground: "rgba(255, 255, 255, 0.15)",
+            arrowForeground: "#141414",
+            arrowHoverBackground: "#f7f7ff",
+          }}
+          fontSizes={{
+            name: "28px",
+            designation: "15px",
+            quote: "16px",
+          }}
+        />
 
         {/* Vibe Match Badge */}
         {matchResult && matchResult.score > 0 && (
-          <div className="absolute left-4 top-6 z-10 flex flex-col gap-1.5">
+          <div className="absolute left-4 top-6 z-10 flex flex-col gap-1.5 pointer-events-none">
             <div className="inline-flex items-center gap-1.5 rounded-full bg-berry-500/95 px-3 py-1.5 text-sm font-bold text-white shadow-md backdrop-blur-md">
               <ZapIcon className="h-4 w-4 fill-white" />
               {matchResult.score}% Vibe Match
             </div>
           </div>
         )}
-
-        {photos.length > 1 && (
-          <>
-            <div className="absolute left-4 right-4 top-4 flex gap-1.5">
-              {photos.map((p, i) => (
-                <span
-                  key={p.id}
-                  className={`h-1 flex-1 rounded-full transition-colors duration-150 ease-soft ${i === index ? 'bg-cream-deep' : 'bg-cream-deep/35'}`}
-                />
-              ))}
-            </div>
-            <button onClick={() => step(-1)} disabled={index === 0} aria-label="Previous photo"
-              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-cream-deep/85 p-2 text-ink shadow-sm transition-opacity duration-150 ease-soft disabled:opacity-0">
-              <ChevronLeftIcon className="h-4 w-4" />
-            </button>
-            <button onClick={() => step(1)} disabled={index === photos.length - 1} aria-label="Next photo"
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-cream-deep/85 p-2 text-ink shadow-sm transition-opacity duration-150 ease-soft disabled:opacity-0">
-              <ChevronRightIcon className="h-4 w-4" />
-            </button>
-          </>
-        )}
-
-        <div className="absolute inset-x-0 bottom-0 p-5 text-white pointer-events-none">
-          <div className="mb-1 flex items-center gap-2">
-            <h2 className="font-display text-[26px] leading-none">{user.name}, {user.age}</h2>
-            {user.verified && <VerifiedMark className="text-white" />}
-          </div>
-          <p className="flex items-center gap-1.5 text-[13px] text-white/85">
-            <MapPinIcon className="h-3.5 w-3.5" />
-            {user.location} · {presence(user.online, user.lastActiveAt)}
-          </p>
-        </div>
       </div>
 
       {/* Card body */}
@@ -231,7 +213,7 @@ export function ProfileCard({
           ))}
         </div>
 
-        <p className="mt-3 text-[15px] leading-relaxed text-ink-soft">{user.bio}</p>
+        <p className="mt-3 text-[15px] leading-relaxed text-ink-soft hidden">{user.bio}</p>
 
         <ul className="mt-4 flex flex-wrap gap-2">
           {user.interests.slice(0, 5).map((interest) => (
