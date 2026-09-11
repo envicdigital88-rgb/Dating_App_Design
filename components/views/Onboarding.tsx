@@ -150,7 +150,7 @@ export function Onboarding() {
           ))}
         </ol>
 
-        <div className="rounded-4xl bg-white p-6 shadow-card sm:p-9">
+        <div className="rounded-4xl bg-cream-deep p-6 shadow-card sm:p-9">
           {step === 0 && (
             <div className="space-y-5">
               <div>
@@ -265,7 +265,7 @@ export function Onboarding() {
                         className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-[14px] transition-[background-color,border-color,color] duration-150 ease-soft ${
                           active
                             ? 'border-berry-500 bg-berry-500 text-white'
-                            : 'border-sand bg-white text-ink-soft hover:border-berry-300'
+                            : 'border-sand bg-cream-deep text-ink-soft hover:border-berry-300'
                         }`}
                       >
                         {active && <CheckIcon className="h-3.5 w-3.5" />}
@@ -299,7 +299,7 @@ export function Onboarding() {
                         className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-[14px] transition-[background-color,border-color,color] duration-150 ease-soft ${
                           active
                             ? 'border-berry-500 bg-berry-500 text-white'
-                            : 'border-sand bg-white text-ink-soft hover:border-berry-300'
+                            : 'border-sand bg-cream-deep text-ink-soft hover:border-berry-300'
                         }`}
                       >
                         {active && <CheckIcon className="h-3.5 w-3.5" />}
@@ -365,7 +365,7 @@ export function Onboarding() {
                         id={`prompt-a-${prompt.id}`}
                         value={prompt.answer}
                         onChange={(e) => updatePrompt(prompt.id, 'answer', e.target.value)}
-                        className="font-medium text-berry-600 bg-white"
+                        className="font-medium text-berry-600 bg-cream-deep"
                       >
                         <option value="" disabled>Select an answer...</option>
                         {promptAnswers[prompt.question]?.map((ans) => (
@@ -395,7 +395,7 @@ export function Onboarding() {
                       className="aspect-[3/4] w-full object-cover"
                     />
                     {i === 0 && (
-                      <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-ink">
+                      <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-cream-deep/95 px-2.5 py-1 text-[11px] font-semibold text-ink">
                         <StarIcon className="h-3 w-3 text-berry-500" fill="currentColor" />
                         Main
                       </span>
@@ -407,7 +407,7 @@ export function Onboarding() {
                           onClick={() =>
                             setPhotos((p) => [p[i], ...p.filter((_, index) => index !== i)])
                           }
-                          className="flex-1 rounded-full bg-white/95 py-1.5 text-[11px] font-medium text-ink"
+                          className="flex-1 rounded-full bg-cream-deep/95 py-1.5 text-[11px] font-medium text-ink"
                         >
                           Make main
                         </button>
@@ -416,7 +416,7 @@ export function Onboarding() {
                         type="button"
                         aria-label="Delete photo"
                         onClick={() => setPhotos((p) => p.filter((_, index) => index !== i))}
-                        className="rounded-full bg-white/95 p-1.5 text-ink"
+                        className="rounded-full bg-cream-deep/95 p-1.5 text-ink"
                       >
                         <Trash2Icon className="h-3.5 w-3.5" />
                       </button>

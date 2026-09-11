@@ -28,6 +28,7 @@ export const heroImage = IMG.hero;
 export const lifestyleImage = IMG.lifestyle;
 
 const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
+const hoursAgo = (n: number) => new Date(Date.now() - n * 3_600_000).toISOString();
 const minsAgo = (n: number) => new Date(Date.now() - n * 60_000).toISOString();
 
 const baseLifestyle = {
@@ -350,11 +351,19 @@ export const seedRequests: DatingRequest[] = [
 
 
 export const seedConnections: Connection[] = [
-{ id: 'cn-1', userIds: [DEMO_USER_ID, 'u-1'], createdAt: daysAgo(4) }];
+{ id: 'cn-1', userIds: [DEMO_USER_ID, 'u-1'], createdAt: daysAgo(4) },
+{ id: 'cn-2', userIds: [DEMO_USER_ID, 'u-2'], createdAt: daysAgo(2) },
+{ id: 'cn-3', userIds: [DEMO_USER_ID, 'u-3'], createdAt: daysAgo(1) },
+{ id: 'cn-4', userIds: [DEMO_USER_ID, 'u-5'], createdAt: hoursAgo(5) }
+];
 
 
 export const seedConversations: Conversation[] = [
-{ id: 'cv-1', userIds: [DEMO_USER_ID, 'u-1'], createdAt: daysAgo(4), lastMessageAt: minsAgo(8) }];
+{ id: 'cv-1', userIds: [DEMO_USER_ID, 'u-1'], createdAt: daysAgo(4), lastMessageAt: minsAgo(8) },
+{ id: 'cv-2', userIds: [DEMO_USER_ID, 'u-2'], createdAt: daysAgo(2), lastMessageAt: hoursAgo(12) },
+{ id: 'cv-3', userIds: [DEMO_USER_ID, 'u-3'], createdAt: daysAgo(1), lastMessageAt: minsAgo(45) },
+{ id: 'cv-4', userIds: [DEMO_USER_ID, 'u-5'], createdAt: hoursAgo(5), lastMessageAt: hoursAgo(2) }
+];
 
 
 export const seedMessages: Message[] = [
@@ -392,6 +401,42 @@ export const seedMessages: Message[] = [
   body: 'Sunday, 11am?',
   imageUrl: IMG.lifestyle,
   createdAt: minsAgo(8),
+  readAt: null,
+  deleted: false
+},
+{
+  id: 'ms-5',
+  conversationId: 'cv-2',
+  senderId: 'u-2',
+  body: 'Hey! Loved your prompt about the best hidden spots in the city. Where should we start?',
+  createdAt: hoursAgo(12),
+  readAt: hoursAgo(10),
+  deleted: false
+},
+{
+  id: 'ms-6',
+  conversationId: 'cv-3',
+  senderId: DEMO_USER_ID,
+  body: 'Are you going to the food festival this weekend?',
+  createdAt: hoursAgo(2),
+  readAt: minsAgo(60),
+  deleted: false
+},
+{
+  id: 'ms-7',
+  conversationId: 'cv-3',
+  senderId: 'u-3',
+  body: 'Yes definitely! We should grab a bite together if you are around 🌮',
+  createdAt: minsAgo(45),
+  readAt: null,
+  deleted: false
+},
+{
+  id: 'ms-8',
+  conversationId: 'cv-4',
+  senderId: 'u-5',
+  body: 'Hi there! Nice to connect with you. Have a great day!',
+  createdAt: hoursAgo(2),
   readAt: null,
   deleted: false
 }];

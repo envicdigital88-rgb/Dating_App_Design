@@ -44,7 +44,7 @@ export function Modal({ open, onClose, title, description, children, footer, siz
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 16, scale: 0.98 }}
           transition={{ duration: 0.24, ease: [0.23, 1, 0.32, 1] }}
-          className={`relative w-full ${maxWidth} rounded-t-4xl bg-white p-6 shadow-lift sm:rounded-4xl`}>
+          className={`relative w-full ${maxWidth} rounded-t-4xl bg-cream-deep p-6 shadow-lift sm:rounded-4xl`}>
           
             <button
             onClick={onClose}

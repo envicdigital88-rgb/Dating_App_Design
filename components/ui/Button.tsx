@@ -9,9 +9,9 @@ const variants: Record<Variant, string> = {
   primary: 'bg-berry-500 text-white hover:bg-berry-600 shadow-sm',
   secondary: 'bg-plum-500 text-cream hover:bg-plum-600',
   ghost: 'text-ink-soft hover:bg-cream-deep',
-  outline: 'border border-sand bg-white text-ink hover:border-berry-300 hover:text-berry-600',
-  danger: 'border border-red-200 bg-white text-red-700 hover:bg-red-50',
-  inverse: 'bg-cream text-plum-500 hover:bg-white'
+  outline: 'border border-sand bg-cream-deep text-ink hover:border-berry-300 hover:text-berry-600',
+  danger: 'border border-red-200 bg-cream-deep text-red-700 hover:bg-red-50',
+  inverse: 'bg-cream text-plum-500 hover:bg-cream-deep'
 };
 
 const sizes: Record<Size, string> = {

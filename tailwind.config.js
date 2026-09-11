@@ -8,31 +8,31 @@ export default {content: [
     extend: {
       colors: {
         cream: {
-          DEFAULT: '#F4F7F4', // Soft coconut green light
-          deep: '#E8EFE8',    // Coconut green deep
+          DEFAULT: '#050505', // Almost black
+          deep: '#111111',    // Slightly lighter for cards/surfaces
         },
         ink: {
-          DEFAULT: '#2B1C1A', // Warmer dark text
-          soft: '#5C4844',
-          muted: '#8F7C78',
+          DEFAULT: '#FFFFFF', // Pure white text
+          soft: '#E2E8F0',    // Light slate for secondary text
+          muted: '#94A3B8',   // Slate-400 for muted text
         },
-        berry: { // Terracotta tones (Primary Action)
-          50: '#FFF5F2',
-          100: '#FFE6DF',
-          200: '#FFC8B9',
-          300: '#FFA18A',
-          400: '#F87556',
-          500: '#E05A3B', // Terracotta
-          600: '#BE3E21',
-          700: '#992E16',
+        berry: { // Magenta/Pink (Primary Action)
+          50: '#FDF2F8',
+          100: '#FCE7F3',
+          200: '#FBCFE8',
+          300: '#F9A8D4',
+          400: '#F472B6',
+          500: '#EC4899', // Main Pink
+          600: '#DB2777',
+          700: '#BE185D',
         },
-        plum: { // Maroon tones (Deep accents)
-          500: '#8C2730', // Maroon
-          600: '#6A1A21',
-          700: '#4D1016',
+        plum: { // Cyan/Blue (Deep accents)
+          500: '#0EA5E9', // Main Cyan/Blue
+          600: '#0284C7',
+          700: '#0369A1',
         },
-        sand: '#E3D7AE', // Mustard tinted warm sand
-        moss: '#009688', // Vibrant teal
+        sand: '#1E293B', // dark slate for borders
+        moss: '#06B6D4', // cyan-500
       },
       fontFamily: {
         display: ['Fraunces', 'Georgia', 'serif'],

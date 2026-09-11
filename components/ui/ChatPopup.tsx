@@ -76,7 +76,7 @@ export function ChatPopup() {
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
         className="fixed bottom-0 right-4 lg:right-10 z-[100] flex w-[340px] flex-col overflow-hidden rounded-t-2xl border border-sand/60 bg-cream shadow-[0_-8px_30px_rgba(0,0,0,0.12)]"
       >
-        <header className="flex items-center gap-3 border-b border-sand/70 bg-white px-3 py-3 shadow-sm cursor-pointer" onClick={() => setMinimized(!minimized)}>
+        <header className="flex items-center gap-3 border-b border-sand/70 bg-cream-deep px-3 py-3 shadow-sm cursor-pointer" onClick={() => setMinimized(!minimized)}>
           <Avatar src={photo?.url} name={other?.name ?? '?'} size={36} online={other?.online} />
           <div className="flex-1 min-w-0">
             <span className="block truncate font-medium text-ink leading-tight">{other?.name}</span>
@@ -124,7 +124,7 @@ export function ChatPopup() {
                   </div>
                 )}
                 <div className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`relative max-w-[85%] rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed ${isMe ? 'bg-berry-500 text-white rounded-tr-sm' : 'bg-white text-ink border border-sand/40 rounded-tl-sm shadow-sm'}`}>
+                  <div className={`relative max-w-[85%] rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed ${isMe ? 'bg-berry-500 text-white rounded-tr-sm' : 'bg-cream-deep text-ink border border-sand/40 rounded-tl-sm shadow-sm'}`}>
                     {message.imageUrl && (
                       <img src={message.imageUrl} alt="" className="mb-2 max-h-48 w-full rounded-xl object-cover" />
                     )}
@@ -139,7 +139,7 @@ export function ChatPopup() {
           })}
           {typingIn === conversation.id && (
             <div className="flex justify-start">
-              <div className="flex items-center gap-1 rounded-2xl rounded-tl-sm border border-sand/40 bg-white px-3 py-2.5 shadow-sm">
+              <div className="flex items-center gap-1 rounded-2xl rounded-tl-sm border border-sand/40 bg-cream-deep px-3 py-2.5 shadow-sm">
                 <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-ink-muted [animation-delay:-0.3s]" />
                 <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-ink-muted [animation-delay:-0.15s]" />
                 <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-ink-muted" />
@@ -149,8 +149,8 @@ export function ChatPopup() {
           <div ref={endRef} />
         </div>
 
-        <div className="border-t border-sand/60 bg-white p-3">
-          <div className="flex items-center gap-2 rounded-full border border-sand/60 bg-cream/50 px-3 py-1.5 focus-within:border-berry-500 focus-within:bg-white transition-colors">
+        <div className="border-t border-sand/60 bg-cream-deep p-3">
+          <div className="flex items-center gap-2 rounded-full border border-sand/60 bg-cream/50 px-3 py-1.5 focus-within:border-berry-500 focus-within:bg-cream-deep transition-colors">
             <input
               type="text"
               placeholder="Type a message..."

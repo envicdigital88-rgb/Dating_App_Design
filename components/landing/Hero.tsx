@@ -77,7 +77,7 @@ export function Hero() {
             alt="Two people laughing together at an outdoor café table"
             className="aspect-[4/5] w-full rounded-4xl object-cover shadow-lift" />
           
-          <div className="absolute -bottom-5 left-4 flex items-center gap-3 rounded-3xl bg-white px-4 py-3 shadow-card sm:left-8">
+          <div className="absolute -bottom-5 left-4 flex items-center gap-3 rounded-3xl bg-cream-deep px-4 py-3 shadow-card sm:left-8">
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-moss/10 text-moss">
               <ShieldCheckIcon className="h-4 w-4" />
             </span>

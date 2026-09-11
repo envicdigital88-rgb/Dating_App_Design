@@ -30,7 +30,7 @@ export function SubscriptionPage() {
       
 
       <div className="grid max-w-4xl gap-5 lg:grid-cols-2">
-        <div className="rounded-4xl bg-white p-6 shadow-card">
+        <div className="rounded-4xl bg-cream-deep p-6 shadow-card">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-ink-muted">
@@ -80,7 +80,7 @@ export function SubscriptionPage() {
           </dl>
         </div>
 
-        <div className="rounded-4xl bg-white p-6 shadow-card">
+        <div className="rounded-4xl bg-cream-deep p-6 shadow-card">
           <h2 className="font-display text-xl text-ink">Payment history</h2>
           {payments.length === 0 ?
           <div className="mt-4">

@@ -67,7 +67,7 @@ export function Requests() {
           aria-selected={tab === key}
           onClick={() => setTab(key)}
           className={`rounded-full px-5 py-2 text-sm font-medium transition-[background-color,color] duration-150 ease-soft ${
-          tab === key ? 'bg-white text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`
+          tab === key ? 'bg-cream-deep text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`
           }>
           
             {label}
@@ -95,7 +95,7 @@ export function Requests() {
               return (
                 <li
                   key={request.id}
-                  className="flex flex-wrap items-center gap-4 rounded-4xl bg-white p-4 shadow-card sm:p-5">
+                  className="flex flex-wrap items-center gap-4 rounded-4xl bg-cream-deep p-4 shadow-card sm:p-5">
                   
                       <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-3xl bg-cream-deep">
                         {photo &&
@@ -133,7 +133,7 @@ export function Requests() {
             return (
               <li
                 key={request.id}
-                className="flex flex-wrap items-center gap-4 rounded-4xl bg-white p-4 shadow-card sm:p-5">
+                className="flex flex-wrap items-center gap-4 rounded-4xl bg-cream-deep p-4 shadow-card sm:p-5">
                 
                     <button
                   onClick={() => router.push(`/profile/${sender.id}`)}
@@ -239,7 +239,7 @@ export function Requests() {
             return (
               <li
                 key={request.id}
-                className="flex flex-wrap items-center gap-4 rounded-4xl bg-white p-4 shadow-card sm:p-5">
+                className="flex flex-wrap items-center gap-4 rounded-4xl bg-cream-deep p-4 shadow-card sm:p-5">
                 
                     {photo &&
                 <img src={photo.url} alt="" className="h-16 w-16 rounded-2xl object-cover" />

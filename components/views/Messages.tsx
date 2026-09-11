@@ -42,7 +42,7 @@ export function Messages() {
             action={<Button onClick={() => router.push('/discover')}>Discover people</Button>} /> :
 
 
-          <ul className="divide-y divide-sand overflow-hidden rounded-4xl bg-white shadow-card">
+          <ul className="flex flex-col gap-4">
               {conversations.map((conversation) => {
               const otherId = conversation.userIds.find((uid) => uid !== currentUser.id) as string;
               const user = userById(otherId);
@@ -52,7 +52,7 @@ export function Messages() {
               const unread = messages.filter((m) => m.senderId !== currentUser.id && !m.readAt).length;
               if (!user) return null;
               return (
-                <li key={conversation.id}>
+                <li key={conversation.id} className="overflow-hidden rounded-4xl bg-white/15 backdrop-blur-md ring-1 ring-white/10 shadow-sm">
                     <button
                     onClick={() => {
                       if (window.innerWidth >= 1024) {
@@ -61,7 +61,7 @@ export function Messages() {
                         router.push(`/messages/${conversation.id}`);
                       }
                     }}
-                    className="flex w-full items-center gap-4 px-4 py-4 text-left transition-colors duration-150 ease-soft hover:bg-cream">
+                    className="flex w-full items-center gap-4 px-4 py-4 text-left transition-colors duration-150 ease-soft hover:bg-white/15">
                     
                       <Avatar src={photo?.url} name={user.name} size={52} online={user.online} />
                       <span className="min-w-0 flex-1">
@@ -101,7 +101,7 @@ export function Messages() {
         </div>
 
         <aside className="space-y-5">
-          <div className="rounded-4xl bg-white p-5 shadow-card">
+          <div className="rounded-4xl bg-cream-deep p-5 shadow-card">
             <h2 className="mb-4 font-display text-lg text-ink">Chat allowance</h2>
             <UsageMeter
               label="Messages remaining"

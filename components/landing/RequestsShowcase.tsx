@@ -33,7 +33,7 @@ export function RequestsShowcase() {
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-4xl bg-white p-5 shadow-card">
+          <div className="rounded-4xl bg-cream-deep p-5 shadow-card">
             <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">
               Incoming · locked
             </p>
@@ -60,7 +60,7 @@ export function RequestsShowcase() {
             </div>
           </div>
 
-          <div className="rounded-4xl bg-white p-5 shadow-card">
+          <div className="rounded-4xl bg-cream-deep p-5 shadow-card">
             <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">
               Sent · accepted
             </p>

@@ -27,7 +27,7 @@ export function PackageGrid({
           <li
             key={pkg.id}
             className={`flex flex-col rounded-4xl p-6 shadow-card ${
-            featured ? 'bg-plum-500 text-cream' : 'bg-white text-ink'}`
+            featured ? 'bg-plum-500 text-cream' : 'bg-cream-deep text-ink'}`
             }>
             
             <div className="flex items-start justify-between gap-3">

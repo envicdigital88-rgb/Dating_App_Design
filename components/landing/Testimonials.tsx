@@ -14,7 +14,7 @@ export function Testimonials() {
         
 
         <div className="mt-12 grid gap-5 lg:grid-cols-[1.3fr_1fr]">
-          <figure className="flex flex-col justify-between rounded-4xl bg-white p-8 shadow-card lg:p-10">
+          <figure className="flex flex-col justify-between rounded-4xl bg-cream-deep p-8 shadow-card lg:p-10">
             <blockquote className="font-display text-[26px] leading-[1.25] text-ink lg:text-[32px]">
               “{lead.quote}”
             </blockquote>

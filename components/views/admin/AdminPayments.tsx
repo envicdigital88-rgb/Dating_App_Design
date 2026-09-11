@@ -57,7 +57,7 @@ export function AdminPayments() {
           key={key}
           onClick={() => setFilter(key)}
           className={`rounded-full px-4 py-1.5 text-[13px] capitalize transition-colors duration-150 ease-soft ${
-          filter === key ? 'bg-white text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`
+          filter === key ? 'bg-cream-deep text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`
           }>
           
             {key}
@@ -65,7 +65,7 @@ export function AdminPayments() {
         )}
       </div>
 
-      <div className="overflow-x-auto rounded-4xl bg-white shadow-card">
+      <div className="overflow-x-auto rounded-4xl bg-cream-deep shadow-card">
         <table className="w-full min-w-[760px] text-left text-[14px]">
           <thead className="border-b border-sand text-[12px] uppercase tracking-[0.06em] text-ink-muted">
             <tr>
@@ -124,7 +124,7 @@ export function AdminPayments() {
         }
       </div>
 
-      <section className="mt-5 overflow-hidden rounded-4xl bg-white shadow-card">
+      <section className="mt-5 overflow-hidden rounded-4xl bg-cream-deep shadow-card">
         <h2 className="border-b border-sand px-5 py-4 font-display text-xl text-ink">Subscriptions</h2>
         {db.subscriptions.length === 0 ?
         <p className="px-5 py-8 text-[14px] text-ink-muted">

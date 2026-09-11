@@ -40,7 +40,7 @@ export function HeartBucket() {
               const photo = photosOf(user.id)[0];
               const requested = !!requestStatusWith(user.id);
               return (
-                <li key={user.id} className="group relative block w-full overflow-hidden rounded-4xl bg-white text-left shadow-card">
+                <li key={user.id} className="group relative block w-full overflow-hidden rounded-4xl bg-cream-deep text-left shadow-card">
                   <button
                     onClick={() => router.push(`/profile/${user.id}`)}
                     className="block w-full text-left"
@@ -62,7 +62,7 @@ export function HeartBucket() {
                       </div>
                     </div>
                   </button>
-                  <div className="flex p-3 gap-2 bg-white">
+                  <div className="flex p-3 gap-2 bg-cream-deep">
                     <button
                       onClick={() => removeFromHeartBucket(user.id)}
                       className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50"

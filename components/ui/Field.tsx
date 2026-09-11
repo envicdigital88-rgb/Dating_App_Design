@@ -2,7 +2,7 @@ import React from 'react';
 import { cn } from '@/lib/utils/format';
 
 const base =
-'w-full rounded-2xl border border-sand bg-white px-4 text-sm text-ink placeholder:text-ink-muted/70 transition-[border-color,box-shadow] duration-150 ease-soft focus:border-berry-400 focus:outline-none focus:ring-2 focus:ring-berry-100';
+'w-full rounded-2xl border border-sand bg-cream-deep px-4 text-sm text-ink placeholder:text-ink-muted/70 transition-[border-color,box-shadow] duration-150 ease-soft focus:border-berry-400 focus:outline-none focus:ring-2 focus:ring-berry-100';
 
 export function Label({ children, htmlFor }: {children: React.ReactNode;htmlFor?: string;}) {
   return (

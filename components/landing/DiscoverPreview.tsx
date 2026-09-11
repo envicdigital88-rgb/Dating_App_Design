@@ -34,7 +34,7 @@ export function DiscoverPreview() {
           {showcase.map(({ user, photo }) =>
           <li
             key={user.id}
-            className="group flex flex-col overflow-hidden rounded-4xl bg-white shadow-card">
+            className="group flex flex-col overflow-hidden rounded-4xl bg-cream-deep shadow-card">
             
               <div className="relative aspect-[3/4] overflow-hidden bg-cream-deep">
                 {photo &&

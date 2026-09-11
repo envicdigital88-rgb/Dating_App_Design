@@ -67,7 +67,7 @@ export function AdminOverview() {
       </div>
 
       <div className="mt-8 grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-        <section className="rounded-4xl bg-white p-6 shadow-card">
+        <section className="rounded-4xl bg-cream-deep p-6 shadow-card">
           <h2 className="font-display text-xl text-ink">Package performance</h2>
           <ul className="mt-5 space-y-4">
             {popular.map(({ pkg, count }) =>
@@ -89,7 +89,7 @@ export function AdminOverview() {
           </ul>
         </section>
 
-        <section className="rounded-4xl bg-white p-6 shadow-card">
+        <section className="rounded-4xl bg-cream-deep p-6 shadow-card">
           <h2 className="font-display text-xl text-ink">Latest activity</h2>
           <ul className="mt-4 divide-y divide-sand">
             {[...db.requests].

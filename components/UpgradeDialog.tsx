@@ -52,7 +52,7 @@ export function UpgradeDialog({
             onClose();
             router.push(`/checkout/${pkg.id}`);
           }}
-          className="flex w-full items-center gap-4 rounded-3xl border border-sand bg-cream px-5 py-4 text-left transition-[border-color,background-color] duration-150 ease-soft hover:border-berry-300 hover:bg-white">
+          className="flex w-full items-center gap-4 rounded-3xl border border-sand bg-cream px-5 py-4 text-left transition-[border-color,background-color] duration-150 ease-soft hover:border-berry-300 hover:bg-cream-deep">
           
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-berry-100 text-berry-600">
               {pkg.priorityVisibility ? <SparklesIcon className="h-5 w-5" /> : c.icon}

@@ -212,7 +212,7 @@ export function ProfileDetail() {
                 {user.traits.map((trait) => (
                   <li
                     key={trait}
-                    className="rounded-full border border-sand bg-white px-3.5 py-1.5 text-[14px] text-ink-soft"
+                    className="rounded-full border border-sand bg-cream-deep px-3.5 py-1.5 text-[14px] text-ink-soft"
                   >
                     {trait}
                   </li>
@@ -227,7 +227,7 @@ export function ProfileDetail() {
               {user.interests.map((interest) => (
                 <li
                   key={interest}
-                  className="rounded-full border border-sand bg-white px-3.5 py-1.5 text-[14px] text-ink-soft"
+                  className="rounded-full border border-sand bg-cream-deep px-3.5 py-1.5 text-[14px] text-ink-soft"
                 >
                   {interest}
                 </li>
@@ -256,7 +256,7 @@ export function ProfileDetail() {
             </dl>
           </section>
 
-          <section className="mt-10 rounded-4xl border border-sand bg-white p-5">
+          <section className="mt-10 rounded-4xl border border-sand bg-cream-deep p-5">
             <h2 className="font-display text-lg text-ink">Not right for you?</h2>
             <p className="mt-1.5 text-[13px] leading-relaxed text-ink-soft">
               Blocking removes {user.name} from your Discover, requests and inbox. Reports are

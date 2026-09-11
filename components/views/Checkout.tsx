@@ -55,7 +55,7 @@ export function Checkout() {
   if (stage === 'done') {
     return (
       <Page>
-        <div className="mx-auto max-w-lg rounded-4xl bg-white p-8 text-center shadow-card">
+        <div className="mx-auto max-w-lg rounded-4xl bg-cream-deep p-8 text-center shadow-card">
           <span className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-moss/10 text-moss">
             <CheckCircle2Icon className="h-7 w-7" />
           </span>
@@ -100,7 +100,7 @@ export function Checkout() {
   return (
     <Page>
       <div className="mx-auto grid max-w-4xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="rounded-4xl bg-white p-6 shadow-card sm:p-8">
+        <div className="rounded-4xl bg-cream-deep p-6 shadow-card sm:p-8">
           <h1 className="font-display text-[28px] leading-tight text-ink">Secure checkout</h1>
           <p className="mt-2 text-[14px] leading-relaxed text-ink-soft">
             Payments are verified on our servers before anything unlocks. We never store your card

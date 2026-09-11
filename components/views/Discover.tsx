@@ -92,7 +92,7 @@ export function Discover() {
       <div className="mb-6 flex justify-center lg:justify-start">
         <div role="tablist" className="inline-flex rounded-full bg-cream-deep p-1 shadow-inner">
           <button role="tab" aria-selected={tab === 'nearby'} onClick={() => setTab('nearby')}
-            className={`flex items-center gap-1.5 rounded-full px-5 py-2 text-sm font-semibold transition-all duration-150 ease-soft ${tab === 'nearby' ? 'bg-white text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`}>
+            className={`flex items-center gap-1.5 rounded-full px-5 py-2 text-sm font-semibold transition-all duration-150 ease-soft ${tab === 'nearby' ? 'bg-cream-deep text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`}>
             <CompassIcon className="h-4 w-4" /> Nearby
           </button>
           <button role="tab" aria-selected={tab === 'daily5'} onClick={() => setTab('daily5')}
@@ -149,11 +149,11 @@ export function Discover() {
         <aside className="space-y-4">
 
           {/* Up next — compact draggable thumbnails */}
-          <div className="rounded-3xl bg-white shadow-card overflow-hidden">
-            <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-sand/50">
+          <div className="rounded-3xl bg-white/15 backdrop-blur-md ring-1 ring-white/10 shadow-card overflow-hidden">
+            <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-white/10">
               <h2 className="font-display text-[15px] font-semibold text-ink">Up next</h2>
               {upNext.length > 0 && (
-                <span className="text-[10px] bg-cream-deep rounded-full px-2 py-0.5 text-ink-muted font-medium">
+                <span className="text-[10px] bg-white/10 rounded-full px-2 py-0.5 text-ink-muted font-medium">
                   drag to sort
                 </span>
               )}
@@ -162,7 +162,7 @@ export function Discover() {
             {upNext.length === 0 ? (
               <p className="px-4 py-4 text-[13px] text-ink-soft">No more profiles queued.</p>
             ) : (
-              <ul className="divide-y divide-sand/40">
+              <ul className="divide-y divide-white/10">
                 {upNext.map((user, i) => {
                   const photo = photosOf(user.id)[0];
                   const isDraggingThis = draggingUser?.id === user.id;
@@ -173,7 +173,7 @@ export function Discover() {
                         onDragStart={(e) => handleDragStart(e, user)}
                         onDragEnd={handleDragEnd}
                         className={`group flex items-center gap-2.5 px-3 py-2 transition-all duration-150 cursor-grab active:cursor-grabbing select-none ${
-                          isDraggingThis ? 'opacity-25 bg-cream scale-[0.97]' : 'hover:bg-cream/60'
+                          isDraggingThis ? 'opacity-25 bg-white/15 scale-[0.97]' : 'hover:bg-white/15'
                         }`}
                       >
                         {/* Rank */}
@@ -191,7 +191,7 @@ export function Discover() {
                             <Skeleton className="h-8 w-8 rounded-xl" />
                           )}
                           {/* Grip dots */}
-                          <div className="absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full bg-white border border-sand/80 shadow-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full bg-[#050505]/80 border border-white/20 shadow-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                             <svg className="h-1.5 w-1.5 text-ink-muted" viewBox="0 0 6 10" fill="currentColor">
                               <circle cx="1.5" cy="1.5" r="1" /><circle cx="4.5" cy="1.5" r="1" />
                               <circle cx="1.5" cy="5" r="1" /><circle cx="4.5" cy="5" r="1" />
@@ -226,7 +226,7 @@ export function Discover() {
 
             {/* Drag hint */}
             {upNext.length > 0 && (
-              <div className="px-4 py-2.5 border-t border-sand/50 text-center">
+              <div className="px-4 py-2.5 border-t border-white/10 text-center">
                 {draggingUser ? (
                   <p className="text-[11px] font-semibold text-berry-500 animate-pulse">
                     ↙ Drop {draggingUser.name} into a bucket on the card ↙
@@ -248,14 +248,14 @@ export function Discover() {
                     <ShoppingBagIcon className="h-4 w-4" />
                     <span className="text-[13px] font-semibold">In Your Heart</span>
                   </div>
-                  <span className="rounded-full bg-white/25 px-2 py-0.5 text-[11px] font-bold">{bucketCount}</span>
+                  <span className="rounded-full bg-cream-deep/25 px-2 py-0.5 text-[11px] font-bold">{bucketCount}</span>
                 </button>
               </div>
             )}
           </div>
 
           {/* Allowance */}
-          <div className="rounded-3xl bg-white p-4 shadow-card">
+          <div className="rounded-3xl bg-white/15 backdrop-blur-md ring-1 ring-white/10 p-4 shadow-card">
             <h2 className="mb-3 font-display text-[15px] font-semibold text-ink">Your allowance</h2>
             <div className="space-y-3">
               <UsageMeter label="Chat messages remaining" used={entitlements.chatUsed} limit={entitlements.chatLimit} />

@@ -32,7 +32,7 @@ export function Settings() {
       <PageHeader title="Settings" body="Account, privacy, notifications and app options." />
 
       <div className="grid max-w-4xl gap-5 lg:grid-cols-2">
-        <section className="rounded-4xl bg-white p-6 shadow-card">
+        <section className="rounded-4xl bg-cream-deep p-6 shadow-card">
           <h2 className="font-display text-xl text-ink">Account</h2>
           <div className="mt-4 space-y-4">
             <div>
@@ -60,7 +60,7 @@ export function Settings() {
           </div>
         </section>
 
-        <section className="rounded-4xl bg-white p-6 shadow-card">
+        <section className="rounded-4xl bg-cream-deep p-6 shadow-card">
           <h2 className="flex items-center gap-2 font-display text-xl text-ink">
             <ShieldCheckIcon className="h-4 w-4 text-moss" />
             Privacy
@@ -89,7 +89,7 @@ export function Settings() {
                 }>
                 
                   <span
-                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-150 ease-soft ${
+                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-cream-deep shadow-sm transition-transform duration-150 ease-soft ${
                   privacy[key] ? 'translate-x-[22px]' : 'translate-x-0.5'}`
                   } />
                 
@@ -99,7 +99,7 @@ export function Settings() {
           </ul>
         </section>
 
-        <section className="rounded-4xl bg-white p-6 shadow-card">
+        <section className="rounded-4xl bg-cream-deep p-6 shadow-card">
           <h2 className="flex items-center gap-2 font-display text-xl text-ink">
             <BanIcon className="h-4 w-4 text-ink-muted" />
             Blocked members · {blocked.length}
@@ -133,7 +133,7 @@ export function Settings() {
           }
         </section>
 
-        <section className="rounded-4xl bg-white p-6 shadow-card">
+        <section className="rounded-4xl bg-cream-deep p-6 shadow-card">
           <h2 className="font-display text-xl text-ink">App</h2>
           <div className="mt-4 space-y-3">
             <Button variant="outline" block onClick={promptInstall} disabled={installed}>

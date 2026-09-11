@@ -53,7 +53,7 @@ export function AdminActivity() {
         
       </div>
 
-      <section className="mt-8 overflow-hidden rounded-4xl bg-white shadow-card">
+      <section className="mt-8 overflow-hidden rounded-4xl bg-cream-deep shadow-card">
         <h2 className="border-b border-sand px-5 py-4 font-display text-xl text-ink">
           Chat usage by member
         </h2>
@@ -98,7 +98,7 @@ export function AdminActivity() {
         </table>
       </section>
 
-      <section className="mt-5 overflow-hidden rounded-4xl bg-white shadow-card">
+      <section className="mt-5 overflow-hidden rounded-4xl bg-cream-deep shadow-card">
         <h2 className="border-b border-sand px-5 py-4 font-display text-xl text-ink">
           Recent requests
         </h2>

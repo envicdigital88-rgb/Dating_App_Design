@@ -148,7 +148,7 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
             </Link>
           </p>
 
-          <div className="mt-8 rounded-3xl border border-sand bg-white p-4 text-[13px] leading-relaxed text-ink-soft">
+          <div className="mt-8 rounded-3xl border border-sand bg-cream-deep p-4 text-[13px] leading-relaxed text-ink-soft">
             <p className="font-medium text-ink">Demo accounts</p>
             <p className="mt-1">
               Member — <span className="font-mono">demo@kindred.app</span> /{' '}

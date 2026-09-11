@@ -118,7 +118,7 @@ export function Chat() {
 
   return (
     <div className="flex h-[100dvh] flex-col bg-cream">
-      <header className="flex items-center gap-3 border-b border-sand/70 bg-white px-3 py-2.5 sm:px-5">
+      <header className="flex items-center gap-3 border-b border-sand/70 bg-cream-deep px-3 py-2.5 sm:px-5">
         <button
           onClick={() => navigate('/messages')}
           aria-label="Back to messages"
@@ -180,7 +180,7 @@ export function Chat() {
                   <button
                     onClick={() => setPendingDelete(message.id)}
                     aria-label="Delete message"
-                    className="mb-1 rounded-full p-1.5 text-ink-muted opacity-0 transition-opacity duration-150 ease-soft hover:bg-white group-hover:opacity-100">
+                    className="mb-1 rounded-full p-1.5 text-ink-muted opacity-0 transition-opacity duration-150 ease-soft hover:bg-cream-deep group-hover:opacity-100">
                     
                       <Trash2Icon className="h-3.5 w-3.5" />
                     </button>
@@ -191,7 +191,7 @@ export function Chat() {
                     'border border-dashed border-sand bg-transparent text-ink-muted' :
                     mine ?
                     'bg-berry-500 text-white' :
-                    'bg-white text-ink shadow-sm'}`
+                    'bg-cream-deep text-ink shadow-sm'}`
                     }>
                     
                     {message.deleted ?
@@ -241,7 +241,7 @@ export function Chat() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.16, ease: [0.23, 1, 0.32, 1] }}
-              className="flex gap-1.5 rounded-3xl bg-white px-4 py-3 shadow-sm"
+              className="flex gap-1.5 rounded-3xl bg-cream-deep px-4 py-3 shadow-sm"
               style={{ width: 'fit-content' }}
               aria-label={`${other?.name} is typing`}>
               
@@ -260,7 +260,7 @@ export function Chat() {
       </div>
 
       {limitReached ?
-      <div className="border-t border-sand/70 bg-white px-4 py-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
+      <div className="border-t border-sand/70 bg-cream-deep px-4 py-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
           <div className="mx-auto flex max-w-2xl flex-wrap items-center gap-4 rounded-4xl bg-plum-500 p-5 text-cream">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cream/15">
               <LockIcon className="h-5 w-5" />
@@ -281,7 +281,7 @@ export function Chat() {
           </div>
         </div> :
 
-      <div className="border-t border-sand/70 bg-white px-3 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-5">
+      <div className="border-t border-sand/70 bg-cream-deep px-3 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-5">
           <div className="mx-auto max-w-2xl relative">
             {showEmoji && (
               <div className="absolute bottom-full right-0 mb-2 z-50 shadow-xl rounded-2xl overflow-hidden animate-in slide-in-from-bottom-2 fade-in duration-200">

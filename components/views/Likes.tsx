@@ -33,7 +33,7 @@ export function Likes() {
             <li key={like.id}>
               <button
                 onClick={() => router.push(`/profile/${user.id}`)}
-                className="group block w-full overflow-hidden rounded-4xl bg-white text-left shadow-card">
+                className="group block w-full overflow-hidden rounded-4xl bg-cream-deep text-left shadow-card">
                 
                 <div className="relative aspect-[3/4] overflow-hidden bg-cream-deep">
                   {photo &&

@@ -68,7 +68,7 @@ export function ProfileCard({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
-      className="overflow-hidden rounded-4xl bg-white shadow-card"
+      className="overflow-hidden rounded-4xl bg-cream-deep shadow-card"
     >
       {/* Photo */}
       <div className="relative w-full bg-cream-deep" style={{ aspectRatio: '3/5', maxHeight: '420px' }}>
@@ -98,16 +98,16 @@ export function ProfileCard({
               {photos.map((p, i) => (
                 <span
                   key={p.id}
-                  className={`h-1 flex-1 rounded-full transition-colors duration-150 ease-soft ${i === index ? 'bg-white' : 'bg-white/35'}`}
+                  className={`h-1 flex-1 rounded-full transition-colors duration-150 ease-soft ${i === index ? 'bg-cream-deep' : 'bg-cream-deep/35'}`}
                 />
               ))}
             </div>
             <button onClick={() => step(-1)} disabled={index === 0} aria-label="Previous photo"
-              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/85 p-2 text-ink shadow-sm transition-opacity duration-150 ease-soft disabled:opacity-0">
+              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-cream-deep/85 p-2 text-ink shadow-sm transition-opacity duration-150 ease-soft disabled:opacity-0">
               <ChevronLeftIcon className="h-4 w-4" />
             </button>
             <button onClick={() => step(1)} disabled={index === photos.length - 1} aria-label="Next photo"
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/85 p-2 text-ink shadow-sm transition-opacity duration-150 ease-soft disabled:opacity-0">
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-cream-deep/85 p-2 text-ink shadow-sm transition-opacity duration-150 ease-soft disabled:opacity-0">
               <ChevronRightIcon className="h-4 w-4" />
             </button>
           </>
@@ -158,7 +158,7 @@ export function ProfileCard({
               }`} />
             </motion.div>
             <span className={`text-[11px] font-semibold transition-colors duration-200 ${
-              isHeartActive ? 'text-berry-600' : 'text-ink-muted group-hover:text-berry-500'
+              isHeartActive ? 'text-berry-400' : 'text-ink-muted group-hover:text-berry-400'
             }`}>
               {isHeartActive && draggingUserName ? `Save ${draggingUserName}` : 'In Your Heart'}
             </span>
@@ -200,7 +200,7 @@ export function ProfileCard({
               }`} />
             </motion.div>
             <span className={`text-[11px] font-semibold transition-colors duration-200 ${
-              isRecycleActive ? 'text-slate-600' : 'text-ink-muted group-hover:text-slate-500'
+              isRecycleActive ? 'text-slate-300' : 'text-ink-muted group-hover:text-slate-400'
             }`}>
               {isRecycleActive && draggingUserName ? `Skip ${draggingUserName}` : 'Recycle Bin'}
             </span>
@@ -209,11 +209,11 @@ export function ProfileCard({
 
         {/* Match Reasons */}
         {matchResult && matchResult.reasons.length > 0 && (
-          <div className="mb-4 rounded-2xl bg-berry-50 p-3">
-            <div className="flex items-center gap-1.5 mb-2 text-sm font-semibold text-berry-600">
+          <div className="mb-4 rounded-2xl bg-berry-500/10 p-3 border border-berry-500/20">
+            <div className="flex items-center gap-1.5 mb-2 text-sm font-semibold text-berry-400">
               <SparklesIcon className="h-4 w-4" /> Why you fit
             </div>
-            <ul className="flex flex-col gap-1.5 text-[13px] text-berry-900/80">
+            <ul className="flex flex-col gap-1.5 text-[13px] text-ink-soft">
               {matchResult.reasons.map((reason, i) => (
                 <li key={i} className="flex items-start gap-1.5">
                   <span className="mt-1 block h-1.5 w-1.5 shrink-0 rounded-full bg-berry-400" />
@@ -258,7 +258,7 @@ export function ProfileCard({
           <button
             onClick={onPass}
             aria-label={`Pass on ${user.name}`}
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-400 shadow-sm transition-all duration-150 ease-soft hover:border-slate-400 hover:text-slate-600 active:scale-95"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-sand bg-cream-deep text-ink-muted shadow-sm transition-all duration-150 ease-soft hover:border-slate-500 hover:text-slate-300 active:scale-95"
           >
             <XIcon className="h-5 w-5" />
           </button>
@@ -283,7 +283,7 @@ export function ProfileCard({
           </button>
           <button
             onClick={() => router.push(`/profile/${user.id}`)}
-            className="h-12 shrink-0 rounded-2xl border border-sand bg-white px-4 text-sm font-semibold text-ink shadow-sm transition-all duration-150 ease-soft hover:border-berry-300 hover:text-berry-600"
+            className="h-12 shrink-0 rounded-2xl border border-sand bg-cream-deep px-4 text-sm font-semibold text-ink shadow-sm transition-all duration-150 ease-soft hover:border-berry-400 hover:text-berry-400"
           >
             View
           </button>

@@ -56,7 +56,7 @@ export function Notifications() {
 
       <div className="max-w-2xl space-y-5">
         {!notificationsEnabled &&
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-4xl border border-sand bg-white p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-4xl border border-sand bg-cream-deep p-5">
             <div>
               <p className="font-display text-lg text-ink">Turn on push notifications</p>
               <p className="mt-1 text-[13px] text-ink-soft">
@@ -74,15 +74,15 @@ export function Notifications() {
           body="Requests, accepted connections, new messages and package updates all land here." /> :
 
 
-        <ul className="divide-y divide-sand overflow-hidden rounded-4xl bg-white shadow-card">
+        <ul className="flex flex-col gap-4">
             {notifications.map((notification) =>
-          <li key={notification.id}>
+          <li key={notification.id} className="overflow-hidden rounded-4xl bg-white/15 backdrop-blur-md ring-1 ring-white/10 shadow-sm">
                 <button
               onClick={() => {
                 markNotificationRead(notification.id);
                 if (notification.href) router.push(notification.href);
               }}
-              className="flex w-full items-start gap-4 px-5 py-4 text-left transition-colors duration-150 ease-soft hover:bg-cream">
+              className="flex w-full items-start gap-4 px-5 py-4 text-left transition-colors duration-150 ease-soft hover:bg-white/15">
               
                   <span
                 className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${

@@ -83,19 +83,20 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
 
   const mobileNav: NavItem[] = [
-  main[0],
-  main[2],
-  main[4],
-  { to: '/photos', label: 'Photos', icon: <ImageIcon className="h-[18px] w-[18px]" /> },
-  { to: '/profile', label: 'You', icon: <UserIcon className="h-[18px] w-[18px]" /> }];
+    main[0], // Discover
+    main[1], // In Your Heart
+    main[2], // Likes
+    main[5], // Messages
+    { to: '/profile', label: 'You', icon: <UserIcon className="h-[18px] w-[18px]" /> }
+  ];
 
 
   const isChat = /^\/messages\/.+/.test(pathname);
 
   const navClass = (isActive: boolean) =>
   cn(
-    'group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-[background-color,color] duration-150 ease-soft',
-    isActive ? 'bg-white text-ink shadow-sm' : 'text-ink-soft hover:bg-white/60 hover:text-ink'
+    'group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-[background-color,color,box-shadow] duration-150 ease-soft',
+    isActive ? 'bg-gradient-to-r from-white/15 to-white/5 text-ink shadow-sm ring-1 ring-white/10' : 'text-ink-soft hover:bg-white/5 hover:text-ink'
   );
 
   return (
@@ -196,7 +197,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
                   router.push('/');
                 }}
                 aria-label="Sign out"
-                className="rounded-full p-2 text-ink-muted transition-colors duration-150 ease-soft hover:bg-white hover:text-ink">
+                className="rounded-full p-2 text-ink-muted transition-colors duration-150 ease-soft hover:bg-cream-deep hover:text-ink">
                 
                 <LogOutIcon className="h-4 w-4" />
               </button>
@@ -210,13 +211,13 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-sand/70 bg-cream/90 px-4 py-3 backdrop-blur lg:hidden">
               <BrandMark />
               <div className="flex items-center gap-1">
-                <span className="mr-1 rounded-full bg-white px-3 py-1.5 text-[12px] font-medium text-ink-soft shadow-sm">
+                <span className="mr-1 rounded-full bg-cream-deep px-3 py-1.5 text-[12px] font-medium text-ink-soft shadow-sm">
                   {entitlements.chatRemaining === null ? '∞' : entitlements.chatRemaining} msgs
                 </span>
                 <Link
                 href="/notifications"
                 aria-label="Notifications"
-                className="relative rounded-full p-2 text-ink-soft transition-colors duration-150 ease-soft hover:bg-white">
+                className="relative rounded-full p-2 text-ink-soft transition-colors duration-150 ease-soft hover:bg-cream-deep">
                 
                   <BellIcon className="h-5 w-5" />
                   {!!unreadNotifications &&
@@ -239,7 +240,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
       {!isChat &&
       <nav
         aria-label="Primary"
-        className="fixed bottom-0 left-0 right-0 z-40 border-t border-sand/80 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+        className="fixed bottom-0 left-0 right-0 z-40 border-t border-sand/80 bg-cream-deep/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
         
           <ul className="flex items-stretch">
             {mobileNav.map((item) => {

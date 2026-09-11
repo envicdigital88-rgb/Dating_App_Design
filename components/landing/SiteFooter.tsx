@@ -46,7 +46,7 @@ export function SiteFooter() {
             </p>
             <div className="mt-6 flex gap-3">
               <Link href="/sign-up"
-                className="rounded-full bg-cream px-5 py-2.5 text-[13px] font-medium text-plum-600 transition-colors duration-150 ease-soft hover:bg-white">
+                className="rounded-full bg-cream px-5 py-2.5 text-[13px] font-medium text-plum-600 transition-colors duration-150 ease-soft hover:bg-cream-deep">
                 
                 Create your profile
               </Link>

@@ -47,7 +47,7 @@ export function AdminPackages() {
         } />
       
 
-      <div className="overflow-x-auto rounded-4xl bg-white shadow-card">
+      <div className="overflow-x-auto rounded-4xl bg-cream-deep shadow-card">
         <table className="w-full min-w-[820px] text-left text-[14px]">
           <thead className="border-b border-sand text-[12px] uppercase tracking-[0.06em] text-ink-muted">
             <tr>
@@ -242,7 +242,7 @@ export function AdminPackages() {
                 }>
                 
                     <span
-                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-150 ease-soft ${
+                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-cream-deep shadow-sm transition-transform duration-150 ease-soft ${
                   editing[key] ? 'translate-x-[22px]' : 'translate-x-0.5'}`
                   } />
                 

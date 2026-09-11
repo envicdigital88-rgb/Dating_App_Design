@@ -60,14 +60,14 @@ export function PhotoGallery({ photos, name }: {photos: Photo[];name: string;}) 
             <button
             onClick={() => setLightbox(false)}
             aria-label="Close gallery"
-            className="absolute right-5 top-5 rounded-full bg-white/10 p-2.5 text-cream transition-colors duration-150 ease-soft hover:bg-white/20">
+            className="absolute right-5 top-5 rounded-full bg-cream-deep/10 p-2.5 text-cream transition-colors duration-150 ease-soft hover:bg-cream-deep/20">
             
               <XIcon className="h-5 w-5" />
             </button>
             <button
             onClick={() => setActive((i) => Math.max(0, i - 1))}
             aria-label="Previous"
-            className="absolute left-4 rounded-full bg-white/10 p-3 text-cream disabled:opacity-30"
+            className="absolute left-4 rounded-full bg-cream-deep/10 p-3 text-cream disabled:opacity-30"
             disabled={active === 0}>
             
               <ChevronLeftIcon className="h-5 w-5" />
@@ -84,7 +84,7 @@ export function PhotoGallery({ photos, name }: {photos: Photo[];name: string;}) 
             <button
             onClick={() => setActive((i) => Math.min(photos.length - 1, i + 1))}
             aria-label="Next"
-            className="absolute right-4 rounded-full bg-white/10 p-3 text-cream disabled:opacity-30"
+            className="absolute right-4 rounded-full bg-cream-deep/10 p-3 text-cream disabled:opacity-30"
             disabled={active === photos.length - 1}>
             
               <ChevronRightIcon className="h-5 w-5" />

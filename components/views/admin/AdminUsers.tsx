@@ -59,7 +59,7 @@ export function AdminUsers() {
             key={key}
             onClick={() => setFilter(key)}
             className={`rounded-full px-3.5 py-1.5 text-[13px] capitalize transition-colors duration-150 ease-soft ${
-            filter === key ? 'bg-white text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`
+            filter === key ? 'bg-cream-deep text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`
             }>
             
               {key}
@@ -68,7 +68,7 @@ export function AdminUsers() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-4xl bg-white shadow-card">
+      <div className="overflow-hidden rounded-4xl bg-cream-deep shadow-card">
         <table className="w-full text-left text-[14px]">
           <thead className="border-b border-sand text-[12px] uppercase tracking-[0.06em] text-ink-muted">
             <tr>

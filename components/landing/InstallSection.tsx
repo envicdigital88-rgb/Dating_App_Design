@@ -68,10 +68,10 @@ export function InstallSection() {
                 <p className="mt-1 text-[12px] text-ink-muted">Margate · Online now</p>
                 <div className="mt-3 flex gap-2">
                   <span className="h-9 flex-1 rounded-full bg-berry-500" />
-                  <span className="h-9 w-9 rounded-full border border-sand bg-white" />
+                  <span className="h-9 w-9 rounded-full border border-sand bg-cream-deep" />
                 </div>
               </div>
-              <div className="flex justify-around border-t border-sand bg-white px-4 py-2.5 text-ink-muted">
+              <div className="flex justify-around border-t border-sand bg-cream-deep px-4 py-2.5 text-ink-muted">
                 {['Discover', 'Requests', 'Chat', 'You'].map((tab, i) =>
                 <span
                   key={tab}

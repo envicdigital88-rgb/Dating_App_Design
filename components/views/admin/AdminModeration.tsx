@@ -36,7 +36,7 @@ export function AdminModeration() {
           aria-selected={tab === key}
           onClick={() => setTab(key)}
           className={`rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors duration-150 ease-soft ${
-          tab === key ? 'bg-white text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`
+          tab === key ? 'bg-cream-deep text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`
           }>
           
             {label}
@@ -56,7 +56,7 @@ export function AdminModeration() {
             {queue.map((photo) => {
           const owner = db.users.find((u) => u.id === photo.userId);
           return (
-            <li key={photo.id} className="overflow-hidden rounded-4xl bg-white shadow-card">
+            <li key={photo.id} className="overflow-hidden rounded-4xl bg-cream-deep shadow-card">
                   <img src={photo.url} alt="" className="aspect-[4/3] w-full object-cover" />
                   <div className="p-4">
                     <p className="font-medium text-ink">{owner?.name ?? 'Member'}</p>
@@ -109,7 +109,7 @@ export function AdminModeration() {
           return (
             <li
               key={report.id}
-              className="flex flex-wrap items-start gap-4 rounded-4xl bg-white p-5 shadow-card">
+              className="flex flex-wrap items-start gap-4 rounded-4xl bg-cream-deep p-5 shadow-card">
               
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">

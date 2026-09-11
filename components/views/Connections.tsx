@@ -40,7 +40,7 @@ export function Connections() {
           const photo = user ? photosOf(user.id)[0] : undefined;
           if (!user) return null;
           return (
-            <li key={connection.id} className="flex gap-4 rounded-4xl bg-white p-4 shadow-card">
+            <li key={connection.id} className="flex gap-4 rounded-4xl bg-cream-deep p-4 shadow-card">
                 {photo &&
               <img src={photo.url} alt="" className="h-24 w-20 shrink-0 rounded-2xl object-cover" />
               }

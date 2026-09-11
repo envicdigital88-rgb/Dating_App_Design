@@ -117,7 +117,7 @@ export function MyProfile() {
             { label: 'Requests sent', value: sentRequests().length },
             { label: 'Photos', value: photos.length }].
             map((stat) =>
-            <div key={stat.label} className="rounded-3xl bg-white p-4 text-center shadow-card">
+            <div key={stat.label} className="rounded-3xl bg-cream-deep p-4 text-center shadow-card">
                 <dd className="font-display text-2xl text-ink">{stat.value}</dd>
                 <dt className="mt-0.5 text-[12px] text-ink-muted">{stat.label}</dt>
               </div>
@@ -127,7 +127,7 @@ export function MyProfile() {
 
         <div>
           {editing ?
-          <div className="space-y-5 rounded-4xl bg-white p-6 shadow-card">
+          <div className="space-y-5 rounded-4xl bg-cream-deep p-6 shadow-card">
               <div>
                 <Label htmlFor="my-location">Location</Label>
                 <Input
@@ -256,7 +256,7 @@ export function MyProfile() {
                   {currentUser.interests.map((interest) =>
                 <li
                   key={interest}
-                  className="rounded-full border border-sand bg-white px-3.5 py-1.5 text-[14px] text-ink-soft">
+                  className="rounded-full border border-sand bg-cream-deep px-3.5 py-1.5 text-[14px] text-ink-soft">
                   
                       {interest}
                     </li>

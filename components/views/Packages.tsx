@@ -51,7 +51,7 @@ export function Packages() {
           body: 'Buying or upgrading a package starts a new allowance period for both messages and dating requests.'
         }].
         map((item) =>
-        <div key={item.title} className="rounded-4xl bg-white p-6 shadow-card">
+        <div key={item.title} className="rounded-4xl bg-cream-deep p-6 shadow-card">
             <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-berry-50 text-berry-500">
               {item.icon}
             </span>
@@ -66,7 +66,7 @@ export function Packages() {
           <ShieldCheckIcon className="h-4 w-4 text-moss" />
           Before you pay
         </h2>
-        <dl className="mt-4 divide-y divide-sand rounded-4xl bg-white px-5 shadow-card">
+        <dl className="mt-4 divide-y divide-sand rounded-4xl bg-cream-deep px-5 shadow-card">
           {faqs.slice(0, 3).map((faq) =>
           <div key={faq.q} className="py-4">
               <dt className="font-medium text-ink">{faq.q}</dt>

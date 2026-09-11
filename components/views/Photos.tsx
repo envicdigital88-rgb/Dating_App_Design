@@ -32,7 +32,7 @@ export function Photos() {
       <div className="max-w-4xl">
         <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           {photos.map((photo, index) =>
-          <li key={photo.id} className="overflow-hidden rounded-4xl bg-white shadow-card">
+          <li key={photo.id} className="overflow-hidden rounded-4xl bg-cream-deep shadow-card">
               <div className="relative">
                 <img
                 src={photo.url}
@@ -41,7 +41,7 @@ export function Photos() {
               
                 <div className="absolute left-2.5 top-2.5 flex flex-col gap-1.5">
                   {photo.isPrimary &&
-                <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-ink">
+                <span className="inline-flex items-center gap-1 rounded-full bg-cream-deep/95 px-2.5 py-1 text-[11px] font-semibold text-ink">
                       <StarIcon className="h-3 w-3 text-berry-500" fill="currentColor" />
                       Main
                     </span>
@@ -104,7 +104,7 @@ export function Photos() {
           }
         </ul>
 
-        <div className="mt-8 grid gap-4 rounded-4xl border border-sand bg-white p-6 sm:grid-cols-3">
+        <div className="mt-8 grid gap-4 rounded-4xl border border-sand bg-cream-deep p-6 sm:grid-cols-3">
           {[
           {
             title: 'One clear face photo',

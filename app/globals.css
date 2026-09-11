@@ -9,10 +9,10 @@
 /* END TAILWIND IMPORTS — ALL OTHER CSS MUST GO BELOW THIS LINE */
 
 :root {
-  --k-cream: #F4F7F4;
-  --k-ink: #2B1C1A;
-  --k-berry: #E05A3B;
-  --k-plum: #8C2730;
+  --k-cream: #050505;
+  --k-ink: #FFFFFF;
+  --k-berry: #EC4899;
+  --k-plum: #0EA5E9;
 }
 html,
 body,
@@ -22,12 +22,10 @@ body,
 body {
   background-color: var(--k-cream);
   background-image: 
-    /* Sun */
-    radial-gradient(circle at 50% 100%, rgba(255, 225, 140, 0.9) 0%, rgba(255, 225, 140, 0.9) 10%, transparent 10.5%),
-    /* Sun glow */
-    radial-gradient(circle at 50% 100%, rgba(255, 120, 80, 0.6) 0%, transparent 50%),
-    /* Sunset sky gradient */
-    linear-gradient(180deg, rgba(130, 90, 160, 0.25) 0%, rgba(220, 110, 130, 0.35) 40%, rgba(250, 180, 120, 0.5) 100%);
+    /* Pink glow top left */
+    radial-gradient(circle at 0% 0%, rgba(236, 72, 153, 0.15) 0%, transparent 40%),
+    /* Blue glow bottom right */
+    radial-gradient(circle at 100% 100%, rgba(14, 165, 233, 0.15) 0%, transparent 40%);
   background-attachment: fixed;
   color: var(--k-ink);
   font-family: 'Inter', system-ui, sans-serif;

@@ -99,7 +99,7 @@ export function AdminShell({ children }: { children?: React.ReactNode }) {
                     href={item.to}
                     className={cn(
                       'shrink-0 rounded-full px-3.5 py-1.5 text-[13px] transition-colors duration-150 ease-soft',
-                      isActive ? 'bg-plum-500 text-cream' : 'bg-white text-ink-soft'
+                      isActive ? 'bg-plum-500 text-cream' : 'bg-cream-deep text-ink-soft'
                     )}>
                       {item.label}
                   </Link>
@@ -141,7 +141,7 @@ export function StatTile({
     <div
       className={cn(
         'rounded-3xl p-5',
-        emphasis ? 'bg-plum-500 text-cream' : 'bg-white text-ink shadow-card'
+        emphasis ? 'bg-plum-500 text-cream' : 'bg-cream-deep text-ink shadow-card'
       )}>
       
       <p className={cn('text-[12px]', emphasis ? 'text-cream/65' : 'text-ink-muted')}>{label}</p>

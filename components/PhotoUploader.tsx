@@ -54,7 +54,7 @@ export function PhotoUploader({
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={busy}
-        className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-sand bg-white/70 px-4 text-center transition-[border-color,background-color] duration-150 ease-soft hover:border-berry-300 hover:bg-white disabled:opacity-60">
+        className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-sand bg-cream-deep/70 px-4 text-center transition-[border-color,background-color] duration-150 ease-soft hover:border-berry-300 hover:bg-cream-deep disabled:opacity-60">
         
         {busy ?
         <Loader2Icon className="h-5 w-5 animate-spin text-berry-500" /> :
