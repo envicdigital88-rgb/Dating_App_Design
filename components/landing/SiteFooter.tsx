@@ -39,7 +39,7 @@ export function SiteFooter() {
       <div className="mx-auto max-w-6xl px-5 lg:px-8">
         <div className="grid gap-10 lg:grid-cols-[1.4fr_2fr]">
           <div>
-            <BrandMark tone="cream" />
+            <BrandMark />
             <p className="mt-4 max-w-xs text-[14px] leading-relaxed">
               Dating for people who actually mean it. Profiles, photos, requests and real
               conversations — no questionnaires, no compatibility scores.

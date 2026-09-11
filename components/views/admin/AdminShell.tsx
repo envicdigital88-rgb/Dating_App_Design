@@ -36,7 +36,7 @@ export function AdminShell({ children }: { children?: React.ReactNode }) {
       <div className="mx-auto flex w-full max-w-[1500px]">
         <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-sand/70 bg-plum-600 px-4 py-6 lg:flex">
           <div className="mb-1 px-1">
-            <BrandMark tone="cream" />
+            <BrandMark />
           </div>
           <p className="mb-7 px-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-cream/45">
             Admin console

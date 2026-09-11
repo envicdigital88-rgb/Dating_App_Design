@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeftIcon, ChevronRightIcon, HeartIcon, MapPinIcon, SendIcon, XIcon, ZapIcon, SparklesIcon, Trash2Icon } from 'lucide-react';
+import { HeartIcon, SendIcon, XIcon, ZapIcon, SparklesIcon, Trash2Icon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { Badge, VerifiedMark } from './ui/Bits';
+import { Badge } from './ui/Bits';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { presence } from '@/lib/utils/format';
 import { calculateVibeMatch } from '@/lib/utils/matching';
@@ -52,11 +52,6 @@ export function ProfileCard({
   const { photosOf, currentUser } = useStore();
   const router = useRouter();
   const photos = photosOf(user.id);
-  const [index, setIndex] = useState(0);
-  const photo = photos[index];
-
-  const step = (delta: number) =>
-    setIndex((i) => Math.min(photos.length - 1, Math.max(0, i + delta)));
 
   const matchResult = currentUser ? calculateVibeMatch(currentUser, user) : null;
 
@@ -162,7 +157,8 @@ export function ProfileCard({
             onDragOver={onRecycleDragOver}
             onDragLeave={onDragLeave}
             onDrop={onRecycleDrop}
-            className="group relative flex flex-col items-center gap-1.5 cursor-default select-none"
+            onClick={onRecycleBin}
+            className="group relative flex flex-col items-center gap-1.5 cursor-pointer select-none"
           >
             <motion.div
               animate={isRecycleActive
