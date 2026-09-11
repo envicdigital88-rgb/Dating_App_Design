@@ -54,9 +54,9 @@ export function Notifications() {
         } />
       
 
-      <div className="max-w-2xl space-y-5">
+      <div className="min-w-0 max-w-2xl space-y-5 overflow-hidden">
         {!notificationsEnabled &&
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-4xl border border-sand bg-cream-deep p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-4xl border border-sand bg-cream-deep p-5">
             <div>
               <p className="font-display text-lg text-ink">Turn on push notifications</p>
               <p className="mt-1 text-[13px] text-ink-soft">

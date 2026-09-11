@@ -32,8 +32,8 @@ export function Mingles() {
         } />
       
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="max-w-2xl">
+      <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="min-w-0 w-full overflow-hidden lg:max-w-2xl">
           {conversations.length === 0 ?
           <EmptyState
             icon={<MessageCircleIcon className="h-5 w-5" />}
@@ -42,7 +42,7 @@ export function Mingles() {
             action={<Button onClick={() => router.push('/discover')}>Discover people</Button>} /> :
 
 
-          <ul className="flex flex-col gap-4">
+          <ul className="flex min-w-0 flex-col gap-4">
               {conversations.map((conversation) => {
               const otherId = conversation.userIds.find((uid) => uid !== currentUser.id) as string;
               const user = userById(otherId);
@@ -100,7 +100,7 @@ export function Mingles() {
           }
         </div>
 
-        <aside className="space-y-5">
+        <aside className="hidden lg:block space-y-5">
           <div className="rounded-4xl bg-cream-deep p-5 shadow-card">
             <h2 className="mb-4 font-display text-lg text-ink">Chat allowance</h2>
             <UsageMeter

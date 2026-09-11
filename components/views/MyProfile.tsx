@@ -57,7 +57,7 @@ export function MyProfile() {
         title="My profile"
         body="This is what other members see. Keep it current — active, complete profiles get far more wingles."
         action={
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => router.push('/photos')}>
               <ImageIcon className="h-4 w-4" />
               Photos

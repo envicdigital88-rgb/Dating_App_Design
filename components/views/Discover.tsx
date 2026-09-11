@@ -104,8 +104,8 @@ export function Discover() {
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_280px]">
 
-        {/* Main — profile card with bucket zones INSIDE */}
-        <div className="mx-auto w-full max-w-4xl lg:mx-0">
+        {/* Main — profile card */}
+        <div className="mx-auto w-full max-w-xl sm:max-w-2xl lg:max-w-none lg:mx-0">
           {feed.length === 0 ? (
             <EmptyState icon={<CompassIcon className="h-5 w-5" />}
               title={tab === 'nearby' ? "That is everyone for now" : "No Daily 5 available"}
@@ -124,7 +124,7 @@ export function Discover() {
                 wingleed={!!wingleStatusWith(current.id)}
                 onLike={() => { likeUser(current.id); toast.success(`You liked ${current.name}`); advance(); }}
                 onPass={() => { passUser(current.id); advance(); }}
-                onHeartBucket={() => { addToHeartBucket(current.id); toast.success(`${current.name} added to your heart bucket`); advance(); }}
+                onHeartBucket={() => { addToHeartBucket(current.id); toast.success(`♥️ ${current.name} added to In Your Heart!`); advance(); }}
                 onRecycleBin={() => { passUser(current.id); advance(); }}
                 onWingle={() => {
                   if (entitlements.winglesRemaining !== null && entitlements.winglesRemaining <= 0) { setUpgrade('wingle_limit'); return; }
@@ -145,8 +145,8 @@ export function Discover() {
           )}
         </div>
 
-        {/* Right sidebar */}
-        <aside className="space-y-4">
+        {/* Right sidebar — desktop only */}
+        <aside className="hidden lg:block space-y-4">
 
           {/* Up next — compact draggable thumbnails */}
           <div className="rounded-3xl bg-white/15 backdrop-blur-md ring-1 ring-white/10 shadow-card overflow-hidden">

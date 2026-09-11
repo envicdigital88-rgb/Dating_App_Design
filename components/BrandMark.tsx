@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils/format';
 
 export function BrandMark({
   className,
-  size = 96,
+  size = 80,
 }: {
   className?: string;
   size?: number;
@@ -12,11 +12,11 @@ export function BrandMark({
   return (
     <span className={cn('inline-flex items-center justify-center', className)}>
       <Image
-        src="/logo.png"
+        src="https://res.cloudinary.com/dax2b5to5/image/upload/v1789137182/logo_gwl8ju.png"
         alt="Wingle Mingle"
         width={size}
         height={size}
-        className="rounded-xl object-contain"
+        className="object-contain"
         priority
       />
     

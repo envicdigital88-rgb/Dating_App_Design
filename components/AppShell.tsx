@@ -276,17 +276,17 @@ export function PageHeader({
   action
 }: {title: string;body?: string;action?: React.ReactNode;}) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <h1 className="font-display text-[28px] leading-tight text-ink sm:text-[34px]">{title}</h1>
+    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4">
+      <div className="min-w-0">
+        <h1 className="font-display text-[26px] leading-tight text-ink sm:text-[34px]">{title}</h1>
         {body && <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-ink-soft">{body}</p>}
       </div>
-      {action}
+      {action && <div className="shrink-0">{action}</div>}
     </div>);
 }
 
 export function Page({ children, className }: {children: React.ReactNode;className?: string;}) {
-  return <div className={cn('px-4 py-6 sm:px-6 lg:px-10 lg:py-10', className)}>{children}</div>;
+  return <div className={cn('min-w-0 overflow-hidden px-4 py-6 sm:px-6 lg:px-10 lg:py-10', className)}>{children}</div>;
 }
 
 export { Badge };

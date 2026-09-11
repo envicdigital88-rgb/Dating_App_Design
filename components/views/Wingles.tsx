@@ -76,7 +76,7 @@ export function Wingles() {
       </div>
 
       {tab === 'incoming' &&
-      <div className="max-w-3xl">
+      <div className="min-w-0 w-full max-w-3xl overflow-hidden">
           {incoming.length === 0 ?
         <EmptyState
           icon={<SendIcon className="h-5 w-5" />}
@@ -200,7 +200,7 @@ export function Wingles() {
         }
 
           {!unlocked && incoming.length > 0 &&
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-4xl bg-plum-500 p-5 text-cream">
+        <div className="mt-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-4xl bg-plum-500 p-5 text-cream">
               <div>
                 <p className="font-display text-xl">
                   {pendingIncoming.length} {pendingIncoming.length === 1 ? 'person' : 'people'} asked
@@ -222,7 +222,7 @@ export function Wingles() {
       }
 
       {tab === 'sent' &&
-      <div className="max-w-3xl">
+      <div className="min-w-0 w-full max-w-3xl overflow-hidden">
           {sent.length === 0 ?
         <EmptyState
           icon={<SendIcon className="h-5 w-5" />}

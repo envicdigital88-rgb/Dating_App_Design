@@ -1,7 +1,12 @@
 'use client';
 
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useRef, useEffect } from 'react';
+import {
+  motion,
+  useMotionValue,
+  useTransform,
+  useAnimation,
+} from 'framer-motion';
 import { HeartIcon, SendIcon, XIcon, ZapIcon, SparklesIcon, HeartCrackIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Badge } from './ui/Bits';
@@ -10,6 +15,9 @@ import { presence } from '@/lib/utils/format';
 import { calculateVibeMatch } from '@/lib/utils/matching';
 import type { User } from '@/lib/types';
 import { CircularTestimonials } from './ui/circular-testimonials';
+
+// How far (px) the card must travel before triggering an action
+const SWIPE_THRESHOLD = 110;
 
 export function ProfileCard({
   user,
@@ -58,6 +66,43 @@ export function ProfileCard({
   const isHeartActive = activeZone === 'heart';
   const isRecycleActive = activeZone === 'recycle';
 
+  // ── Framer-motion drag values ────────────────────────────────────────────
+  const x = useMotionValue(0);
+  const controls = useAnimation();
+  const isDragging = useRef(false);
+
+  // Card tilt: ±15° based on drag distance
+  const rotate = useTransform(x, [-300, 0, 300], [-15, 0, 15]);
+
+  // Overlay opacities — heart on left, broken on right
+  const heartOpacity = useTransform(x, [-SWIPE_THRESHOLD, -SWIPE_THRESHOLD / 2, 0], [1, 0.5, 0]);
+  const brokenOpacity = useTransform(x, [0, SWIPE_THRESHOLD / 2, SWIPE_THRESHOLD], [0, 0.5, 1]);
+
+  const handleDragEnd = async (_: unknown, info: { offset: { x: number } }) => {
+    const offsetX = info.offset.x;
+    if (offsetX < -SWIPE_THRESHOLD) {
+      // Dragged LEFT → In Your Heart
+      await controls.start({ x: -700, opacity: 0, transition: { duration: 0.32, ease: 'easeOut' } });
+      x.set(0);
+      onHeartBucket?.();
+    } else if (offsetX > SWIPE_THRESHOLD) {
+      // Dragged RIGHT → Broken Heart (pass)
+      await controls.start({ x: 700, opacity: 0, transition: { duration: 0.32, ease: 'easeOut' } });
+      x.set(0);
+      onRecycleBin?.();
+    } else {
+      // Not far enough — snap back
+      controls.start({ x: 0, rotate: 0, transition: { type: 'spring', stiffness: 300, damping: 25 } });
+    }
+    isDragging.current = false;
+  };
+
+  // Fire entry animation on mount
+  useEffect(() => {
+    controls.start({ opacity: 1, scale: 1, y: 0, transition: { duration: 0.28, ease: [0.23, 1, 0.32, 1] } });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const PassAndLikeButtons = (
     <>
       <button
@@ -83,16 +128,47 @@ export function ProfileCard({
 
   return (
     <motion.article
-      layout
+      drag="x"
+      dragElastic={0.18}
+      dragConstraints={{ left: 0, right: 0 }}
+      style={{ x, rotate }}
+      animate={controls}
+      onDragStart={() => { isDragging.current = true; }}
+      onDragEnd={handleDragEnd}
       initial={{ opacity: 0, scale: 0.96, y: 10 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.96, y: -10 }}
-      transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
-      className="overflow-hidden rounded-4xl bg-cream-deep shadow-card relative"
+      className="overflow-hidden rounded-4xl bg-cream-deep shadow-card relative touch-pan-y cursor-grab active:cursor-grabbing select-none"
+      layout
     >
+      {/* ── LEFT overlay: In Your Heart ─────────────────────────────────── */}
+      <motion.div
+        style={{ opacity: heartOpacity }}
+        className="pointer-events-none absolute inset-0 z-30 flex items-center justify-start rounded-4xl bg-gradient-to-r from-berry-500/80 to-transparent px-8"
+      >
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm ring-4 ring-white/60">
+            <HeartIcon className="h-9 w-9 fill-white text-white" />
+          </div>
+          <span className="text-base font-bold text-white drop-shadow">In Your Heart</span>
+        </div>
+      </motion.div>
+
+      {/* ── RIGHT overlay: Broken Heart ──────────────────────────────────── */}
+      <motion.div
+        style={{ opacity: brokenOpacity }}
+        className="pointer-events-none absolute inset-0 z-30 flex items-center justify-end rounded-4xl bg-gradient-to-l from-slate-600/80 to-transparent px-8"
+      >
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm ring-4 ring-white/60">
+            <HeartCrackIcon className="h-9 w-9 text-white" />
+          </div>
+          <span className="text-base font-bold text-white drop-shadow">Broken Heart</span>
+        </div>
+      </motion.div>
+
       {/* Photo & Details Carousel */}
       <div className="relative w-full bg-[#0a0a0a] pt-4">
-        
+
         {/* Mobile floating actions (Top of image) */}
         <div className="absolute right-4 top-4 z-20 flex gap-2 lg:hidden">
           {PassAndLikeButtons}
@@ -135,8 +211,8 @@ export function ProfileCard({
       {/* Card body */}
       <div className="p-5">
 
-        {/* ── Bucket Drop Zones — icon only, no card background ── */}
-        <div className="mb-5 flex items-center justify-between px-2">
+        {/* ── Bucket Drop Zones ── */}
+        <div className="mb-4 flex items-center justify-between px-1 sm:px-2">
 
           {/* Heart Bucket — LEFT */}
           <div
@@ -172,8 +248,8 @@ export function ProfileCard({
           </div>
 
           {/* Centre hint */}
-          <div className="flex flex-col items-center gap-1.5">
-            <span className="text-[10px] font-medium uppercase tracking-widest text-ink-muted/50">drag here</span>
+          <div className="flex flex-col items-center gap-1 text-center">
+            <span className="text-[9px] font-medium uppercase tracking-widest text-ink-muted/50 leading-tight">← swipe / drag →</span>
             <div className="flex gap-1">
               <span className="h-1 w-1 rounded-full bg-sand" />
               <span className="h-1 w-1 rounded-full bg-sand" />
