@@ -15,17 +15,17 @@ import {
   SendIcon,
   SettingsIcon,
   ShieldCheckIcon,
-  SparklesIcon,
+  /* SparklesIcon, */
   UserIcon,
   UsersIcon,
   WifiOffIcon,
   ShoppingCartIcon } from
 'lucide-react';
 import { BrandMark } from './BrandMark';
-import { UsageMeter } from './UsageMeter';
+/* import { UsageMeter } from './UsageMeter'; */
 import { Avatar, Badge } from './ui/Bits';
 import { ChatPopup } from './ui/ChatPopup';
-import { Button } from './ui/Button';
+/* import { Button } from './ui/Button'; */
 import { useStore } from '@/lib/contexts/StoreContext';
 import { usePwa } from './PwaProvider';
 import { cn } from '@/lib/utils/format';
