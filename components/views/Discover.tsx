@@ -11,7 +11,6 @@ import { WingleDialog } from '@/components/WingleDialog';
 import { UpgradeDialog, type UpgradeReason } from '@/components/UpgradeDialog';
 import { Button } from '@/components/ui/Button';
 import { EmptyState, Skeleton } from '@/components/ui/Bits';
-import { UsageMeter } from '@/components/UsageMeter';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { calculateVibeMatch } from '@/lib/utils/matching';
 import type { User } from '@/lib/types';
