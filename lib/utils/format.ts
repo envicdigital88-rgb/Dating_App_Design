@@ -13,6 +13,13 @@ export const dayLabel = (iso: string) => {
   return format(d, 'EEEE d MMM');
 };
 
+export const listTime = (iso: string) => {
+  const d = new Date(iso);
+  if (isToday(d)) return format(d, 'HH:mm');
+  if (isYesterday(d)) return 'Yesterday';
+  return format(d, 'd MMM');
+};
+
 export const money = (amount: number) =>
 amount === 0 ?
 'Free' :
