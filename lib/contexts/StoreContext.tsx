@@ -132,6 +132,8 @@ interface StoreValue {
   heartBucketOf: () => User[];
   addToHeartBucket: (userId: string) => void;
   removeFromHeartBucket: (userId: string) => void;
+  brokenHeartOf: () => User[];
+  removeFromPasses: (userId: string) => void;
   // wingles
   sendWingle: (toUserId: string, note: string) => ServerResult<WinglingWingle>;
   respondToWingle: (wingleId: string, status: 'accepted' | 'declined') => void;
@@ -616,6 +618,24 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       return {
         ...d,
         heartBucket: d.heartBucket.filter((h) => !(h.userId === uid && h.targetUserId === userId))
+      };
+    });
+  }, []);
+
+  const brokenHeartOf = useCallback<StoreValue['brokenHeartOf']>(() => {
+    if (!sessionId) return [];
+    const passedTargetIds = new Set(
+      db.passes.filter((p) => p.userId === sessionId).map((p) => p.targetUserId)
+    );
+    return db.users.filter((u) => passedTargetIds.has(u.id));
+  }, [db.passes, db.users, sessionId]);
+
+  const removeFromPasses = useCallback<StoreValue['removeFromPasses']>((userId) => {
+    setDb((d) => {
+      const uid = sessionIdRef.current as string;
+      return {
+        ...d,
+        passes: d.passes.filter((p) => !(p.userId === uid && p.targetUserId === userId))
       };
     });
   }, []);
@@ -1121,6 +1141,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     heartBucketOf,
     addToHeartBucket,
     removeFromHeartBucket,
+    brokenHeartOf,
+    removeFromPasses,
     sendWingle,
     respondToWingle,
     sentWingles,
