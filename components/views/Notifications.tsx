@@ -54,16 +54,16 @@ export function Notifications() {
         } />
       
 
-      <div className="min-w-0 max-w-2xl space-y-5 overflow-hidden">
+      <div className="min-w-0 max-w-2xl overflow-hidden">
         {!notificationsEnabled &&
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-4xl border border-sand bg-cream-deep p-5">
+        <div className="mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-3xl border border-sand bg-cream-deep px-4 py-3">
             <div>
-              <p className="font-display text-lg text-ink">Turn on push notifications</p>
-              <p className="mt-1 text-[13px] text-ink-soft">
+              <p className="font-display text-base text-ink">Turn on push notifications</p>
+              <p className="mt-0.5 text-[13px] text-ink-soft">
                 Get told about new wingles and mingles without opening the app.
               </p>
             </div>
-            <Button onClick={enableNotifications}>Enable</Button>
+            <Button size="sm" onClick={enableNotifications}>Enable</Button>
           </div>
         }
 
@@ -74,19 +74,19 @@ export function Notifications() {
           body="Wingles, accepted connections, new mingles and package updates all land here." /> :
 
 
-        <ul className="flex flex-col gap-4">
+        <ul className="flex flex-col gap-2">
             {notifications.map((notification) =>
-          <li key={notification.id} className="overflow-hidden rounded-4xl bg-white/15 backdrop-blur-md ring-1 ring-white/10 shadow-sm">
+          <li key={notification.id} className="overflow-hidden rounded-3xl bg-white/15 backdrop-blur-md ring-1 ring-white/10 shadow-sm">
                 <button
               onClick={() => {
                 markNotificationRead(notification.id);
                 if (notification.href) router.push(notification.href);
               }}
-              className="flex w-full items-start gap-4 px-5 py-4 text-left transition-colors duration-150 ease-soft hover:bg-white/15">
+              className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors duration-150 ease-soft hover:bg-white/15">
               
                   <span
-                className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-                notification.read ? 'bg-cream-deep text-ink-muted' : 'bg-berry-100 text-berry-600'}`
+                className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                notification.read ? 'bg-cream-deep text-ink-muted' : 'bg-berry-500/20 text-berry-400'}`
                 }>
                 
                     {icons[notification.type]}
@@ -94,20 +94,19 @@ export function Notifications() {
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2">
                       <span
-                    className={`truncate text-[15px] ${
-                    notification.read ? 'text-ink-soft' : 'font-medium text-ink'}`
+                    className={`truncate text-[14px] ${
+                    notification.read ? 'text-ink-soft' : 'font-semibold text-ink'}`
                     }>
-                    
                         {notification.title}
                       </span>
                       {!notification.read &&
-                  <span className="h-2 w-2 shrink-0 rounded-full bg-berry-500" />
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-berry-500" />
                   }
                     </span>
-                    <span className="mt-0.5 block text-[13px] leading-relaxed text-ink-soft">
+                    <span className="block text-[12px] leading-relaxed text-ink-soft">
                       {notification.body}
                     </span>
-                    <span className="mt-1 block text-[12px] text-ink-muted">
+                    <span className="block text-[11px] text-ink-muted">
                       {relativeTime(notification.createdAt)}
                     </span>
                   </span>
