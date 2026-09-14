@@ -13,13 +13,20 @@ export const dayLabel = (iso: string) => {
   return format(d, 'EEEE d MMM');
 };
 
+export const listTime = (iso: string) => {
+  const d = new Date(iso);
+  if (isToday(d)) return format(d, 'HH:mm');
+  if (isYesterday(d)) return 'Yesterday';
+  return format(d, 'd MMM');
+};
+
 export const money = (amount: number) =>
 amount === 0 ?
 'Free' :
 new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount);
 
 export const presence = (online: boolean, lastActiveAt: string) =>
-online ? 'Online now' : `Active ${formatDistanceToNowStrict(new Date(lastActiveAt))} ago`;
+online ? 'Online now' : `Last seen ${formatDistanceToNowStrict(new Date(lastActiveAt))} ago`;
 
 export const cn = (...parts: Array<string | false | null | undefined>) =>
 parts.filter(Boolean).join(' ');

@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { XIcon, SendIcon, MinusIcon, Maximize2Icon, ChevronUpIcon } from 'lucide-react';
+import { XIcon, SendIcon, MinusIcon, Maximize2Icon, ChevronUpIcon, CheckIcon, CheckCheckIcon } from 'lucide-react';
 import { Avatar } from './Bits';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { dayLabel, mingleTime, presence } from '@/lib/utils/format';
@@ -129,8 +129,17 @@ export function ChatPopup() {
                       <img src={mingle.imageUrl} alt="" className="mb-2 max-h-48 w-full rounded-xl object-cover" />
                     )}
                     {mingle.body && <p className="whitespace-pre-wrap break-words">{mingle.body}</p>}
-                    <span className={`mt-1 block text-[10px] ${isMe ? 'text-white/70' : 'text-ink-muted'}`}>
+                    <span className={`mt-1 flex items-center gap-1 text-[10px] ${isMe ? 'justify-end text-white/70' : 'justify-start text-ink-muted'}`}>
                       {mingleTime(mingle.createdAt)}
+                      {isMe && (
+                        mingle.readAt ? (
+                          <CheckCheckIcon className="h-3 w-3 text-black" />
+                        ) : other?.online ? (
+                          <CheckCheckIcon className="h-3 w-3 text-plum-500/70" />
+                        ) : (
+                          <CheckIcon className="h-2.5 w-2.5 text-plum-500/70" />
+                        )
+                      )}
                     </span>
                   </div>
                 </div>
@@ -169,7 +178,7 @@ export function ChatPopup() {
               disabled={!draft.trim()}
               className="flex h-8 w-8 items-center justify-center rounded-full bg-berry-500 text-white disabled:opacity-50 transition-opacity"
             >
-              <SendIcon className="h-4 w-4" />
+              <SendIcon className="h-4 w-4 text-plum-500" />
             </button>
           </div>
         </div>

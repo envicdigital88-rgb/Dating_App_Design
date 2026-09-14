@@ -11,7 +11,6 @@ import { WingleDialog } from '@/components/WingleDialog';
 import { UpgradeDialog, type UpgradeReason } from '@/components/UpgradeDialog';
 import { Button } from '@/components/ui/Button';
 import { EmptyState, Skeleton } from '@/components/ui/Bits';
-import { UsageMeter } from '@/components/UsageMeter';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { calculateVibeMatch } from '@/lib/utils/matching';
 import type { User } from '@/lib/types';
@@ -254,21 +253,6 @@ export function Discover() {
             )}
           </div>
 
-          {/* Allowance */}
-          <div className="rounded-3xl bg-white/15 backdrop-blur-md ring-1 ring-white/10 p-4 shadow-card">
-            <h2 className="mb-3 font-display text-[15px] font-semibold text-ink">Your allowance</h2>
-            <div className="space-y-3">
-              <UsageMeter label="Chat mingles remaining" used={entitlements.chatUsed} limit={entitlements.chatLimit} />
-              <UsageMeter label="Wingles remaining" used={entitlements.winglesUsed} limit={entitlements.wingleLimit} />
-            </div>
-            <p className="mt-3 text-[12px] leading-relaxed text-ink-soft">
-              On the <span className="font-medium text-ink">{entitlements.packageName}</span> package.{' '}
-              {entitlements.incomingWinglesUnlocked ? 'Incoming wingles unlocked.' : 'Incoming wingles locked.'}
-            </p>
-            {entitlements.subscriptionStatus === 'free' && (
-              <Button size="sm" block className="mt-3" onClick={() => router.push('/packages')}>See packages</Button>
-            )}
-          </div>
         </aside>
       </div>
 
