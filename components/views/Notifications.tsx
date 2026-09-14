@@ -40,6 +40,10 @@ export function Notifications() {
   const notifications = notificationsOf();
   const unread = notifications.filter((n) => !n.read).length;
 
+  React.useEffect(() => {
+    markAllNotificationsRead();
+  }, [markAllNotificationsRead]);
+
   return (
     <Page>
       <PageHeader

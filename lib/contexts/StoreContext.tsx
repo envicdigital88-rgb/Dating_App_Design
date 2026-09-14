@@ -129,6 +129,8 @@ interface StoreValue {
   passUser: (userId: string) => void;
   hasLiked: (userId: string) => boolean;
   likesReceived: () => Like[];
+  unreadLikesCount: () => number;
+  markLikesViewed: () => void;
   heartBucketOf: () => User[];
   addToHeartBucket: (userId: string) => void;
   removeFromHeartBucket: (userId: string) => void;
@@ -143,6 +145,8 @@ interface StoreValue {
   respondToWingle: (wingleId: string, status: 'accepted' | 'declined') => void;
   sentWingles: () => WinglingWingle[];
   incomingWingles: () => WinglingWingle[];
+  unreadWinglesCount: () => number;
+  markWinglesViewed: () => void;
   wingleStatusWith: (userId: string) => WinglingWingle | undefined;
   // chat
   conversationsOf: () => Conversation[];
@@ -597,6 +601,20 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     [db.likes, sessionId]
   );
 
+  const unreadLikesCount = useCallback<StoreValue['unreadLikesCount']>(
+    () => db.likes.filter((l) => l.toUserId === sessionId && !l.viewed).length,
+    [db.likes, sessionId]
+  );
+
+  const markLikesViewed = useCallback<StoreValue['markLikesViewed']>(() => {
+    setDb((d) => ({
+      ...d,
+      likes: d.likes.map((l) => 
+        l.toUserId === sessionIdRef.current ? { ...l, viewed: true } : l
+      )
+    }));
+  }, []);
+
   const heartBucketOf = useCallback<StoreValue['heartBucketOf']>(() => {
     if (!sessionId) return [];
     const heartTargetIds = new Set(
@@ -761,12 +779,23 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   );
 
   const incomingWingles = useCallback<StoreValue['incomingWingles']>(
-    () =>
-    db.wingles.
-    filter((r) => r.toUserId === sessionId).
-    sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    () => db.wingles.filter((w) => w.toUserId === sessionId).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     [db.wingles, sessionId]
   );
+
+  const unreadWinglesCount = useCallback<StoreValue['unreadWinglesCount']>(
+    () => db.wingles.filter((w) => w.toUserId === sessionId && w.status === 'pending' && !w.viewed).length,
+    [db.wingles, sessionId]
+  );
+
+  const markWinglesViewed = useCallback<StoreValue['markWinglesViewed']>(() => {
+    setDb((d) => ({
+      ...d,
+      wingles: d.wingles.map((w) => 
+        w.toUserId === sessionIdRef.current && w.status === 'pending' ? { ...w, viewed: true } : w
+      )
+    }));
+  }, []);
 
   const wingleStatusWith = useCallback<StoreValue['wingleStatusWith']>(
     (userId) =>
@@ -1170,6 +1199,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     passUser,
     hasLiked,
     likesReceived,
+    unreadLikesCount,
+    markLikesViewed,
     heartBucketOf,
     addToHeartBucket,
     removeFromHeartBucket,
@@ -1183,6 +1214,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     respondToWingle,
     sentWingles,
     incomingWingles,
+    unreadWinglesCount,
+    markWinglesViewed,
     wingleStatusWith,
     conversationsOf,
     conversationWith,

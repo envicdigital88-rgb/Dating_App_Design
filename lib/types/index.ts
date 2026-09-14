@@ -112,6 +112,7 @@ export interface Like {
   fromUserId: string;
   toUserId: string;
   createdAt: string;
+  viewed?: boolean;
 }
 
 export interface WinglingWingle {
@@ -122,6 +123,7 @@ export interface WinglingWingle {
   status: 'pending' | 'accepted' | 'declined';
   createdAt: string;
   respondedAt?: string;
+  viewed?: boolean;
 }
 
 export interface Connection {

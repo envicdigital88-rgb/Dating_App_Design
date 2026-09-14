@@ -11,7 +11,11 @@ import { relativeTime } from '@/lib/utils/format';
 
 export function Likes() {
   const router = useRouter();
-  const { likesReceived, db, currentUser, userById, photosOf } = useStore();
+  const { likesReceived, db, currentUser, userById, photosOf, markLikesViewed } = useStore();
+
+  React.useEffect(() => {
+    markLikesViewed();
+  }, [markLikesViewed]);
 
   if (!currentUser) return null;
   const received = likesReceived();
