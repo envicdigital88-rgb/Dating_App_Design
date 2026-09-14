@@ -58,6 +58,14 @@ export interface User {
   createdAt: string;
 }
 
+export interface UserStatus {
+  id: string;
+  userId: string;
+  photoUrl: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
 export interface Package {
   id: string;
   name: string;
@@ -104,6 +112,7 @@ export interface Like {
   fromUserId: string;
   toUserId: string;
   createdAt: string;
+  viewed?: boolean;
 }
 
 export interface WinglingWingle {
@@ -114,6 +123,7 @@ export interface WinglingWingle {
   status: 'pending' | 'accepted' | 'declined';
   createdAt: string;
   respondedAt?: string;
+  viewed?: boolean;
 }
 
 export interface Connection {

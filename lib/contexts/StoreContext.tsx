@@ -19,6 +19,7 @@ import type {
   Subscription,
   Usage,
   User,
+  UserStatus,
   Prompt } from
 '@/lib/types';
 import { seedPackages } from '@/lib/data/packages';
@@ -34,6 +35,7 @@ import {
   seedPhotos,
   seedReports,
   seedWingles,
+  seedStatuses,
   seedUsers } from
 '@/lib/data/seed';
 import { id as makeId } from '@/lib/utils/format';
@@ -50,8 +52,8 @@ interface Db {
   payments: Payment[];
   usage: Usage[];
   likes: Like[];
-  passes: {userId: string;targetUserId: string;}[];
-  heartBucket: {userId: string;targetUserId: string;}[];
+  passes: {userId: string;targetUserId: string; viewed?: boolean}[];
+  heartBucket: {userId: string;targetUserId: string; viewed?: boolean}[];
   wingles: WinglingWingle[];
   connections: Connection[];
   conversations: Conversation[];
@@ -59,6 +61,7 @@ interface Db {
   notifications: AppNotification[];
   reports: Report[];
   blocks: Block[];
+  statuses: UserStatus[];
 }
 
 const initialDb: Db = {
@@ -77,7 +80,8 @@ const initialDb: Db = {
   mingles: seedMingles,
   notifications: seedNotifications,
   reports: seedReports,
-  blocks: []
+  blocks: [],
+  statuses: seedStatuses
 };
 
 interface RegisterInput {
@@ -125,14 +129,24 @@ interface StoreValue {
   passUser: (userId: string) => void;
   hasLiked: (userId: string) => boolean;
   likesReceived: () => Like[];
+  unreadLikesCount: () => number;
+  markLikesViewed: () => void;
   heartBucketOf: () => User[];
   addToHeartBucket: (userId: string) => void;
   removeFromHeartBucket: (userId: string) => void;
+  unreadHeartBucketCount: () => number;
+  markHeartBucketViewed: () => void;
+  brokenHeartOf: () => User[];
+  removeFromPasses: (userId: string) => void;
+  unreadBrokenHeartCount: () => number;
+  markBrokenHeartViewed: () => void;
   // wingles
   sendWingle: (toUserId: string, note: string) => ServerResult<WinglingWingle>;
   respondToWingle: (wingleId: string, status: 'accepted' | 'declined') => void;
   sentWingles: () => WinglingWingle[];
   incomingWingles: () => WinglingWingle[];
+  unreadWinglesCount: () => number;
+  markWinglesViewed: () => void;
   wingleStatusWith: (userId: string) => WinglingWingle | undefined;
   // chat
   conversationsOf: () => Conversation[];
@@ -171,6 +185,12 @@ interface StoreValue {
   moderatePhoto: (photoId: string, state: Photo['moderation']) => void;
   resolveReport: (reportId: string, status: Report['status']) => void;
   refundPayment: (paymentId: string) => void;
+  // statuses
+  statusesOf: (userId: string) => UserStatus[];
+  myStatuses: () => UserStatus[];
+  addStatus: (photoUrl: string) => void;
+  deleteStatus: (statusId: string) => void;
+  isHydrated: boolean;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -178,6 +198,7 @@ const StoreContext = createContext<StoreValue | null>(null);
 export function StoreProvider({ children }: {children: React.ReactNode;}) {
   const [db, setDb] = useState<Db>(initialDb);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
   const [typingIn] = useState<string | null>(null);
   const [activePopupChatId, setActivePopupChatId] = useState<string | null>(null);
   const timers = useRef<number[]>([]);
@@ -188,6 +209,11 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
+        const storedSession = localStorage.getItem('winglemingle_session');
+        if (storedSession) {
+          setSessionId(storedSession);
+        }
+
         const stored = localStorage.getItem('winglemingle_mingles');
         if (stored) {
           const parsed = JSON.parse(stored);
@@ -196,8 +222,19 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
           }
         }
       } catch (e) {}
+      setIsHydrated(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (sessionId) {
+        localStorage.setItem('winglemingle_session', sessionId);
+      } else {
+        localStorage.removeItem('winglemingle_session');
+      }
+    }
+  }, [sessionId]);
 
   useEffect(() => {
     if (db.mingles !== initialDb.mingles && typeof window !== 'undefined') {
@@ -564,6 +601,20 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     [db.likes, sessionId]
   );
 
+  const unreadLikesCount = useCallback<StoreValue['unreadLikesCount']>(
+    () => db.likes.filter((l) => l.toUserId === sessionId && !l.viewed).length,
+    [db.likes, sessionId]
+  );
+
+  const markLikesViewed = useCallback<StoreValue['markLikesViewed']>(() => {
+    setDb((d) => ({
+      ...d,
+      likes: d.likes.map((l) => 
+        l.toUserId === sessionIdRef.current ? { ...l, viewed: true } : l
+      )
+    }));
+  }, []);
+
   const heartBucketOf = useCallback<StoreValue['heartBucketOf']>(() => {
     if (!sessionId) return [];
     const heartTargetIds = new Set(
@@ -591,6 +642,52 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         heartBucket: d.heartBucket.filter((h) => !(h.userId === uid && h.targetUserId === userId))
       };
     });
+  }, []);
+
+  const brokenHeartOf = useCallback<StoreValue['brokenHeartOf']>(() => {
+    if (!sessionId) return [];
+    const passedTargetIds = new Set(
+      db.passes.filter((p) => p.userId === sessionId).map((p) => p.targetUserId)
+    );
+    return db.users.filter((u) => passedTargetIds.has(u.id));
+  }, [db.passes, db.users, sessionId]);
+
+  const removeFromPasses = useCallback<StoreValue['removeFromPasses']>((userId) => {
+    setDb((d) => {
+      const uid = sessionIdRef.current as string;
+      return {
+        ...d,
+        passes: d.passes.filter((p) => !(p.userId === uid && p.targetUserId === userId))
+      };
+    });
+  }, []);
+
+  const unreadHeartBucketCount = useCallback<StoreValue['unreadHeartBucketCount']>(() => {
+    if (!sessionId) return 0;
+    return db.heartBucket.filter((h) => h.userId === sessionId && !h.viewed).length;
+  }, [db.heartBucket, sessionId]);
+
+  const markHeartBucketViewed = useCallback<StoreValue['markHeartBucketViewed']>(() => {
+    setDb((d) => ({
+      ...d,
+      heartBucket: d.heartBucket.map((h) => 
+        h.userId === sessionIdRef.current ? { ...h, viewed: true } : h
+      )
+    }));
+  }, []);
+
+  const unreadBrokenHeartCount = useCallback<StoreValue['unreadBrokenHeartCount']>(() => {
+    if (!sessionId) return 0;
+    return db.passes.filter((p) => p.userId === sessionId && !p.viewed).length;
+  }, [db.passes, sessionId]);
+
+  const markBrokenHeartViewed = useCallback<StoreValue['markBrokenHeartViewed']>(() => {
+    setDb((d) => ({
+      ...d,
+      passes: d.passes.map((p) => 
+        p.userId === sessionIdRef.current ? { ...p, viewed: true } : p
+      )
+    }));
   }, []);
 
   /* ------------------------------------------------------------ wingles */
@@ -682,12 +779,23 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   );
 
   const incomingWingles = useCallback<StoreValue['incomingWingles']>(
-    () =>
-    db.wingles.
-    filter((r) => r.toUserId === sessionId).
-    sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    () => db.wingles.filter((w) => w.toUserId === sessionId).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     [db.wingles, sessionId]
   );
+
+  const unreadWinglesCount = useCallback<StoreValue['unreadWinglesCount']>(
+    () => db.wingles.filter((w) => w.toUserId === sessionId && w.status === 'pending' && !w.viewed).length,
+    [db.wingles, sessionId]
+  );
+
+  const markWinglesViewed = useCallback<StoreValue['markWinglesViewed']>(() => {
+    setDb((d) => ({
+      ...d,
+      wingles: d.wingles.map((w) => 
+        w.toUserId === sessionIdRef.current && w.status === 'pending' ? { ...w, viewed: true } : w
+      )
+    }));
+  }, []);
 
   const wingleStatusWith = useCallback<StoreValue['wingleStatusWith']>(
     (userId) =>
@@ -1039,6 +1147,36 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     toast.success('Payment refunded');
   }, []);
 
+  const statusesOf = useCallback<StoreValue['statusesOf']>((userId) => {
+    const now = new Date().toISOString();
+    return db.statuses
+      .filter((s) => s.userId === userId && s.expiresAt > now)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }, [db.statuses]);
+
+  const myStatuses = useCallback<StoreValue['myStatuses']>(() => {
+    if (!sessionId) return [];
+    return statusesOf(sessionId);
+  }, [sessionId, statusesOf]);
+
+  const addStatus = useCallback<StoreValue['addStatus']>((photoUrl) => {
+    if (!sessionId) return;
+    const now = Date.now();
+    const newStatus: UserStatus = {
+      id: makeId('status'),
+      userId: sessionId,
+      photoUrl,
+      createdAt: new Date(now).toISOString(),
+      expiresAt: new Date(now + 24 * 3_600_000).toISOString()
+    };
+    setDb((d) => ({ ...d, statuses: [...d.statuses, newStatus] }));
+    toast.success('Status updated');
+  }, [sessionId]);
+
+  const deleteStatus = useCallback<StoreValue['deleteStatus']>((statusId) => {
+    setDb((d) => ({ ...d, statuses: d.statuses.filter((s) => s.id !== statusId) }));
+  }, []);
+
   const value: StoreValue = {
     db,
     currentUser,
@@ -1061,13 +1199,23 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     passUser,
     hasLiked,
     likesReceived,
+    unreadLikesCount,
+    markLikesViewed,
     heartBucketOf,
     addToHeartBucket,
     removeFromHeartBucket,
+    unreadHeartBucketCount,
+    markHeartBucketViewed,
+    brokenHeartOf,
+    removeFromPasses,
+    unreadBrokenHeartCount,
+    markBrokenHeartViewed,
     sendWingle,
     respondToWingle,
     sentWingles,
     incomingWingles,
+    unreadWinglesCount,
+    markWinglesViewed,
     wingleStatusWith,
     conversationsOf,
     conversationWith,
@@ -1097,7 +1245,12 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     removeUser,
     moderatePhoto,
     resolveReport,
-    refundPayment
+    refundPayment,
+    statusesOf,
+    myStatuses,
+    addStatus,
+    deleteStatus,
+    isHydrated
   };
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

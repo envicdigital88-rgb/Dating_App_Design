@@ -20,10 +20,15 @@ export function Wingles() {
     entitlements,
     userById,
     photosOf,
-    respondToWingle
+    respondToWingle,
+    markWinglesViewed
   } = useStore();
   const [tab, setTab] = useState<'incoming' | 'sent'>('incoming');
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+
+  React.useEffect(() => {
+    markWinglesViewed();
+  }, [markWinglesViewed]);
 
   if (!entitlements) return null;
 

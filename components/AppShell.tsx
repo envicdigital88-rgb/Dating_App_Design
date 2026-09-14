@@ -9,23 +9,24 @@ import {
   CompassIcon,
   CreditCardIcon,
   HeartIcon,
+  HeartCrackIcon,
   ImageIcon,
   LogOutIcon,
   MessageCircleIcon,
   SendIcon,
   SettingsIcon,
   ShieldCheckIcon,
-  SparklesIcon,
+  /* SparklesIcon, */
   UserIcon,
   UsersIcon,
   WifiOffIcon,
   ShoppingCartIcon } from
 'lucide-react';
 import { BrandMark } from './BrandMark';
-import { UsageMeter } from './UsageMeter';
+/* import { UsageMeter } from './UsageMeter'; */
 import { Avatar, Badge } from './ui/Bits';
 import { ChatPopup } from './ui/ChatPopup';
-import { Button } from './ui/Button';
+/* import { Button } from './ui/Button'; */
 import { useStore } from '@/lib/contexts/StoreContext';
 import { usePwa } from './PwaProvider';
 import { cn } from '@/lib/utils/format';
@@ -49,7 +50,11 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     minglesOf,
     incomingWingles,
     likesReceived,
+    unreadLikesCount,
+    unreadWinglesCount,
     notificationsOf,
+    unreadHeartBucketCount,
+    unreadBrokenHeartCount,
     logout
   } = useStore();
 
@@ -66,9 +71,10 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   const main: NavItem[] = [
   { to: '/discover', label: 'Discover', icon: <CompassIcon className="h-[18px] w-[18px]" /> },
-  { to: '/heart-bucket', label: 'In Your Heart', icon: <ShoppingCartIcon className="h-[18px] w-[18px]" /> },
-  { to: '/likes', label: 'Likes', icon: <HeartIcon className="h-[18px] w-[18px]" />, badge: likesReceived().length },
-  { to: '/wingles', label: 'Wingles', icon: <SendIcon className="h-[18px] w-[18px]" />, badge: pendingIncoming },
+  { to: '/heart-bucket', label: 'In Your Heart', icon: <ShoppingCartIcon className="h-[18px] w-[18px]" />, badge: unreadHeartBucketCount() },
+  { to: '/broken-heart', label: 'Broken Heart', icon: <HeartCrackIcon className="h-[18px] w-[18px]" />, badge: unreadBrokenHeartCount() },
+  { to: '/likes', label: 'Likes', icon: <HeartIcon className="h-[18px] w-[18px]" />, badge: unreadLikesCount() },
+  { to: '/wingles', label: 'Wingles', icon: <SendIcon className="h-[18px] w-[18px]" />, badge: unreadWinglesCount() },
   { to: '/connections', label: 'Connections', icon: <UsersIcon className="h-[18px] w-[18px]" /> },
   { to: '/mingles', label: 'Mingles', icon: <MessageCircleIcon className="h-[18px] w-[18px]" />, badge: unreadMingles },
   { to: '/photos', label: 'Photos', icon: <ImageIcon className="h-[18px] w-[18px]" /> },

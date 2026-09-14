@@ -1,48 +1,41 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
-import { ShoppingCartIcon, SendIcon, XIcon } from 'lucide-react';
+import { HeartCrackIcon, ShoppingCartIcon, XIcon } from 'lucide-react';
 import { Page, PageHeader } from '@/components/AppShell';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/Bits';
 import { useStore } from '@/lib/contexts/StoreContext';
-import { WingleDialog } from '@/components/WingleDialog';
-import { UpgradeDialog, type UpgradeReason } from '@/components/UpgradeDialog';
-import type { User } from '@/lib/types';
 
-export function HeartBucket() {
+export function BrokenHeart() {
   const router = useRouter();
-  const { heartBucketOf, currentUser, photosOf, removeFromHeartBucket, wingleStatusWith, entitlements, markHeartBucketViewed } = useStore();
+  const { brokenHeartOf, currentUser, photosOf, removeFromPasses, addToHeartBucket, entitlements, markBrokenHeartViewed } = useStore();
   
-  const [wingleTarget, setWingleTarget] = useState<User | null>(null);
-  const [upgrade, setUpgrade] = useState<UpgradeReason | null>(null);
-
   React.useEffect(() => {
-    markHeartBucketViewed();
-  }, [markHeartBucketViewed]);
+    markBrokenHeartViewed();
+  }, [markBrokenHeartViewed]);
 
   if (!currentUser || !entitlements) return null;
-  const bucket = heartBucketOf();
+  const brokenHeartList = brokenHeartOf();
 
   return (
     <Page>
-      <PageHeader title="In Your Heart" body="Profiles you have saved to review and send wingles to." />
+      <PageHeader title="Broken Heart" body="Profiles you have passed on. You can always change your mind and move them to your heart bucket." />
 
       <section className="mb-10">
-        <h2 className="mb-4 font-display text-xl text-ink">Saved Profiles · {bucket.length}</h2>
-        {bucket.length === 0 ? (
+        <h2 className="mb-4 font-display text-xl text-ink">Passed Profiles · {brokenHeartList.length}</h2>
+        {brokenHeartList.length === 0 ? (
           <EmptyState
-            icon={<ShoppingCartIcon className="h-5 w-5" />}
-            title="Your bucket is empty"
-            body="You haven't added any profiles to In Your Heart yet. Head to Discover and drag profiles or tap the heart icon to save them here."
+            icon={<HeartCrackIcon className="h-5 w-5" />}
+            title="No broken hearts"
+            body="You haven't passed on any profiles yet. As you explore Discover and pass on profiles, they will appear here."
             action={<Button onClick={() => router.push('/discover')}>Discover people</Button>} 
           />
         ) : (
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {bucket.map((user) => {
+            {brokenHeartList.map((user) => {
               const photo = photosOf(user.id)[0];
-              const wingleed = !!wingleStatusWith(user.id);
               return (
                 <li key={user.id} className="group relative block w-full overflow-hidden rounded-4xl bg-cream-deep text-left shadow-card">
                   <button
@@ -68,28 +61,21 @@ export function HeartBucket() {
                   </button>
                   <div className="flex p-3 gap-2 bg-cream-deep">
                     <button
-                      onClick={() => removeFromHeartBucket(user.id)}
+                      onClick={() => removeFromPasses(user.id)}
                       className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50"
-                      aria-label="Remove from bucket"
+                      aria-label="Remove forever"
                     >
                       <XIcon className="h-5 w-5" />
                     </button>
                     <button
                       onClick={() => {
-                        if (
-                          entitlements.winglesRemaining !== null &&
-                          entitlements.winglesRemaining <= 0
-                        ) {
-                          setUpgrade('wingle_limit');
-                          return;
-                        }
-                        setWingleTarget(user);
+                        removeFromPasses(user.id);
+                        addToHeartBucket(user.id);
                       }}
-                      disabled={wingleed}
-                      className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-berry-500 text-sm font-semibold text-white transition-colors hover:bg-berry-600 disabled:bg-cream-deep disabled:text-ink-muted"
+                      className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-berry-500 text-sm font-semibold text-white transition-colors hover:bg-berry-600"
                     >
-                      <SendIcon className="h-4 w-4" />
-                      {wingleed ? 'Wingle sent' : 'Send wingle'}
+                      <ShoppingCartIcon className="h-4 w-4" />
+                      Move to In Your Heart
                     </button>
                   </div>
                 </li>
@@ -98,19 +84,6 @@ export function HeartBucket() {
           </ul>
         )}
       </section>
-
-      <WingleDialog
-        open={!!wingleTarget}
-        target={wingleTarget}
-        onClose={() => setWingleTarget(null)}
-        onLimitReached={() => setUpgrade('wingle_limit')}
-      />
-      
-      <UpgradeDialog
-        open={!!upgrade}
-        reason={upgrade ?? 'wingle_limit'}
-        onClose={() => setUpgrade(null)}
-      />
     </Page>
   );
 }
