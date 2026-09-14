@@ -41,8 +41,7 @@ export function SiteFooter() {
           <div>
             <BrandMark />
             <p className="mt-4 max-w-xs text-[14px] leading-relaxed">
-              Wingling for people who actually mean it. Profiles, photos, wingles and real
-              conversations — no questionnaires, no compatibility scores.
+              More than just a dating app. The perfect place to make new friends, enjoy great chats, and build genuine connections with real people.
             </p>
             <div className="mt-6 flex gap-3">
               <Link href="/sign-up"
