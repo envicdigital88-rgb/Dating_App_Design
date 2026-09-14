@@ -21,10 +21,10 @@ export function Hero() {
           transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}>
           
           <h1 className="font-display text-[42px] leading-[1.02] tracking-[-0.02em] text-ink sm:text-[58px] lg:text-[68px]">
-            Connect with people
+            Where strangers
             <br />
-            who actually
-            <em className="italic text-berry-500"> mean it</em>.
+            become
+            <em className="italic text-berry-500"> storylines</em>.
           </h1>
           <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-ink-soft">
             More than just a dating app. Wingle Mingle is the perfect place to make new friends, enjoy great chats, and build genuine relationships. No questionnaires or compatibility scores—just real people choosing to connect.
