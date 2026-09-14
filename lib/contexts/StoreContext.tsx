@@ -197,6 +197,11 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
+        const storedSession = localStorage.getItem('winglemingle_session');
+        if (storedSession) {
+          setSessionId(storedSession);
+        }
+
         const stored = localStorage.getItem('winglemingle_mingles');
         if (stored) {
           const parsed = JSON.parse(stored);
@@ -207,6 +212,16 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       } catch (e) {}
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (sessionId) {
+        localStorage.setItem('winglemingle_session', sessionId);
+      } else {
+        localStorage.removeItem('winglemingle_session');
+      }
+    }
+  }, [sessionId]);
 
   useEffect(() => {
     if (db.mingles !== initialDb.mingles && typeof window !== 'undefined') {
