@@ -10,8 +10,12 @@ import { useStore } from '@/lib/contexts/StoreContext';
 
 export function BrokenHeart() {
   const router = useRouter();
-  const { brokenHeartOf, currentUser, photosOf, removeFromPasses, addToHeartBucket, entitlements } = useStore();
+  const { brokenHeartOf, currentUser, photosOf, removeFromPasses, addToHeartBucket, entitlements, markBrokenHeartViewed } = useStore();
   
+  React.useEffect(() => {
+    markBrokenHeartViewed();
+  }, [markBrokenHeartViewed]);
+
   if (!currentUser || !entitlements) return null;
   const brokenHeartList = brokenHeartOf();
 

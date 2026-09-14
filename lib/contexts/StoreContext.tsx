@@ -52,8 +52,8 @@ interface Db {
   payments: Payment[];
   usage: Usage[];
   likes: Like[];
-  passes: {userId: string;targetUserId: string;}[];
-  heartBucket: {userId: string;targetUserId: string;}[];
+  passes: {userId: string;targetUserId: string; viewed?: boolean}[];
+  heartBucket: {userId: string;targetUserId: string; viewed?: boolean}[];
   wingles: WinglingWingle[];
   connections: Connection[];
   conversations: Conversation[];
@@ -132,8 +132,12 @@ interface StoreValue {
   heartBucketOf: () => User[];
   addToHeartBucket: (userId: string) => void;
   removeFromHeartBucket: (userId: string) => void;
+  unreadHeartBucketCount: () => number;
+  markHeartBucketViewed: () => void;
   brokenHeartOf: () => User[];
   removeFromPasses: (userId: string) => void;
+  unreadBrokenHeartCount: () => number;
+  markBrokenHeartViewed: () => void;
   // wingles
   sendWingle: (toUserId: string, note: string) => ServerResult<WinglingWingle>;
   respondToWingle: (wingleId: string, status: 'accepted' | 'declined') => void;
@@ -640,6 +644,34 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     });
   }, []);
 
+  const unreadHeartBucketCount = useCallback<StoreValue['unreadHeartBucketCount']>(() => {
+    if (!sessionId) return 0;
+    return db.heartBucket.filter((h) => h.userId === sessionId && !h.viewed).length;
+  }, [db.heartBucket, sessionId]);
+
+  const markHeartBucketViewed = useCallback<StoreValue['markHeartBucketViewed']>(() => {
+    setDb((d) => ({
+      ...d,
+      heartBucket: d.heartBucket.map((h) => 
+        h.userId === sessionIdRef.current ? { ...h, viewed: true } : h
+      )
+    }));
+  }, []);
+
+  const unreadBrokenHeartCount = useCallback<StoreValue['unreadBrokenHeartCount']>(() => {
+    if (!sessionId) return 0;
+    return db.passes.filter((p) => p.userId === sessionId && !p.viewed).length;
+  }, [db.passes, sessionId]);
+
+  const markBrokenHeartViewed = useCallback<StoreValue['markBrokenHeartViewed']>(() => {
+    setDb((d) => ({
+      ...d,
+      passes: d.passes.map((p) => 
+        p.userId === sessionIdRef.current ? { ...p, viewed: true } : p
+      )
+    }));
+  }, []);
+
   /* ------------------------------------------------------------ wingles */
 
   const sendWingle = useCallback<StoreValue['sendWingle']>(
@@ -1141,8 +1173,12 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     heartBucketOf,
     addToHeartBucket,
     removeFromHeartBucket,
+    unreadHeartBucketCount,
+    markHeartBucketViewed,
     brokenHeartOf,
     removeFromPasses,
+    unreadBrokenHeartCount,
+    markBrokenHeartViewed,
     sendWingle,
     respondToWingle,
     sentWingles,

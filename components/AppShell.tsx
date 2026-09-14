@@ -51,6 +51,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     incomingWingles,
     likesReceived,
     notificationsOf,
+    unreadHeartBucketCount,
+    unreadBrokenHeartCount,
     logout
   } = useStore();
 
@@ -67,8 +69,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   const main: NavItem[] = [
   { to: '/discover', label: 'Discover', icon: <CompassIcon className="h-[18px] w-[18px]" /> },
-  { to: '/heart-bucket', label: 'In Your Heart', icon: <ShoppingCartIcon className="h-[18px] w-[18px]" /> },
-  { to: '/broken-heart', label: 'Broken Heart', icon: <HeartCrackIcon className="h-[18px] w-[18px]" /> },
+  { to: '/heart-bucket', label: 'In Your Heart', icon: <ShoppingCartIcon className="h-[18px] w-[18px]" />, badge: unreadHeartBucketCount() },
+  { to: '/broken-heart', label: 'Broken Heart', icon: <HeartCrackIcon className="h-[18px] w-[18px]" />, badge: unreadBrokenHeartCount() },
   { to: '/likes', label: 'Likes', icon: <HeartIcon className="h-[18px] w-[18px]" />, badge: likesReceived().length },
   { to: '/wingles', label: 'Wingles', icon: <SendIcon className="h-[18px] w-[18px]" />, badge: pendingIncoming },
   { to: '/connections', label: 'Connections', icon: <UsersIcon className="h-[18px] w-[18px]" /> },

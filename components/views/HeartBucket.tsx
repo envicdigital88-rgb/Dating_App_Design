@@ -13,10 +13,14 @@ import type { User } from '@/lib/types';
 
 export function HeartBucket() {
   const router = useRouter();
-  const { heartBucketOf, currentUser, photosOf, removeFromHeartBucket, wingleStatusWith, entitlements } = useStore();
+  const { heartBucketOf, currentUser, photosOf, removeFromHeartBucket, wingleStatusWith, entitlements, markHeartBucketViewed } = useStore();
   
   const [wingleTarget, setWingleTarget] = useState<User | null>(null);
   const [upgrade, setUpgrade] = useState<UpgradeReason | null>(null);
+
+  React.useEffect(() => {
+    markHeartBucketViewed();
+  }, [markHeartBucketViewed]);
 
   if (!currentUser || !entitlements) return null;
   const bucket = heartBucketOf();
