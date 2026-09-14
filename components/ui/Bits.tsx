@@ -104,14 +104,15 @@ export function SectionHeading({
   title,
   body,
   align = 'center'
+}: {overline?: string;title: string;body?: string;align?: 'center' | 'left' | 'responsive';}) {
+  const alignClasses = {
+    center: 'mx-auto text-center',
+    left: 'text-left',
+    responsive: 'mx-auto text-center lg:mx-0 lg:text-left'
+  };
 
-
-
-
-
-}: {overline?: string;title: string;body?: string;align?: 'center' | 'left';}) {
   return (
-    <div className={cn('max-w-2xl', align === 'center' && 'mx-auto text-center')}>
+    <div className={cn('max-w-2xl', alignClasses[align])}>
       {overline && <p className="mb-3 text-[13px] font-semibold text-berry-500">{overline}</p>}
       <h2 className="font-display text-3xl leading-[1.1] text-ink sm:text-4xl">{title}</h2>
       {body && <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">{body}</p>}

@@ -68,7 +68,7 @@ export function SiteNav() {
         {/* Logo */}
         <Link href="/" aria-label="Wingle Mingle home" className="flex items-center gap-2.5 bg-[#0a0a0a]/80 backdrop-blur-md rounded-full px-4 py-2 border border-white/10 shadow-lg">
           <Image src="/logo.png" alt="Wingle Mingle" width={32} height={32} className="rounded-xl object-contain" />
-          <span className="hidden bg-gradient-to-r from-[#ec4899] to-[#0ea5e9] bg-clip-text font-display text-[16px] font-semibold text-transparent xl:block">
+          <span className="bg-gradient-to-r from-[#ec4899] to-[#0ea5e9] bg-clip-text font-display text-[16px] font-semibold text-transparent">
             Wingle Mingle
           </span>
         </Link>

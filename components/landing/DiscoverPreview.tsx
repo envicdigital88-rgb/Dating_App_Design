@@ -63,7 +63,7 @@ export function DiscoverPreview() {
       <div className="mx-auto max-w-6xl px-5 lg:px-8">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <SectionHeading
-            align="left"
+            align="responsive"
             overline="Discover people"
             title="Real profiles, properly photographed"
             body="Large galleries, a bio in their own words, and what they are looking for — visible before you spend anything."

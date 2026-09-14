@@ -36,9 +36,9 @@ export function Hero() {
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, ease: [0.23, 1, 0.32, 1] }}>
-
-
+          transition={{ duration: 0.55, ease: [0.23, 1, 0.32, 1] }}
+          className="flex flex-col items-center text-center lg:items-start lg:text-left"
+        >
 
           {/* Headline */}
           <h1 className="font-display text-[52px] font-bold leading-[1.05] tracking-[-0.02em] text-white sm:text-[60px] lg:text-[68px]">
@@ -66,17 +66,17 @@ export function Hero() {
           </p>
 
           {/* CTAs */}
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/sign-up">
+          <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:justify-center lg:justify-start">
+            <Link href="/sign-up" className="w-full sm:w-auto">
               <button
-                className="flex items-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-semibold text-white shadow-xl transition-all duration-200 hover:scale-105 hover:shadow-[0_0_40px_rgba(236,72,153,0.45)]"
+                className="flex w-full items-center justify-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-semibold text-white shadow-xl transition-all duration-200 hover:scale-105 hover:shadow-[0_0_40px_rgba(236,72,153,0.45)]"
                 style={{ background: 'linear-gradient(135deg, #ec4899 0%, #a855f7 50%, #0ea5e9 100%)' }}>
                 Start wingling
                 <ArrowRightIcon className="h-4 w-4" />
               </button>
             </Link>
-            <Link href="/sign-up">
-              <button className="flex items-center gap-2.5 rounded-full border border-white/20 bg-white/5 px-6 py-3.5 text-[15px] font-semibold text-white/75 backdrop-blur-sm transition-all duration-200 hover:bg-white/10 hover:text-white">
+            <Link href="/sign-up" className="w-full sm:w-auto">
+              <button className="flex w-full items-center justify-center gap-2.5 rounded-full border border-white/20 bg-white/5 px-6 py-3.5 text-[15px] font-semibold text-white/75 backdrop-blur-sm transition-all duration-200 hover:bg-white/10 hover:text-white">
                 <UserIcon className="h-4 w-4" />
                 Create your profile
               </button>
@@ -84,7 +84,7 @@ export function Hero() {
           </div>
 
           {/* Members count */}
-          <div className="mt-8 flex items-center gap-3">
+          <div className="mt-8 flex items-center justify-center gap-3 lg:justify-start text-left">
             <div className="flex -space-x-2.5">
               {facePhotos.map((p) => (
                 <img

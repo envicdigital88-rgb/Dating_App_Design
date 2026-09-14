@@ -11,7 +11,7 @@ export function WinglesShowcase() {
       <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 lg:grid-cols-2 lg:gap-20 lg:px-8">
         <div>
           <SectionHeading
-            align="left"
+            align="responsive"
             overline="Wingling wingles"
             title="Interest you can see, and interest you unlock"
             body="Wingles you send are always visible to you, with their status. Wingles you receive are a paid feature — you will know someone is there, and one upgrade reveals who." />
