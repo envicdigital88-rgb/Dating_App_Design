@@ -156,13 +156,13 @@ export function ProfileCard({
       {/* ── RIGHT overlay: Broken Heart ──────────────────────────────────── */}
       <motion.div
         style={{ opacity: brokenOpacity }}
-        className="pointer-events-none absolute inset-0 z-30 flex items-center justify-end rounded-4xl bg-gradient-to-l from-slate-600/80 to-transparent px-8"
+        className="pointer-events-none absolute inset-0 z-30 flex items-center justify-end rounded-4xl bg-gradient-to-l from-pink-600/80 to-transparent px-8"
       >
         <div className="flex flex-col items-center gap-2">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm ring-4 ring-white/60">
-            <HeartCrackIcon className="h-9 w-9 text-white" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-pink-500/30 backdrop-blur-sm ring-4 ring-pink-400/60">
+            <HeartCrackIcon className="h-9 w-9 text-pink-300" />
           </div>
-          <span className="text-base font-bold text-white drop-shadow">Broken Heart</span>
+          <span className="text-base font-bold text-pink-200 drop-shadow">Broken Heart</span>
         </div>
       </motion.div>
 
@@ -275,16 +275,16 @@ export function ProfileCard({
                 : { duration: 0.2 }}
               className={`flex h-14 w-14 items-center justify-center rounded-full transition-all duration-200 ${
                 isRecycleActive
-                  ? 'bg-slate-600 shadow-xl shadow-slate-300/70'
-                  : 'bg-slate-50 group-hover:bg-slate-100'
+                  ? 'bg-pink-500 shadow-xl shadow-pink-400/50'
+                  : 'bg-pink-50 group-hover:bg-pink-100'
               }`}
             >
               <HeartCrackIcon className={`h-7 w-7 transition-all duration-200 ${
-                isRecycleActive ? 'text-white' : 'text-slate-400'
+                isRecycleActive ? 'text-white' : 'text-pink-400'
               }`} />
             </motion.div>
             <span className={`text-[11px] font-semibold transition-colors duration-200 ${
-              isRecycleActive ? 'text-slate-300' : 'text-ink-muted group-hover:text-slate-400'
+              isRecycleActive ? 'text-pink-200' : 'text-ink-muted group-hover:text-pink-400'
             }`}>
               {isRecycleActive && draggingUserName ? `Skip ${draggingUserName}` : 'Broken Heart'}
             </span>
