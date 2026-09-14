@@ -101,7 +101,7 @@ export function Mingles() {
                         <div className="relative rounded-full p-[2px]">
                           {/* Dashed border to indicate active/online */}
                           <div className="absolute inset-0 rounded-full border border-dashed border-[#0ea5e9]"></div>
-                          <Avatar src={data.photo?.url} name={data.user.name} size={60} online={false} />
+                          <Avatar src={data.photo?.url} name={data.user.name} size={60} online={data.user.online} />
                         </div>
                         <span className="w-full truncate text-center text-[11px] font-medium text-ink">
                           {data.user.name.split(' ')[0]}

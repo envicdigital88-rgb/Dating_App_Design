@@ -232,12 +232,6 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
           src={heroImage}
           alt="Two people laughing together at an outdoor café table"
           className="h-full w-full object-cover" />
-        <div className="absolute inset-x-8 bottom-8 rounded-4xl bg-plum-600/85 p-7 text-cream backdrop-blur-sm">
-          <p className="font-display text-2xl leading-snug">
-            "I sent four wingles, had two real dates, and deleted the app."
-          </p>
-          <p className="mt-3 text-[13px] text-cream/70">Cora · Manchester</p>
-        </div>
       </div>
     </div>
   );
