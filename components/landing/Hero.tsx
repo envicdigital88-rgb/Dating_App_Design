@@ -30,7 +30,7 @@ export function Hero() {
 
 
       {/* ── Main grid ── */}
-      <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-6 py-16 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:px-10 lg:py-20">
+      <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-6 pb-16 pt-32 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16 lg:px-10 lg:pb-20 lg:pt-40">
 
         {/* ── LEFT: Text ── */}
         <motion.div
