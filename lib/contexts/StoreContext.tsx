@@ -264,6 +264,16 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                 )
               };
             });
+          } else if (data.type === 'read_receipt') {
+            const { conversationId, readAt } = data;
+            setDb((d) => ({
+              ...d,
+              mingles: d.mingles.map((m) => 
+                m.conversationId === conversationId && m.senderId === sessionId && !m.readAt
+                  ? { ...m, readAt }
+                  : m
+              )
+            }));
           }
         });
       });
@@ -920,14 +930,37 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   );
 
   const markConversationRead = useCallback<StoreValue['markConversationRead']>((conversationId) => {
-    setDb((d) => ({
-      ...d,
-      mingles: d.mingles.map((m) =>
-      m.conversationId === conversationId && m.senderId !== sessionIdRef.current && !m.readAt ?
-      { ...m, readAt: new Date().toISOString() } :
-      m
-      )
-    }));
+    setDb((d) => {
+      let changed = false;
+      const now = new Date().toISOString();
+      const nextMingles = d.mingles.map((m) => {
+        if (m.conversationId === conversationId && m.senderId !== sessionIdRef.current && !m.readAt) {
+          changed = true;
+          return { ...m, readAt: now };
+        }
+        return m;
+      });
+
+      if (changed) {
+        const conversation = d.conversations.find((c) => c.id === conversationId);
+        const otherId = conversation?.userIds.find((uid) => uid !== sessionIdRef.current);
+        if (otherId && peerRef.current) {
+          try {
+            const conn = peerRef.current.connect(otherId, { reliable: true });
+            if (conn) {
+              conn.on('open', () => {
+                conn.send({ type: 'read_receipt', conversationId, readAt: now });
+                setTimeout(() => conn.close(), 1000);
+              });
+            }
+          } catch (err) {
+            console.error("PeerJS read receipt error", err);
+          }
+        }
+      }
+
+      return changed ? { ...d, mingles: nextMingles } : d;
+    });
   }, []);
 
   const deleteMingle = useCallback<StoreValue['deleteMingle']>((mingleId) => {
