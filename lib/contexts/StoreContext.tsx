@@ -180,6 +180,7 @@ interface StoreValue {
   myStatuses: () => UserStatus[];
   addStatus: (photoUrl: string) => void;
   deleteStatus: (statusId: string) => void;
+  isHydrated: boolean;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -187,6 +188,7 @@ const StoreContext = createContext<StoreValue | null>(null);
 export function StoreProvider({ children }: {children: React.ReactNode;}) {
   const [db, setDb] = useState<Db>(initialDb);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
   const [typingIn] = useState<string | null>(null);
   const [activePopupChatId, setActivePopupChatId] = useState<string | null>(null);
   const timers = useRef<number[]>([]);
@@ -210,6 +212,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
           }
         }
       } catch (e) {}
+      setIsHydrated(true);
     }
   }, []);
 
@@ -1155,7 +1158,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     statusesOf,
     myStatuses,
     addStatus,
-    deleteStatus
+    deleteStatus,
+    isHydrated
   };
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

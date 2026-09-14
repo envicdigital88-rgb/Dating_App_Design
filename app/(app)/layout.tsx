@@ -6,19 +6,20 @@ import { useStore } from '@/lib/contexts/StoreContext';
 import { AppShell } from '@/components/AppShell';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { currentUser } = useStore();
+  const { currentUser, isHydrated } = useStore();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
+    if (!isHydrated) return;
     if (!currentUser) {
       router.replace(`/sign-in?from=${pathname}`);
     } else if (!currentUser.onboarded) {
       router.replace('/onboarding');
     }
-  }, [currentUser, router, pathname]);
+  }, [currentUser, router, pathname, isHydrated]);
 
-  if (!currentUser || !currentUser.onboarded) {
+  if (!isHydrated || !currentUser || !currentUser.onboarded) {
     return null; // Or a loading spinner
   }
 
