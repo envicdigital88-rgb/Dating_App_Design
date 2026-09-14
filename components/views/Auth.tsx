@@ -53,7 +53,7 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
             <BrandMark />
           </Link>
           <Link href="/"
-            className="inline-flex items-center gap-1.5 text-[13px] text-ink-soft transition-colors duration-150 ease-soft hover:text-berry-600">
+            className="inline-flex items-center gap-1.5 rounded-full border border-sand bg-cream-deep px-4 py-2 text-[13px] font-medium text-ink-soft transition-all duration-150 ease-soft hover:border-berry-500/40 hover:bg-berry-500/10 hover:text-berry-400">
             
             <ArrowLeftIcon className="h-3.5 w-3.5" />
             Back to home
@@ -159,6 +159,13 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
               <span className="font-mono">admin123</span>
             </p>
           </div>
+
+          <p className="mt-6 text-center text-[13px] text-ink-muted">
+            Not ready to sign in?{' '}
+            <Link href="/" className="font-medium text-berry-400 underline decoration-berry-400/30 underline-offset-4 hover:text-berry-300">
+              Go back to homepage
+            </Link>
+          </p>
         </div>
       </div>
 
