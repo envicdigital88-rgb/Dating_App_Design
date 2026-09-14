@@ -239,26 +239,30 @@ export function Wingles() {
             return (
               <li
                 key={wingle.id}
-                className="flex flex-wrap items-center gap-4 rounded-4xl bg-cream-deep p-4 shadow-card sm:p-5">
-                
+                className="flex flex-col gap-3 rounded-4xl bg-cream-deep p-4 shadow-card sm:p-5">
+
+                  <div className="flex items-center gap-4">
                     {photo &&
-                <img src={photo.url} alt="" className="h-16 w-16 rounded-2xl object-cover" />
-                }
+                    <img src={photo.url} alt="" className="h-16 w-16 shrink-0 rounded-2xl object-cover" />
+                    }
                     <div className="min-w-0 flex-1">
-                      <p className="font-display text-[18px] leading-tight text-ink">
-                        {target.name}, {target.age}
-                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-display text-[18px] leading-tight text-ink">
+                          {target.name}, {target.age}
+                        </p>
+                        <Badge tone={statusTone(wingle.status)}>{wingle.status}</Badge>
+                      </div>
                       <p className="mt-1 text-[13px] text-ink-soft">
                         Sent {shortDate(wingle.createdAt)} · {relativeTime(wingle.createdAt)}
                       </p>
                     </div>
-                    <Badge tone={statusTone(wingle.status)}>{wingle.status}</Badge>
-                    {wingle.status === 'accepted' &&
-                <Button size="sm" onClick={() => router.push('/mingles')}>
-                        Open chat
-                      </Button>
-                }
-                  </li>);
+                  </div>
+                  {wingle.status === 'accepted' &&
+                  <Button size="sm" className="w-full sm:w-auto" onClick={() => router.push('/mingles')}>
+                      Open chat
+                    </Button>
+                  }
+                </li>);
 
           })}
             </ul>
