@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 import { toast } from 'sonner';
-import { ArrowLeftIcon, ArrowRightIcon, EyeIcon, EyeOffIcon, LockIcon, MailIcon, PhoneIcon, UserIcon, XCircleIcon, CheckCircle2Icon } from 'lucide-react';
+import { ArrowLeftIcon, ArrowRightIcon, EyeIcon, EyeOffIcon, LockIcon, MailIcon, UserIcon, XCircleIcon, CheckCircle2Icon } from 'lucide-react';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { heroImage } from '@/lib/data/seed';
 

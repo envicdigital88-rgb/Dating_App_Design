@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowLeftIcon, MailIcon, MapPinIcon } from 'lucide-react';
+import { ArrowLeftIcon, MailIcon } from 'lucide-react';
 import { BrandMark } from '@/components/BrandMark';
 
 export default function ContactPage() {
