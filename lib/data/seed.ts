@@ -8,7 +8,8 @@ import type {
   Payment,
   Photo,
   Report,
-  User } from
+  User,
+  UserStatus } from
 '@/lib/types';
 
 const IMG = {
@@ -586,3 +587,20 @@ export const faqs = [
   q: 'Can I install Wingle Mingle on my phone?',
   a: 'Yes. Wingle Mingle is an installable app — add it to your home screen and it runs full screen with offline support and push notifications, no app store required.'
 }];
+
+export const seedStatuses: UserStatus[] = [
+  {
+    id: 'status-1',
+    userId: 'u-1',
+    photoUrl: IMG.m1,
+    createdAt: hoursAgo(2),
+    expiresAt: new Date(Date.now() + 22 * 3_600_000).toISOString()
+  },
+  {
+    id: 'status-2',
+    userId: 'u-3',
+    photoUrl: IMG.m3,
+    createdAt: hoursAgo(5),
+    expiresAt: new Date(Date.now() + 19 * 3_600_000).toISOString()
+  }
+];

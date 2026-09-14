@@ -19,6 +19,7 @@ import type {
   Subscription,
   Usage,
   User,
+  UserStatus,
   Prompt } from
 '@/lib/types';
 import { seedPackages } from '@/lib/data/packages';
@@ -34,6 +35,7 @@ import {
   seedPhotos,
   seedReports,
   seedWingles,
+  seedStatuses,
   seedUsers } from
 '@/lib/data/seed';
 import { id as makeId } from '@/lib/utils/format';
@@ -59,6 +61,7 @@ interface Db {
   notifications: AppNotification[];
   reports: Report[];
   blocks: Block[];
+  statuses: UserStatus[];
 }
 
 const initialDb: Db = {
@@ -77,7 +80,8 @@ const initialDb: Db = {
   mingles: seedMingles,
   notifications: seedNotifications,
   reports: seedReports,
-  blocks: []
+  blocks: [],
+  statuses: seedStatuses
 };
 
 interface RegisterInput {
@@ -171,6 +175,11 @@ interface StoreValue {
   moderatePhoto: (photoId: string, state: Photo['moderation']) => void;
   resolveReport: (reportId: string, status: Report['status']) => void;
   refundPayment: (paymentId: string) => void;
+  // statuses
+  statusesOf: (userId: string) => UserStatus[];
+  myStatuses: () => UserStatus[];
+  addStatus: (photoUrl: string) => void;
+  deleteStatus: (statusId: string) => void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -1039,6 +1048,36 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     toast.success('Payment refunded');
   }, []);
 
+  const statusesOf = useCallback<StoreValue['statusesOf']>((userId) => {
+    const now = new Date().toISOString();
+    return db.statuses
+      .filter((s) => s.userId === userId && s.expiresAt > now)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }, [db.statuses]);
+
+  const myStatuses = useCallback<StoreValue['myStatuses']>(() => {
+    if (!sessionId) return [];
+    return statusesOf(sessionId);
+  }, [sessionId, statusesOf]);
+
+  const addStatus = useCallback<StoreValue['addStatus']>((photoUrl) => {
+    if (!sessionId) return;
+    const now = Date.now();
+    const newStatus: UserStatus = {
+      id: makeId('status'),
+      userId: sessionId,
+      photoUrl,
+      createdAt: new Date(now).toISOString(),
+      expiresAt: new Date(now + 24 * 3_600_000).toISOString()
+    };
+    setDb((d) => ({ ...d, statuses: [...d.statuses, newStatus] }));
+    toast.success('Status updated');
+  }, [sessionId]);
+
+  const deleteStatus = useCallback<StoreValue['deleteStatus']>((statusId) => {
+    setDb((d) => ({ ...d, statuses: d.statuses.filter((s) => s.id !== statusId) }));
+  }, []);
+
   const value: StoreValue = {
     db,
     currentUser,
@@ -1097,7 +1136,11 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     removeUser,
     moderatePhoto,
     resolveReport,
-    refundPayment
+    refundPayment,
+    statusesOf,
+    myStatuses,
+    addStatus,
+    deleteStatus
   };
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

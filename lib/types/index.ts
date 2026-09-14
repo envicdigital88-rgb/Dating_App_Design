@@ -58,6 +58,14 @@ export interface User {
   createdAt: string;
 }
 
+export interface UserStatus {
+  id: string;
+  userId: string;
+  photoUrl: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
 export interface Package {
   id: string;
   name: string;

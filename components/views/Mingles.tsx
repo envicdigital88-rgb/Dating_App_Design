@@ -9,11 +9,16 @@ import { Avatar, EmptyState } from '@/components/ui/Bits';
 import { UsageMeter } from '@/components/UsageMeter';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { relativeTime } from '@/lib/utils/format';
+import { AddStatusModal } from '@/components/ui/AddStatusModal';
+import { StatusViewer } from '@/components/ui/StatusViewer';
 
 export function Mingles() {
   const router = useRouter();
-  const { conversationsOf, minglesOf, currentUser, userById, photosOf, entitlements, openChatPopup } = useStore();
+  const { conversationsOf, minglesOf, currentUser, userById, photosOf, entitlements, openChatPopup, statusesOf, myStatuses } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const [showAddStatus, setShowAddStatus] = useState(false);
+  const [viewingStatusUserId, setViewingStatusUserId] = useState<string | null>(null);
 
   if (!currentUser || !entitlements) return null;
 
@@ -29,7 +34,8 @@ export function Mingles() {
     })
     .filter((data) => data.user !== undefined) as { conversation: any, user: any, photo: any, otherId: string }[];
 
-  const onlineUsers = conversationData.filter((data) => data.user.online);
+  const usersWithStatus = conversationData.filter((data) => statusesOf(data.otherId).length > 0);
+  const hasMyStatus = myStatuses().length > 0;
 
   const filteredConversations = conversationData.filter((data) =>
     data.user.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -82,35 +88,56 @@ export function Mingles() {
                 </button>
               </div>
 
-              {/* Online Users Horizontal Scroll */}
-              {onlineUsers.length > 0 && (
-                <div className="w-full overflow-x-auto pb-2 scrollbar-hide">
-                  <div className="flex gap-4">
-                    {onlineUsers.map((data) => (
-                      <button
-                        key={data.otherId}
-                        onClick={() => {
-                          if (window.innerWidth >= 1024) {
-                            openChatPopup(data.conversation.id);
-                          } else {
-                            router.push(`/mingles/${data.conversation.id}`);
-                          }
-                        }}
-                        className="flex w-16 shrink-0 flex-col items-center gap-1.5"
-                      >
-                        <div className="relative rounded-full p-[2px]">
-                          {/* Dashed border to indicate active/online */}
-                          <div className="absolute inset-0 rounded-full border border-dashed border-[#0ea5e9]"></div>
-                          <Avatar src={data.photo?.url} name={data.user.name} size={60} online={data.user.online} />
-                        </div>
-                        <span className="w-full truncate text-center text-[11px] font-medium text-ink">
-                          {data.user.name.split(' ')[0]}
-                        </span>
+              {/* Status Updates Horizontal Scroll */}
+              <div className="w-full overflow-x-auto pb-2 scrollbar-hide">
+                <div className="flex gap-4">
+                  
+                  {/* Current User Add Status or View Own */}
+                  <div className="flex w-16 shrink-0 flex-col items-center gap-1.5">
+                    <div className="relative rounded-full p-[3px]">
+                      {hasMyStatus && (
+                        <div className="absolute inset-0 pointer-events-none rounded-full border-[3px] border-transparent bg-gradient-to-tr from-[#0ea5e9] to-[#ec4899]" style={{ WebkitMask: 'linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude' }}></div>
+                      )}
+                      
+                      {/* Avatar Button (Views Status if exists, otherwise adds) */}
+                      <button onClick={() => hasMyStatus ? setViewingStatusUserId(currentUser.id) : setShowAddStatus(true)}>
+                        <Avatar src={photosOf(currentUser.id)[0]?.url} name={currentUser.name} size={60} />
                       </button>
-                    ))}
+
+                      {/* Always present '+' button to add more statuses */}
+                      <button 
+                        onClick={() => setShowAddStatus(true)}
+                        className="absolute bottom-0 right-0 z-10 rounded-full bg-white p-0.5 text-black shadow-md border-2 border-black hover:scale-110 transition-transform"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                          <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                        </svg>
+                      </button>
+                    </div>
+                    <span className="w-full truncate text-center text-[11px] font-medium text-ink">
+                      Your Status
+                    </span>
                   </div>
+
+                  {/* Friends Statuses */}
+                  {usersWithStatus.map((data) => (
+                    <button
+                      key={data.otherId}
+                      onClick={() => setViewingStatusUserId(data.otherId)}
+                      className="flex w-16 shrink-0 flex-col items-center gap-1.5"
+                    >
+                      <div className="relative rounded-full p-[3px]">
+                        {/* Status border indicator */}
+                        <div className="absolute inset-0 rounded-full border-[3px] border-transparent bg-gradient-to-tr from-[#0ea5e9] to-[#ec4899]" style={{ WebkitMask: 'linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude' }}></div>
+                        <Avatar src={data.photo?.url} name={data.user.name} size={60} online={data.user.online} />
+                      </div>
+                      <span className="w-full truncate text-center text-[11px] font-medium text-ink">
+                        {data.user.name.split(' ')[0]}
+                      </span>
+                    </button>
+                  ))}
                 </div>
-              )}
+              </div>
 
               {/* Chat List */}
               <ul className="flex min-w-0 flex-col gap-4">
@@ -203,6 +230,9 @@ export function Mingles() {
           </div>
         </aside>
       </div>
+
+      {showAddStatus && <AddStatusModal onClose={() => setShowAddStatus(false)} />}
+      {viewingStatusUserId && <StatusViewer userId={viewingStatusUserId} onClose={() => setViewingStatusUserId(null)} />}
     </Page>
   );
 }
