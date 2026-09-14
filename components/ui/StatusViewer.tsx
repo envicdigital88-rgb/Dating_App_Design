@@ -6,7 +6,7 @@ import { useStore } from '@/lib/contexts/StoreContext';
 import { Avatar } from './Bits';
 
 export function StatusViewer({ userId, onClose }: { userId: string, onClose: () => void }) {
-  const { userById, statusesOf } = useStore();
+  const { userById, statusesOf, photosOf } = useStore();
   const statuses = statusesOf(userId);
   const user = userById(userId);
   
@@ -89,7 +89,7 @@ export function StatusViewer({ userId, onClose }: { userId: string, onClose: () 
           {/* User Info */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Avatar src={user.photos?.[0] || ''} name={user.name} />
+              <Avatar src={photosOf(user.id)[0]?.url} name={user.name} />
               <span className="font-semibold text-white drop-shadow-md">{user.name}</span>
             </div>
             
