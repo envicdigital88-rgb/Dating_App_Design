@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
+/* import { useRouter } from 'next/navigation'; */
 import { SiteNav } from '@/components/landing/SiteNav';
 import { Hero } from '@/components/landing/Hero';
 import { HowItWorks } from '@/components/landing/HowItWorks';
@@ -14,7 +14,7 @@ import { InstallSection } from '@/components/landing/InstallSection';
 import { SiteFooter } from '@/components/landing/SiteFooter';
 /* import { PackageGrid } from '@/components/PackageGrid'; */
 /* import { SectionHeading } from '@/components/ui/Bits'; */
-import { useStore } from '@/lib/contexts/StoreContext';
+/* import { useStore } from '@/lib/contexts/StoreContext'; */
 
 export default function Landing() {
   /* const router = useRouter(); */
