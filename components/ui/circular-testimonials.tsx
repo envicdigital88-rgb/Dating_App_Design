@@ -195,6 +195,7 @@ export const CircularTestimonials = ({
               className="testimonial-image pointer-events-none"
               data-index={index}
               style={getImageStyle(index)}
+              draggable={false}
             />
           ))}
         </div>

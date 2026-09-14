@@ -83,15 +83,15 @@ export function SiteFooter() {
         <div className="mt-12 flex flex-col justify-between gap-3 border-t border-ink/12 pt-6 text-[13px] sm:flex-row">
           <p>© {new Date().getFullYear()} Wingle Mingle Wingling Ltd. All rights reserved.</p>
           <p className="flex gap-5">
-            <a href="#" className="hover:text-ink">
+            <Link href="/terms" className="hover:text-ink">
               Terms
-            </a>
-            <a href="#" className="hover:text-ink">
+            </Link>
+            <Link href="/privacy" className="hover:text-ink">
               Privacy
-            </a>
-            <a href="#" className="hover:text-ink">
+            </Link>
+            <Link href="/cookies" className="hover:text-ink">
               Cookies
-            </a>
+            </Link>
           </p>
         </div>
       </div>
