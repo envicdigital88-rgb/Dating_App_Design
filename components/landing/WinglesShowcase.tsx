@@ -1,9 +1,8 @@
 import React from 'react';
-import { CheckIcon, ClockIcon, LockIcon } from 'lucide-react';
+import { CheckIcon, ClockIcon } from 'lucide-react';
 import { SectionHeading } from '../ui/Bits';
 import { seedPhotos } from '@/lib/data/seed';
 
-const blurred = seedPhotos.find((p) => p.userId === 'u-7')?.url;
 const accepted = seedPhotos.find((p) => p.userId === 'u-1' && p.isPrimary)?.url;
 
 export function WinglesShowcase() {
@@ -21,7 +20,6 @@ export function WinglesShowcase() {
             {[
             'Send a wingle with a note — no more shouting into a void',
             'Track pending, accepted and declined in one place',
-            'Incoming wingles stay anonymous until you upgrade',
             'Accepting a wingle opens a conversation instantly'].
             map((point) =>
             <li key={point} className="flex gap-3 text-[15px] leading-relaxed text-ink-soft">
@@ -33,33 +31,6 @@ export function WinglesShowcase() {
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-4xl bg-cream-deep p-5 shadow-card">
-            <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">
-              Incoming · locked
-            </p>
-            <div className="flex items-center gap-4">
-              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-cream-deep">
-                {blurred &&
-                <img src={blurred} alt="" className="h-full w-full scale-110 object-cover blur-[10px]" />
-                }
-                <span className="absolute inset-0 flex items-center justify-center bg-plum-500/25 text-white">
-                  <LockIcon className="h-4 w-4" />
-                </span>
-              </div>
-              <div className="min-w-0">
-                <p className="font-display text-lg leading-tight text-ink">
-                  Someone wants to connect ❤
-                </p>
-                <p className="mt-1 text-[13px] text-ink-soft">
-                  Upgrade your package to see who sent this wingle.
-                </p>
-              </div>
-            </div>
-            <div className="mt-4 rounded-2xl bg-cream px-4 py-3 text-[13px] text-ink-muted">
-              “Your bio made me laugh. ▒▒▒▒▒▒ sometime?”
-            </div>
-          </div>
-
           <div className="rounded-4xl bg-cream-deep p-5 shadow-card">
             <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-muted">
               Sent · accepted
