@@ -29,7 +29,7 @@ export default function Landing() {
         <DiscoverPreview />
         <WinglesShowcase />
 
-        <section id="packages" className="border-b border-sand/60 py-16 lg:py-24">
+        {/* <section id="packages" className="border-b border-sand/60 py-16 lg:py-24">
           <div className="mx-auto max-w-6xl px-5 lg:px-8">
             <SectionHeading
               overline="Packages"
@@ -48,7 +48,7 @@ export default function Landing() {
               packages do not auto-renew without your consent.
             </p>
           </div>
-        </section>
+        </section> */}
 
         <Safety />
         <Testimonials />

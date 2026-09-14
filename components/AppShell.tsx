@@ -77,7 +77,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   const account: NavItem[] = [
   { to: '/profile', label: 'My profile', icon: <UserIcon className="h-[18px] w-[18px]" /> },
-  { to: '/packages', label: 'Packages', icon: <SparklesIcon className="h-[18px] w-[18px]" /> },
+  /* { to: '/packages', label: 'Packages', icon: <SparklesIcon className="h-[18px] w-[18px]" /> }, */
   { to: '/subscription', label: 'Subscription', icon: <CreditCardIcon className="h-[18px] w-[18px]" /> },
   { to: '/settings', label: 'Settings', icon: <SettingsIcon className="h-[18px] w-[18px]" /> }];
 
@@ -152,7 +152,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           </nav>
 
           <div className="mt-auto space-y-4">
-            <div className="rounded-3xl bg-plum-500 p-4 text-cream">
+            {/* <div className="rounded-3xl bg-plum-500 p-4 text-cream">
               <div className="mb-3 flex items-center justify-between">
                 <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-cream/70">
                   {entitlements.packageName} package
@@ -183,7 +183,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
                   Upgrade
                 </Button>
               }
-            </div>
+            </div> */}
 
             <div className="flex items-center gap-3 px-1">
               <Avatar src={primaryPhoto?.url} name={currentUser.name} size={38} online />

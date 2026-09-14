@@ -8,7 +8,7 @@ import { ArrowRightIcon, MenuIcon, XIcon } from 'lucide-react';
 const links = [
   { href: '#how', label: 'How it works' },
   { href: '#wingles', label: 'Wingles' },
-  { href: '#packages', label: 'Packages' },
+  /* { href: '#packages', label: 'Packages' }, */
   { href: '#safety', label: 'Safety' },
   { href: '#faq', label: 'FAQ' },
 ];
