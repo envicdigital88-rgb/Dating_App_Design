@@ -5,7 +5,7 @@ import Link from 'next/link';
 
 import { motion } from 'framer-motion';
 import { ArrowRightIcon, ShieldCheckIcon, UserIcon } from 'lucide-react';
-import { heroImage, seedPhotos, seedUsers } from '@/lib/data/seed';
+import { seedPhotos, seedUsers } from '@/lib/data/seed';
 
 const facePhotos = seedPhotos.filter((p) => p.isPrimary && p.userId.startsWith('u-')).slice(0, 4);
 const memberCount = seedUsers.filter((u) => u.role === 'member').length;
@@ -157,8 +157,8 @@ export function Hero() {
             transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
             className="relative z-10 h-[380px] w-full max-w-[440px] overflow-hidden lg:h-[480px]">
             <img
-              src={heroImage}
-              alt="Two people laughing together"
+              src="/hero.jpg"
+              alt="Group of happy friends on a beach"
               className="block h-full w-full object-cover"
             />
             {/* Dark overlay for contrast at bottom */}
