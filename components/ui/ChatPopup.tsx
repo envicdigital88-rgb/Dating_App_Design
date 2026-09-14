@@ -133,7 +133,7 @@ export function ChatPopup() {
                       {mingleTime(mingle.createdAt)}
                       {isMe && (
                         mingle.readAt ? (
-                          <CheckCheckIcon className="h-3 w-3 text-plum-500" />
+                          <CheckCheckIcon className="h-3 w-3 text-black" />
                         ) : other?.online ? (
                           <CheckCheckIcon className="h-3 w-3 text-plum-500/70" />
                         ) : (

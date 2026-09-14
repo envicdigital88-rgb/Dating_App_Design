@@ -218,7 +218,7 @@ export function Chat() {
                           {mingleTime(mingle.createdAt)}
                           {mine && (
                             mingle.readAt ? (
-                              <CheckCheckIcon className="h-3.5 w-3.5 text-plum-500" />
+                              <CheckCheckIcon className="h-3.5 w-3.5 text-black" />
                             ) : other?.online ? (
                               <CheckCheckIcon className="h-3.5 w-3.5 text-plum-500/70" />
                             ) : (
