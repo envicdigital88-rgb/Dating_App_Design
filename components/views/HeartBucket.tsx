@@ -89,7 +89,7 @@ export function HeartBucket() {
                       className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-berry-500 text-sm font-semibold text-white transition-colors hover:bg-berry-600 disabled:bg-cream-deep disabled:text-ink-muted"
                     >
                       <SendIcon className="h-4 w-4" />
-                      {wingleed ? 'Wingle sent' : 'Send wingle'}
+                      {wingleed ? 'Wingle sent' : 'Send Wingle'}
                     </button>
                   </div>
                 </li>

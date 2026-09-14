@@ -391,10 +391,10 @@ export function PageHeader({
   action
 }: {title: string;body?: string;action?: React.ReactNode;}) {
   return (
-    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4">
+    <div className="mb-6 flex flex-col items-center text-center gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4 sm:text-left">
       <div className="min-w-0">
         <h1 className="font-display text-[26px] leading-tight text-ink sm:text-[34px]">{title}</h1>
-        {body && <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-ink-soft">{body}</p>}
+        {body && <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-ink-soft mx-auto sm:mx-0">{body}</p>}
       </div>
       {action && <div className="shrink-0">{action}</div>}
     </div>);

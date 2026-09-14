@@ -90,21 +90,21 @@ export function ProfileDetail() {
         </div>
 
         <div>
-          <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex flex-col sm:flex-row flex-wrap items-center sm:items-start justify-between gap-4 text-center sm:text-left">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center sm:justify-start gap-2">
                 <h1 className="font-display text-[34px] leading-none text-ink">
                   {user.name}, {user.age}
                 </h1>
                 {user.verified && <VerifiedMark className="mt-1" />}
               </div>
-              <p className="mt-2 flex items-center gap-1.5 text-[14px] text-ink-soft">
+              <p className="mt-2 flex items-center justify-center sm:justify-start gap-1.5 text-[14px] text-ink-soft">
                 <MapPinIcon className="h-4 w-4" />
                 {user.location} · {presence(user.online, user.lastActiveAt)}
               </p>
             </div>
             
-            <div className="flex flex-col items-end gap-2">
+            <div className="flex flex-col items-center sm:items-end gap-2">
               {wingle && (
                 <Badge
                   tone={
@@ -127,7 +127,7 @@ export function ProfileDetail() {
             </div>
           </div>
 
-          <div className="mt-6 flex flex-wrap gap-2">
+          <div className="mt-6 flex justify-center sm:justify-start flex-wrap gap-2">
             <Button
               onClick={() => {
                 if (wingle) {
@@ -142,7 +142,7 @@ export function ProfileDetail() {
               }}
             >
               <SendIcon className="h-4 w-4" />
-              {wingle ? 'Wingle sent' : 'Send wingling wingle'}
+              {wingle ? 'Wingle sent' : 'Send Wingle'}
             </Button>
             <Button
               variant="outline"
@@ -161,29 +161,31 @@ export function ProfileDetail() {
           </div>
 
           {matchResult && matchResult.reasons.length > 0 && (
-            <section className="mt-8 rounded-3xl bg-berry-500/10 p-5 border border-berry-500/20">
-              <h2 className="flex items-center gap-2 font-display text-xl text-berry-400">
+            <section className="mt-8 rounded-3xl bg-berry-500/10 p-5 border border-berry-500/20 text-center sm:text-left">
+              <h2 className="flex items-center justify-center sm:justify-start gap-2 font-display text-xl text-berry-400">
                 <SparklesIcon className="h-5 w-5" />
                 Why you fit
               </h2>
-              <ul className="mt-3 flex flex-col gap-2">
-                {matchResult.reasons.map((reason, i) => (
-                  <li key={i} className="flex items-start gap-2 text-[15px] text-ink-soft">
-                    <span className="mt-2 block h-1.5 w-1.5 shrink-0 rounded-full bg-berry-400" />
-                    {reason}
-                  </li>
-                ))}
-              </ul>
+              <div className="flex justify-center sm:justify-start">
+                <ul className="mt-3 flex flex-col gap-2 text-left">
+                  {matchResult.reasons.map((reason, i) => (
+                    <li key={i} className="flex items-start gap-2 text-[15px] text-ink-soft">
+                      <span className="mt-2 block h-1.5 w-1.5 shrink-0 rounded-full bg-berry-400" />
+                      {reason}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </section>
           )}
 
-          <section className="mt-8">
+          <section className="mt-8 text-center sm:text-left">
             <h2 className="font-display text-xl text-ink">About {user.name}</h2>
             <p className="mt-2 text-[15px] leading-relaxed text-ink-soft">{user.bio}</p>
           </section>
 
           {user.prompts && user.prompts.length > 0 && (
-            <section className="mt-8">
+            <section className="mt-8 text-center sm:text-left">
               <h2 className="font-display text-xl text-ink mb-4">Vibe Check</h2>
               <div className="space-y-4">
                 {user.prompts.map((prompt) => (
@@ -198,17 +200,17 @@ export function ProfileDetail() {
             </section>
           )}
 
-          <section className="mt-8">
+          <section className="mt-8 text-center sm:text-left">
             <h2 className="font-display text-xl text-ink">Looking for</h2>
-            <p className="mt-2">
+            <p className="mt-2 flex justify-center sm:justify-start">
               <Badge tone="berry">{user.intention}</Badge>
             </p>
           </section>
 
           {user.traits && user.traits.length > 0 && (
-            <section className="mt-8">
+            <section className="mt-8 text-center sm:text-left">
               <h2 className="font-display text-xl text-ink">Personality Traits</h2>
-              <ul className="mt-3 flex flex-wrap gap-2">
+              <ul className="mt-3 flex justify-center sm:justify-start flex-wrap gap-2">
                 {user.traits.map((trait) => (
                   <li
                     key={trait}
@@ -221,9 +223,9 @@ export function ProfileDetail() {
             </section>
           )}
 
-          <section className="mt-8">
+          <section className="mt-8 text-center sm:text-left">
             <h2 className="font-display text-xl text-ink">Interests</h2>
-            <ul className="mt-3 flex flex-wrap gap-2">
+            <ul className="mt-3 flex justify-center sm:justify-start flex-wrap gap-2">
               {user.interests.map((interest) => (
                 <li
                   key={interest}
@@ -235,9 +237,9 @@ export function ProfileDetail() {
             </ul>
           </section>
 
-          <section className="mt-8">
+          <section className="mt-8 text-center sm:text-left">
             <h2 className="font-display text-xl text-ink">Lifestyle</h2>
-            <dl className="mt-3 grid gap-x-8 gap-y-3 sm:grid-cols-2">
+            <dl className="mt-3 grid gap-x-8 gap-y-3 sm:grid-cols-2 sm:text-left">
               <div className="flex justify-between gap-4 border-b border-sand py-2 text-[14px] sm:border-b-0">
                 <dt className="text-ink-muted">Work</dt>
                 <dd className="text-right font-medium text-ink">{user.lifestyle.work}</dd>
