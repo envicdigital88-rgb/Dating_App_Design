@@ -161,14 +161,14 @@ export function ProfileDetail() {
           </div>
 
           {matchResult && matchResult.reasons.length > 0 && (
-            <section className="mt-8 rounded-3xl bg-berry-50 p-5">
-              <h2 className="flex items-center gap-2 font-display text-xl text-berry-700">
+            <section className="mt-8 rounded-3xl bg-berry-500/10 p-5 border border-berry-500/20">
+              <h2 className="flex items-center gap-2 font-display text-xl text-berry-400">
                 <SparklesIcon className="h-5 w-5" />
                 Why you fit
               </h2>
               <ul className="mt-3 flex flex-col gap-2">
                 {matchResult.reasons.map((reason, i) => (
-                  <li key={i} className="flex items-start gap-2 text-[15px] text-berry-900/80">
+                  <li key={i} className="flex items-start gap-2 text-[15px] text-ink-soft">
                     <span className="mt-2 block h-1.5 w-1.5 shrink-0 rounded-full bg-berry-400" />
                     {reason}
                   </li>
