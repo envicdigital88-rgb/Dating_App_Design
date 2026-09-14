@@ -897,11 +897,11 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
           body: 'Upgrade your package to keep your conversations going.',
           href: '/packages'
         });
-      } else if (remainingAfter !== null && remainingAfter <= 3) {
+      } else if (remainingAfter !== null && remainingAfter === 1) {
         notify({
           userId: currentUser.id,
           type: 'chat_limit_warning',
-          title: `${remainingAfter} mingles left`,
+          title: '1 mingle left',
           body: 'Your chat allowance is nearly used up.',
           href: '/packages'
         });
