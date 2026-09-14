@@ -71,7 +71,7 @@ export function PwaProvider({ children }: {children: React.ReactNode;}) {
 
     const meta = document.createElement('meta');
     meta.name = 'theme-color';
-    meta.content = '#ac2b57';
+    meta.content = '#0EA5E9';
     document.head.appendChild(meta);
 
     // Service worker for offline fallback and asset caching.

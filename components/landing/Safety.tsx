@@ -38,33 +38,33 @@ const items = [
 
 export function Safety() {
   return (
-    <section id="safety" className="border-b border-sand/60 bg-plum-500 py-16 text-cream lg:py-24">
+    <section id="safety" className="border-b border-sand/60 py-16 text-ink lg:py-24">
       <div className="mx-auto max-w-6xl px-5 lg:px-8">
         <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
           <div>
-            <p className="mb-3 text-[13px] font-semibold text-berry-200">Safety &amp; privacy</p>
-            <h2 className="font-display text-3xl leading-[1.1] text-cream sm:text-4xl">
+            <p className="mb-3 text-[13px] font-semibold text-berry-500">Safety &amp; privacy</p>
+            <h2 className="font-display text-3xl leading-[1.1] text-ink sm:text-4xl">
               Built so you can be honest without being exposed
             </h2>
-            <p className="mt-4 text-[15px] leading-relaxed text-cream/75">
+            <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">
               Wingling asks a lot of you. The least an app can do is keep your details, your photos and
               your conversations under your control.
             </p>
             <img
               src={lifestyleImage}
               alt=""
-              className="mt-8 hidden aspect-[16/9] w-full rounded-4xl object-cover lg:block" />
+              className="mt-8 aspect-[16/9] w-full rounded-4xl object-cover opacity-90 mix-blend-luminosity [mask-image:linear-gradient(to_bottom,black_60%,transparent_100%)]" />
             
           </div>
 
           <ul className="grid gap-x-8 gap-y-7 sm:grid-cols-2">
             {items.map((item) =>
             <li key={item.title}>
-                <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-cream/10 text-cream">
+                <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-berry-500/10 text-berry-500">
                   {item.icon}
                 </span>
-                <h3 className="font-display text-lg text-cream">{item.title}</h3>
-                <p className="mt-1.5 text-[14px] leading-relaxed text-cream/70">{item.body}</p>
+                <h3 className="font-display text-lg text-ink">{item.title}</h3>
+                <p className="mt-1.5 text-[14px] leading-relaxed text-ink-muted">{item.body}</p>
               </li>
             )}
           </ul>

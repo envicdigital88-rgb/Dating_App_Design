@@ -26,25 +26,25 @@ export function PackageGrid({
         return (
           <li
             key={pkg.id}
-            className={`flex flex-col rounded-4xl p-6 shadow-card ${
-            featured ? 'bg-plum-500 text-cream' : 'bg-cream-deep text-ink'}`
+            className={`relative flex flex-col rounded-4xl p-6 shadow-card ${
+            featured ? 'bg-gradient-to-br from-plum-500/40 to-berry-500/40 border border-white/20 backdrop-blur-2xl text-ink' : 'bg-cream-deep text-ink'}`
             }>
             
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className={`font-display text-2xl ${featured ? 'text-cream' : 'text-ink'}`}>
+                <h3 className={`font-display text-2xl text-ink`}>
                   {pkg.name}
                 </h3>
                 <p
                   className={`mt-1.5 text-[13px] leading-relaxed ${
-                  featured ? 'text-cream/75' : 'text-ink-soft'}`
+                  featured ? 'text-ink/80' : 'text-ink-soft'}`
                   }>
                   
                   {pkg.tagline}
                 </p>
               </div>
               {featured &&
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cream/15 text-cream">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink/15 text-ink">
                   <SparklesIcon className="h-4 w-4" />
                 </span>
               }
@@ -52,29 +52,29 @@ export function PackageGrid({
             </div>
 
             <p className="mt-6 flex items-baseline gap-1.5">
-              <span className={`font-display text-[40px] leading-none ${featured ? 'text-cream' : 'text-ink'}`}>
+              <span className={`font-display text-[40px] leading-none text-ink`}>
                 {money(pkg.price)}
               </span>
               {pkg.price > 0 &&
-              <span className={`text-[13px] ${featured ? 'text-cream/70' : 'text-ink-muted'}`}>
+              <span className={`text-[13px] ${featured ? 'text-ink/70' : 'text-ink-muted'}`}>
                   / {pkg.durationDays} days
                 </span>
               }
             </p>
 
-            <dl className={`mt-6 space-y-2 border-y py-5 text-[13px] ${featured ? 'border-cream/15' : 'border-sand'}`}>
+            <dl className={`mt-6 space-y-2 border-y py-5 text-[13px] ${featured ? 'border-ink/15' : 'border-sand'}`}>
               <div className="flex justify-between gap-3">
-                <dt className={featured ? 'text-cream/70' : 'text-ink-muted'}>Chat mingles</dt>
+                <dt className={featured ? 'text-ink/70' : 'text-ink-muted'}>Chat mingles</dt>
                 <dd className="font-medium">{pkg.chatLimit === null ? 'Unlimited' : pkg.chatLimit}</dd>
               </div>
               <div className="flex justify-between gap-3">
-                <dt className={featured ? 'text-cream/70' : 'text-ink-muted'}>Wingling wingles</dt>
+                <dt className={featured ? 'text-ink/70' : 'text-ink-muted'}>Wingling wingles</dt>
                 <dd className="font-medium">
                   {pkg.wingleLimit === null ? 'Unlimited' : pkg.wingleLimit}
                 </dd>
               </div>
               <div className="flex justify-between gap-3">
-                <dt className={featured ? 'text-cream/70' : 'text-ink-muted'}>Incoming wingles</dt>
+                <dt className={featured ? 'text-ink/70' : 'text-ink-muted'}>Incoming wingles</dt>
                 <dd className="font-medium">{pkg.incomingWinglesUnlocked ? 'Revealed' : 'Locked'}</dd>
               </div>
             </dl>
@@ -83,9 +83,9 @@ export function PackageGrid({
               {pkg.features.map((f) =>
               <li key={f} className="flex gap-2.5 text-[14px] leading-snug">
                   <CheckIcon
-                  className={`mt-0.5 h-4 w-4 shrink-0 ${featured ? 'text-cream/80' : 'text-moss'}`} />
+                  className={`mt-0.5 h-4 w-4 shrink-0 ${featured ? 'text-ink/80' : 'text-moss'}`} />
                 
-                  <span className={featured ? 'text-cream/90' : 'text-ink-soft'}>{f}</span>
+                  <span className={featured ? 'text-ink/90' : 'text-ink-soft'}>{f}</span>
                 </li>
               )}
             </ul>

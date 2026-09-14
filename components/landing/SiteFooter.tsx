@@ -35,7 +35,7 @@ const columns = [
 
 export function SiteFooter() {
   return (
-    <footer className="bg-plum-600 py-14 text-cream/70">
+    <footer className="border-t border-white/10 bg-gradient-to-r from-plum-500/10 to-berry-500/10 py-14 text-ink/80 backdrop-blur-3xl">
       <div className="mx-auto max-w-6xl px-5 lg:px-8">
         <div className="grid gap-10 lg:grid-cols-[1.4fr_2fr]">
           <div>
@@ -51,7 +51,7 @@ export function SiteFooter() {
                 Create your profile
               </Link>
               <Link href="/sign-in"
-                className="rounded-full border border-cream/25 px-5 py-2.5 text-[13px] font-medium text-cream transition-colors duration-150 ease-soft hover:bg-cream/10">
+                className="rounded-full border border-ink/25 px-5 py-2.5 text-[13px] font-medium text-ink transition-colors duration-150 ease-soft hover:bg-ink/10">
                 
                 Sign in
               </Link>
@@ -61,7 +61,7 @@ export function SiteFooter() {
           <div className="grid gap-8 sm:grid-cols-3">
             {columns.map((col) =>
             <div key={col.title}>
-                <h3 className="mb-3 text-[13px] font-semibold uppercase tracking-[0.08em] text-cream">
+                <h3 className="mb-3 text-[13px] font-semibold uppercase tracking-[0.08em] text-ink">
                   {col.title}
                 </h3>
                 <ul className="space-y-2.5">
@@ -69,7 +69,7 @@ export function SiteFooter() {
                 <li key={link.label}>
                       <a
                     href={link.href}
-                    className="text-[14px] transition-colors duration-150 ease-soft hover:text-cream">
+                    className="text-[14px] transition-colors duration-150 ease-soft hover:text-ink">
                     
                         {link.label}
                       </a>
@@ -81,16 +81,16 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col justify-between gap-3 border-t border-cream/12 pt-6 text-[13px] sm:flex-row">
+        <div className="mt-12 flex flex-col justify-between gap-3 border-t border-ink/12 pt-6 text-[13px] sm:flex-row">
           <p>© {new Date().getFullYear()} Wingle Mingle Wingling Ltd. All rights reserved.</p>
           <p className="flex gap-5">
-            <a href="#" className="hover:text-cream">
+            <a href="#" className="hover:text-ink">
               Terms
             </a>
-            <a href="#" className="hover:text-cream">
+            <a href="#" className="hover:text-ink">
               Privacy
             </a>
-            <a href="#" className="hover:text-cream">
+            <a href="#" className="hover:text-ink">
               Cookies
             </a>
           </p>
