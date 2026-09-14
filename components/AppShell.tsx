@@ -224,6 +224,15 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
                 <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-berry-500" />
                 }
                 </Link>
+                <button
+                  onClick={() => {
+                    logout();
+                    router.push('/');
+                  }}
+                  aria-label="Sign out"
+                  className="rounded-full p-2 text-ink-soft transition-colors duration-150 ease-soft hover:bg-cream-deep hover:text-ink">
+                  <LogOutIcon className="h-5 w-5" />
+                </button>
               </div>
             </header>
           }
