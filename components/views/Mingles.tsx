@@ -64,16 +64,16 @@ export function Mingles() {
                     className="flex w-full items-center gap-4 px-4 py-4 text-left transition-colors duration-150 ease-soft hover:bg-white/15">
                     
                       <Avatar src={photo?.url} name={user.name} size={52} online={user.online} />
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center justify-between gap-3">
-                          <span className="truncate font-medium text-ink">{user.name}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="min-w-0 flex-1 truncate font-medium text-ink">{user.name}</span>
                           <span className="shrink-0 text-[12px] text-ink-muted">
                             {last ? relativeTime(last.createdAt) : ''}
                           </span>
-                        </span>
-                        <span className="mt-0.5 flex items-center justify-between gap-3">
+                        </div>
+                        <div className="mt-0.5 flex items-center justify-between gap-3">
                           <span
-                          className={`truncate text-[13px] ${
+                          className={`min-w-0 flex-1 truncate text-[13px] ${
                           unread ? 'font-medium text-ink' : 'text-ink-soft'}`
                           }>
                           
@@ -90,8 +90,8 @@ export function Mingles() {
                               {unread}
                             </span>
                         }
-                        </span>
-                      </span>
+                        </div>
+                      </div>
                     </button>
                   </li>);
 
@@ -100,7 +100,7 @@ export function Mingles() {
           }
         </div>
 
-        <aside className="hidden lg:block space-y-5">
+        <aside className="hidden space-y-5 lg:block">
           <div className="rounded-4xl bg-cream-deep p-5 shadow-card">
             <h2 className="mb-4 font-display text-lg text-ink">Chat allowance</h2>
             <UsageMeter

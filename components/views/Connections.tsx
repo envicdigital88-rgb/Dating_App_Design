@@ -46,7 +46,7 @@ export function Connections() {
               }
                 <div className="flex min-w-0 flex-1 flex-col">
                   <div className="flex items-center gap-1.5">
-                    <p className="truncate font-display text-[19px] leading-tight text-ink">
+                    <p className="min-w-0 flex-1 truncate font-display text-[19px] leading-tight text-ink">
                       {user.name}, {user.age}
                     </p>
                     {user.verified && <VerifiedMark />}
