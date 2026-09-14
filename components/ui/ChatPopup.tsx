@@ -133,11 +133,11 @@ export function ChatPopup() {
                       {mingleTime(mingle.createdAt)}
                       {isMe && (
                         mingle.readAt ? (
-                          <CheckCheckIcon className="h-3 w-3 text-white" />
+                          <CheckCheckIcon className="h-3 w-3 text-plum-500" />
                         ) : other?.online ? (
-                          <CheckCheckIcon className="h-3 w-3 text-white/70" />
+                          <CheckCheckIcon className="h-3 w-3 text-plum-500/70" />
                         ) : (
-                          <CheckIcon className="h-2.5 w-2.5 text-white/70" />
+                          <CheckIcon className="h-2.5 w-2.5 text-plum-500/70" />
                         )
                       )}
                     </span>
@@ -178,7 +178,7 @@ export function ChatPopup() {
               disabled={!draft.trim()}
               className="flex h-8 w-8 items-center justify-center rounded-full bg-berry-500 text-white disabled:opacity-50 transition-opacity"
             >
-              <SendIcon className="h-4 w-4 text-white" />
+              <SendIcon className="h-4 w-4 text-plum-500" />
             </button>
           </div>
         </div>
