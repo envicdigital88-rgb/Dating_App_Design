@@ -19,7 +19,7 @@ amount === 0 ?
 new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount);
 
 export const presence = (online: boolean, lastActiveAt: string) =>
-online ? 'Online now' : `Active ${formatDistanceToNowStrict(new Date(lastActiveAt))} ago`;
+online ? 'Online now' : `Last seen ${formatDistanceToNowStrict(new Date(lastActiveAt))} ago`;
 
 export const cn = (...parts: Array<string | false | null | undefined>) =>
 parts.filter(Boolean).join(' ');
