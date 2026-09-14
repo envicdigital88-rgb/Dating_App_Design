@@ -48,8 +48,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     photosOf,
     conversationsOf,
     minglesOf,
-    incomingWingles,
-    likesReceived,
     unreadLikesCount,
     unreadWinglesCount,
     notificationsOf,
@@ -65,7 +63,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     total + minglesOf(c.id).filter((m) => m.senderId !== currentUser.id && !m.readAt).length,
     0
   );
-  const pendingIncoming = incomingWingles().filter((r) => r.status === 'pending').length;
   const unreadNotifications = notificationsOf().filter((n) => !n.read).length;
   const primaryPhoto = photosOf(currentUser.id)[0];
 
