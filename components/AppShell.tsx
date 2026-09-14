@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import {
   BellIcon,
@@ -20,7 +21,9 @@ import {
   UserIcon,
   UsersIcon,
   WifiOffIcon,
-  ShoppingCartIcon } from
+  ShoppingCartIcon,
+  MenuIcon,
+  XIcon } from
 'lucide-react';
 import { BrandMark } from './BrandMark';
 /* import { UsageMeter } from './UsageMeter'; */
@@ -39,6 +42,7 @@ interface NavItem {
 }
 
 export function AppShell({ children }: { children?: React.ReactNode }) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const { offline } = usePwa();
@@ -87,10 +91,10 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
   const mobileNav: NavItem[] = [
     main[0], // Discover
-    main[1], // In Your Heart
-    main[2], // Likes
-    main[5], // Mingles
-    { to: '/profile', label: 'You', icon: <UserIcon className="h-[18px] w-[18px]" /> }
+    main[3], // Likes
+    main[6], // Mingles
+    main[8], // Notifications
+    { to: '#more', label: 'More', icon: <MenuIcon className="h-[18px] w-[18px]" /> }
   ];
 
 
@@ -259,25 +263,124 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
               const isActive = pathname.startsWith(item.to);
               return (
                 <li key={item.to} className="flex-1">
-                  <Link
-                    href={item.to}
-                    className={cn(
-                      'relative flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors duration-150 ease-soft',
-                      isActive ? 'text-berry-500' : 'text-ink-muted'
-                    )}>
-                    
-                    {item.icon}
-                    {item.label}
-                    {!!item.badge &&
-                      <span className="absolute right-[22%] top-1.5 h-2 w-2 rounded-full bg-berry-500" />
-                    }
-                  </Link>
+                  {item.to === '#more' ? (
+                    <button
+                      onClick={() => setMobileMenuOpen(true)}
+                      className={cn(
+                        'relative flex w-full flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors duration-150 ease-soft',
+                        mobileMenuOpen ? 'text-berry-500' : 'text-ink-muted'
+                      )}>
+                      {item.icon}
+                      {item.label}
+                    </button>
+                  ) : (
+                    <Link
+                      href={item.to}
+                      className={cn(
+                        'relative flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors duration-150 ease-soft',
+                        isActive ? 'text-berry-500' : 'text-ink-muted'
+                      )}>
+                      
+                      {item.icon}
+                      {item.label}
+                      {!!item.badge &&
+                        <span className="absolute right-[22%] top-1.5 h-2 w-2 rounded-full bg-berry-500" />
+                      }
+                    </Link>
+                  )}
                 </li>
               );
             })}
           </ul>
         </nav>
       }
+
+      {/* Mobile Menu Overlay */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: '100%' }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: '100%' }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="fixed inset-0 z-50 flex flex-col bg-cream lg:hidden"
+          >
+            <div className="flex items-center justify-between border-b border-sand/70 bg-cream/90 px-4 py-3 backdrop-blur">
+              <h2 className="font-display text-lg font-semibold text-ink">Menu</h2>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                aria-label="Close menu"
+                className="rounded-full p-2 text-ink-soft transition-colors duration-150 ease-soft hover:bg-cream-deep hover:text-ink"
+              >
+                <XIcon className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-5 py-6">
+              <nav aria-label="Main" className="space-y-1">
+                {main.map((item) => {
+                  const isActive = pathname.startsWith(item.to);
+                  return (
+                    <Link
+                      key={item.to}
+                      href={item.to}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={navClass(isActive)}
+                    >
+                      {item.icon}
+                      <span className="flex-1">{item.label}</span>
+                      {!!item.badge && (
+                        <span className="rounded-full bg-berry-500 px-1.5 py-0.5 text-[11px] font-semibold text-white">
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </nav>
+
+              <div className="my-5 h-px bg-sand/80" />
+
+              <nav aria-label="Account" className="space-y-1">
+                {account.map((item) => {
+                  const isActive = pathname.startsWith(item.to);
+                  return (
+                    <Link
+                      key={item.to}
+                      href={item.to}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={navClass(isActive)}
+                    >
+                      {item.icon}
+                      <span className="flex-1">{item.label}</span>
+                    </Link>
+                  );
+                })}
+                {currentUser.role === 'admin' && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={navClass(pathname.startsWith('/admin'))}
+                  >
+                    <ShieldCheckIcon className="h-[18px] w-[18px]" />
+                    <span className="flex-1">Admin</span>
+                  </Link>
+                )}
+                <button
+                  onClick={() => {
+                    logout();
+                    router.push('/');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="group flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-ink-soft transition-[background-color,color,box-shadow] duration-150 ease-soft hover:bg-white/5 hover:text-ink"
+                >
+                  <LogOutIcon className="h-[18px] w-[18px]" />
+                  <span className="flex-1 text-left">Sign out</span>
+                </button>
+              </nav>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>);
 
 }
