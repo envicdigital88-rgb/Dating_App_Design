@@ -218,11 +218,11 @@ export function Chat() {
                           {mingleTime(mingle.createdAt)}
                           {mine && (
                             mingle.readAt ? (
-                              <CheckCheckIcon className="h-3.5 w-3.5 text-blue-300" />
+                              <CheckCheckIcon className="h-3.5 w-3.5 text-white" />
                             ) : other?.online ? (
-                              <CheckCheckIcon className="h-3.5 w-3.5 opacity-50" />
+                              <CheckCheckIcon className="h-3.5 w-3.5 text-white/70" />
                             ) : (
-                              <CheckIcon className="h-3 w-3 opacity-50" />
+                              <CheckIcon className="h-3 w-3 text-white/70" />
                             )
                           )}
                         </p>
@@ -338,7 +338,7 @@ export function Chat() {
               className="max-h-32 min-h-[44px] flex-1 resize-none rounded-3xl border border-sand bg-cream px-4 py-3 text-[15px] text-ink placeholder:text-ink-muted/70 focus:border-berry-400 focus:outline-none focus:ring-2 focus:ring-berry-100" />
             
               <Button type="submit" className="h-11 w-11 shrink-0 px-0" aria-label="Send mingle">
-                <SendIcon className="h-4 w-4" />
+                <SendIcon className="h-4 w-4 text-white" />
               </Button>
             </form>
             <p className="mt-2 text-center text-[12px] text-ink-muted">
