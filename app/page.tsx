@@ -21,7 +21,7 @@ export default function Landing() {
   const { db } = useStore();
 
   return (
-    <div className="min-h-full w-full bg-[#07061a]">
+    <div className="min-h-full w-full bg-black">
       <SiteNav />
       <main>
         <Hero />

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRightIcon, HeartIcon, MenuIcon, XIcon } from 'lucide-react';
+import { ArrowRightIcon, MenuIcon, XIcon } from 'lucide-react';
 
 const links = [
   { href: '#how', label: 'How it works' },
@@ -17,7 +17,7 @@ export function SiteNav() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-[#07061a]/80 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 bg-transparent">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-5 py-3 lg:px-10">
         {/* Logo */}
         <Link href="/" aria-label="Wingle Mingle home" className="flex items-center gap-2.5">
@@ -33,7 +33,7 @@ export function SiteNav() {
             <a
               key={l.href}
               href={l.href}
-              className="text-[14px] text-white/60 transition-colors duration-150 hover:text-white">
+              className="text-[14px] text-white transition-colors duration-150 hover:text-white/80">
               {l.label}
             </a>
           ))}
@@ -43,7 +43,7 @@ export function SiteNav() {
         <div className="hidden items-center gap-3 md:flex">
           <Link
             href="/sign-in"
-            className="text-[14px] font-medium text-white/70 transition-colors hover:text-white">
+            className="text-[14px] font-medium text-white transition-colors hover:text-white/80">
             Sign in
           </Link>
           <Link
@@ -74,14 +74,14 @@ export function SiteNav() {
                 key={l.href}
                 href={l.href}
                 onClick={() => setOpen(false)}
-                className="rounded-xl px-4 py-3 text-[14px] text-white/60 transition-colors hover:bg-white/5 hover:text-white">
+                className="rounded-xl px-4 py-3 text-[14px] text-white transition-colors hover:bg-white/5 hover:text-white/90">
                 {l.label}
               </a>
             ))}
           </nav>
           <div className="mt-4 flex gap-2">
             <Link href="/sign-in" className="flex-1">
-              <button className="w-full rounded-full border border-white/20 py-2.5 text-[14px] font-medium text-white/70 transition hover:bg-white/10">
+              <button className="w-full rounded-full border border-white/20 py-2.5 text-[14px] font-medium text-white transition hover:bg-white/10">
                 Sign in
               </button>
             </Link>
