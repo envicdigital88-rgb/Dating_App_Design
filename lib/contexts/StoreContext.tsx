@@ -904,10 +904,12 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       if (otherId && peerRef.current) {
         try {
           const conn = peerRef.current.connect(otherId, { reliable: true });
-          conn.on('open', () => {
-            conn.send({ type: 'mingle', mingle });
-            setTimeout(() => conn.close(), 1000);
-          });
+          if (conn) {
+            conn.on('open', () => {
+              conn.send({ type: 'mingle', mingle });
+              setTimeout(() => conn.close(), 1000);
+            });
+          }
         } catch (err) {
           console.error("PeerJS connect error", err);
         }
