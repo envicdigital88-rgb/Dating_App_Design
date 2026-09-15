@@ -56,6 +56,8 @@ export interface User {
   online: boolean;
   lastActiveAt: string;
   createdAt: string;
+  isAnonymous?: boolean;
+  anonymousName?: string;
 }
 
 export interface UserStatus {

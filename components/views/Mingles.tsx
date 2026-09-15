@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Avatar, EmptyState } from '@/components/ui/Bits';
 import { UsageMeter } from '@/components/UsageMeter';
 import { useStore } from '@/lib/contexts/StoreContext';
-import { relativeTime } from '@/lib/utils/format';
+import { listTime } from '@/lib/utils/format';
 import { AddStatusModal } from '@/components/ui/AddStatusModal';
 import { StatusViewer } from '@/components/ui/StatusViewer';
 
@@ -165,7 +165,7 @@ export function Mingles() {
                           <div className="flex items-center justify-between gap-3">
                             <span className="min-w-0 flex-1 truncate font-medium text-ink">{user.name}</span>
                             <span className="shrink-0 text-[12px] text-ink-muted">
-                              {last ? relativeTime(last.createdAt) : ''}
+                              {last ? listTime(last.createdAt) : ''}
                             </span>
                           </div>
                           <div className="mt-0.5 flex items-center justify-between gap-3">

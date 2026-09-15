@@ -11,7 +11,8 @@ import {
   MessageCircleIcon,
   SendIcon,
   ZapIcon,
-  SparklesIcon
+  SparklesIcon,
+  ShieldCheckIcon
 } from 'lucide-react';
 import { Page } from '@/components/AppShell';
 import { PhotoGallery } from '@/components/PhotoGallery';
@@ -94,14 +95,21 @@ export function ProfileDetail() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="font-display text-[34px] leading-none text-ink">
-                  {user.name}, {user.age}
+                  {user.name}{!user.isAnonymous && `, ${user.age}`}
                 </h1>
                 {user.verified && <VerifiedMark className="mt-1" />}
               </div>
-              <p className="mt-2 flex items-center gap-1.5 text-[14px] text-ink-soft">
-                <MapPinIcon className="h-4 w-4" />
-                {user.location} · {presence(user.online, user.lastActiveAt)}
-              </p>
+              {!user.isAnonymous ? (
+                <p className="mt-2 flex items-center gap-1.5 text-[14px] text-ink-soft">
+                  <MapPinIcon className="h-4 w-4" />
+                  {user.location} · {presence(user.online, user.lastActiveAt)}
+                </p>
+              ) : (
+                <p className="mt-2 flex items-center gap-1.5 text-[14px] text-ink-soft">
+                  <ShieldCheckIcon className="h-4 w-4 text-moss" />
+                  Anonymous User
+                </p>
+              )}
             </div>
             
             <div className="flex flex-col items-end gap-2">
@@ -221,40 +229,44 @@ export function ProfileDetail() {
             </section>
           )}
 
-          <section className="mt-8">
-            <h2 className="font-display text-xl text-ink">Interests</h2>
-            <ul className="mt-3 flex flex-wrap gap-2">
-              {user.interests.map((interest) => (
-                <li
-                  key={interest}
-                  className="rounded-full border border-sand bg-cream-deep px-3.5 py-1.5 text-[14px] text-ink-soft"
-                >
-                  {interest}
-                </li>
-              ))}
-            </ul>
-          </section>
+          {!user.isAnonymous && user.interests && user.interests.length > 0 && (
+            <section className="mt-8">
+              <h2 className="font-display text-xl text-ink">Interests</h2>
+              <ul className="mt-3 flex flex-wrap gap-2">
+                {user.interests.map((interest) => (
+                  <li
+                    key={interest}
+                    className="rounded-full border border-sand bg-cream-deep px-3.5 py-1.5 text-[14px] text-ink-soft"
+                  >
+                    {interest}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
-          <section className="mt-8">
-            <h2 className="font-display text-xl text-ink">Lifestyle</h2>
-            <dl className="mt-3 grid gap-x-8 gap-y-3 sm:grid-cols-2">
-              <div className="flex justify-between gap-4 border-b border-sand py-2 text-[14px] sm:border-b-0">
-                <dt className="text-ink-muted">Work</dt>
-                <dd className="text-right font-medium text-ink">{user.lifestyle.work}</dd>
-              </div>
-              {lifestyleFields.map((field) => (
-                <div
-                  key={field.key}
-                  className="flex justify-between gap-4 border-b border-sand py-2 text-[14px] sm:border-b-0"
-                >
-                  <dt className="text-ink-muted">{field.label}</dt>
-                  <dd className="text-right font-medium text-ink">
-                    {user.lifestyle[field.key as keyof Lifestyle]}
-                  </dd>
+          {!user.isAnonymous && (
+            <section className="mt-8">
+              <h2 className="font-display text-xl text-ink">Lifestyle</h2>
+              <dl className="mt-3 grid gap-x-8 gap-y-3 sm:grid-cols-2">
+                <div className="flex justify-between gap-4 border-b border-sand py-2 text-[14px] sm:border-b-0">
+                  <dt className="text-ink-muted">Work</dt>
+                  <dd className="text-right font-medium text-ink">{user.lifestyle.work}</dd>
                 </div>
-              ))}
-            </dl>
-          </section>
+                {lifestyleFields.map((field) => (
+                  <div
+                    key={field.key}
+                    className="flex justify-between gap-4 border-b border-sand py-2 text-[14px] sm:border-b-0"
+                  >
+                    <dt className="text-ink-muted">{field.label}</dt>
+                    <dd className="text-right font-medium text-ink">
+                      {user.lifestyle[field.key as keyof Lifestyle]}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
 
           <section className="mt-10 rounded-4xl border border-sand bg-cream-deep p-5">
             <h2 className="font-display text-lg text-ink">Not right for you?</h2>

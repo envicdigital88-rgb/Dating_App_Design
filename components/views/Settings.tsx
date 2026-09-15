@@ -66,6 +66,35 @@ export function Settings() {
             Privacy
           </h2>
           <ul className="mt-4 divide-y divide-sand">
+            <li className="flex items-start justify-between gap-4 py-3.5">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[14px] font-medium text-ink">Anonymous Mode</p>
+                  <p className="mt-0.5 text-[12px] leading-relaxed text-ink-muted">Hide your photo and real identity.</p>
+                  {currentUser.isAnonymous && (
+                    <div className="mt-3">
+                      <Label htmlFor="anonymous-name">Preferred Name</Label>
+                      <Input
+                        id="anonymous-name"
+                        value={currentUser.anonymousName || ''}
+                        onChange={(e) => updateProfile({ anonymousName: e.target.value })}
+                        placeholder="e.g. Mystery User"
+                      />
+                    </div>
+                  )}
+                </div>
+                <button
+                  role="switch"
+                  aria-checked={currentUser.isAnonymous}
+                  onClick={() => updateProfile({ isAnonymous: !currentUser.isAnonymous })}
+                  className={`relative mt-1 h-6 w-11 shrink-0 rounded-full transition-colors duration-150 ease-soft ${
+                  currentUser.isAnonymous ? 'bg-berry-500' : 'bg-sand'}`
+                  }>
+                  <span
+                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-cream-deep shadow-sm transition-transform duration-150 ease-soft ${
+                  currentUser.isAnonymous ? 'translate-x-[22px]' : 'translate-x-0.5'}`
+                  } />
+                </button>
+              </li>
             {(
             [
             ['discoverable', 'Show me in Discover', 'Turn off to hide your profile completely.'],

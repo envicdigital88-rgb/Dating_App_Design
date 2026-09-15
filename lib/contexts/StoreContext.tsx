@@ -193,6 +193,28 @@ interface StoreValue {
   isHydrated: boolean;
 }
 
+export const maskUser = (user: User, sessionId: string | null): User => {
+  if (user.id === sessionId || !user.isAnonymous) return user;
+  return {
+    ...user,
+    name: user.anonymousName || 'Anonymous',
+    age: 0,
+    location: 'Hidden',
+    bio: '',
+    lifestyle: {
+      drinking: '',
+      smoking: '',
+      exercise: '',
+      pets: '',
+      children: '',
+      education: '',
+      work: ''
+    },
+    traits: [],
+    interests: []
+  };
+};
+
 const StoreContext = createContext<StoreValue | null>(null);
 
 export function StoreProvider({ children }: {children: React.ReactNode;}) {
@@ -287,10 +309,14 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     };
   }, [sessionId]);
 
-  const currentUser = useMemo(
-    () => db.users.find((u) => u.id === sessionId) ?? null,
-    [db.users, sessionId]
-  );
+  const currentUser = useMemo(() => {
+    const u = db.users.find((u) => u.id === sessionId);
+    if (!u) return null;
+    if (u.isAnonymous && u.anonymousName) {
+      return { ...u, name: u.anonymousName };
+    }
+    return u;
+  }, [db.users, sessionId]);
 
   const freePackage = useMemo(
     () => db.packages.find((p) => p.price === 0) ?? seedPackages[0],
@@ -467,11 +493,14 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   /* -------------------------------------------------------------- photos */
 
   const photosOf = useCallback<StoreValue['photosOf']>(
-    (userId) =>
-    db.photos.
-    filter((p) => p.userId === userId && p.moderation !== 'rejected').
-    sort((a, b) => a.order - b.order),
-    [db.photos]
+    (userId) => {
+      const u = db.users.find((user) => user.id === userId);
+      if (u?.isAnonymous && u.id !== sessionIdRef.current) return [];
+      return db.photos.
+      filter((p) => p.userId === userId && p.moderation !== 'rejected').
+      sort((a, b) => a.order - b.order);
+    },
+    [db.photos, db.users]
   );
 
   const addPhoto = useCallback<StoreValue['addPhoto']>((url) => {
@@ -544,7 +573,10 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   /* ----------------------------------------------------------- discovery */
 
   const userById = useCallback<StoreValue['userById']>(
-    (userId) => db.users.find((u) => u.id === userId),
+    (userId) => {
+      const u = db.users.find((user) => user.id === userId);
+      return u ? maskUser(u, sessionIdRef.current) : undefined;
+    },
     [db.users]
   );
 
@@ -577,7 +609,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       const pb = premiumIds.has(b.id) ? 1 : 0;
       if (pa !== pb) return pb - pa;
       return new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime();
-    });
+    }).
+    map((u) => maskUser(u, sessionId));
   }, [db.blocks, db.packages, db.passes, db.subscriptions, db.users, sessionId]);
 
   const likeUser = useCallback<StoreValue['likeUser']>((userId) => {
@@ -630,7 +663,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     const heartTargetIds = new Set(
       db.heartBucket.filter((h) => h.userId === sessionId).map((h) => h.targetUserId)
     );
-    return db.users.filter((u) => heartTargetIds.has(u.id));
+    return db.users.filter((u) => heartTargetIds.has(u.id)).map((u) => maskUser(u, sessionId));
   }, [db.heartBucket, db.users, sessionId]);
 
   const addToHeartBucket = useCallback<StoreValue['addToHeartBucket']>((userId) => {
@@ -659,7 +692,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     const passedTargetIds = new Set(
       db.passes.filter((p) => p.userId === sessionId).map((p) => p.targetUserId)
     );
-    return db.users.filter((u) => passedTargetIds.has(u.id));
+    return db.users.filter((u) => passedTargetIds.has(u.id)).map((u) => maskUser(u, sessionId));
   }, [db.passes, db.users, sessionId]);
 
   const removeFromPasses = useCallback<StoreValue['removeFromPasses']>((userId) => {
