@@ -55,29 +55,31 @@ export function Wingles() {
         } />
       
 
-      <div
-        role="tablist"
-        aria-label="Wingle direction"
-        className="mb-6 inline-flex rounded-full bg-cream-deep p-1">
-        
-        {(
-        [
-        ['incoming', `Incoming${pendingIncoming.length ? ` · ${pendingIncoming.length}` : ''}`],
-        ['sent', `Sent · ${sent.length}`]] as
-        const).
-        map(([key, label]) =>
-        <button
-          key={key}
-          role="tab"
-          aria-selected={tab === key}
-          onClick={() => setTab(key)}
-          className={`rounded-full px-5 py-2 text-sm font-medium transition-[background-color,color] duration-150 ease-soft ${
-          tab === key ? 'bg-cream-deep text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`
-          }>
+      <div className="mb-6 flex w-full justify-center">
+        <div
+          role="tablist"
+          aria-label="Wingle direction"
+          className="inline-flex rounded-full bg-cream-deep p-1">
           
-            {label}
-          </button>
-        )}
+          {(
+          [
+          ['incoming', `Incoming${pendingIncoming.length ? ` · ${pendingIncoming.length}` : ''}`],
+          ['sent', `Sent · ${sent.length}`]] as
+          const).
+          map(([key, label]) =>
+          <button
+            key={key}
+            role="tab"
+            aria-selected={tab === key}
+            onClick={() => setTab(key)}
+            className={`rounded-full px-5 py-2 text-sm font-medium transition-[background-color,color] duration-150 ease-soft ${
+            tab === key ? 'bg-sand text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`
+            }>
+            
+              {label}
+            </button>
+          )}
+        </div>
       </div>
 
       {tab === 'incoming' &&
