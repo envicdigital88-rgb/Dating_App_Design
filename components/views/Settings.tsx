@@ -23,6 +23,7 @@ export function Settings() {
     discoverable: true
   });
   const [draftAnonymousName, setDraftAnonymousName] = useState(currentUser?.anonymousName || '');
+  const [isEditingAnonymousName, setIsEditingAnonymousName] = useState(!currentUser?.anonymousName);
 
   if (!currentUser) return null;
 
@@ -72,25 +73,44 @@ export function Settings() {
                   <p className="text-[14px] font-medium text-ink">Anonymous Mode</p>
                   <p className="mt-0.5 text-[12px] leading-relaxed text-ink-muted">Hide your photo and real identity.</p>
                   {currentUser.isAnonymous && (
-                    <div className="mt-3 flex items-end gap-2">
-                      <div className="flex-1">
-                        <Label htmlFor="anonymous-name">Preferred Name</Label>
-                        <Input
-                          id="anonymous-name"
-                          value={draftAnonymousName}
-                          onChange={(e) => setDraftAnonymousName(e.target.value)}
-                          placeholder="e.g. Mystery User"
-                        />
-                      </div>
-                      <Button
-                        variant="primary"
-                        onClick={() => {
-                          updateProfile({ anonymousName: draftAnonymousName });
-                          toast.success('Preferred name saved');
-                        }}
-                      >
-                        Save
-                      </Button>
+                    <div className="mt-3">
+                      {isEditingAnonymousName ? (
+                        <div className="flex items-end gap-2">
+                          <div className="flex-1">
+                            <Label htmlFor="anonymous-name">Preferred Name</Label>
+                            <Input
+                              id="anonymous-name"
+                              value={draftAnonymousName}
+                              onChange={(e) => setDraftAnonymousName(e.target.value)}
+                              placeholder="e.g. Mystery User"
+                            />
+                          </div>
+                          <Button
+                            variant="primary"
+                            onClick={() => {
+                              if (!draftAnonymousName.trim()) {
+                                toast.error('Please enter a name');
+                                return;
+                              }
+                              updateProfile({ anonymousName: draftAnonymousName.trim() });
+                              setIsEditingAnonymousName(false);
+                              toast.success('Preferred name saved');
+                            }}
+                          >
+                            Save
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between rounded-2xl bg-white/5 p-3 ring-1 ring-white/10">
+                          <div>
+                            <p className="text-[12px] text-ink-muted">Preferred Name</p>
+                            <p className="font-medium text-ink">{currentUser.anonymousName}</p>
+                          </div>
+                          <Button variant="outline" size="sm" onClick={() => setIsEditingAnonymousName(true)}>
+                            Edit
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
