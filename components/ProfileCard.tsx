@@ -348,7 +348,7 @@ export function ProfileCard({
             className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-berry-500 to-berry-600 px-4 text-sm font-semibold text-white shadow-sm transition-all duration-150 ease-soft hover:opacity-90 active:scale-[0.98] disabled:from-cream-deep disabled:to-cream-deep disabled:text-ink-muted"
           >
             <SendIcon className="h-4 w-4" />
-            {wingleed ? 'Wingle sent' : 'Send wingle'}
+            {wingleed ? 'Wingle sent' : 'Send Wingle'}
           </button>
           <button
             onClick={() => router.push(`/profile/${user.id}`)}

@@ -55,29 +55,31 @@ export function Wingles() {
         } />
       
 
-      <div
-        role="tablist"
-        aria-label="Wingle direction"
-        className="mb-6 inline-flex rounded-full bg-cream-deep p-1">
-        
-        {(
-        [
-        ['incoming', `Incoming${pendingIncoming.length ? ` · ${pendingIncoming.length}` : ''}`],
-        ['sent', `Sent · ${sent.length}`]] as
-        const).
-        map(([key, label]) =>
-        <button
-          key={key}
-          role="tab"
-          aria-selected={tab === key}
-          onClick={() => setTab(key)}
-          className={`rounded-full px-5 py-2 text-sm font-medium transition-[background-color,color] duration-150 ease-soft ${
-          tab === key ? 'bg-cream-deep text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`
-          }>
+      <div className="mb-6 flex w-full justify-center">
+        <div
+          role="tablist"
+          aria-label="Wingle direction"
+          className="inline-flex rounded-full bg-cream-deep p-1">
           
-            {label}
-          </button>
-        )}
+          {(
+          [
+          ['incoming', `Incoming${pendingIncoming.length ? ` · ${pendingIncoming.length}` : ''}`],
+          ['sent', `Sent · ${sent.length}`]] as
+          const).
+          map(([key, label]) =>
+          <button
+            key={key}
+            role="tab"
+            aria-selected={tab === key}
+            onClick={() => setTab(key)}
+            className={`rounded-full px-5 py-2 text-sm font-medium transition-[background-color,color] duration-150 ease-soft ${
+            tab === key ? 'bg-sand text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`
+            }>
+            
+              {label}
+            </button>
+          )}
+        </div>
       </div>
 
       {tab === 'incoming' &&
@@ -100,105 +102,107 @@ export function Wingles() {
               return (
                 <li
                   key={wingle.id}
-                  className="flex flex-wrap items-center gap-4 rounded-4xl bg-cream-deep p-4 shadow-card sm:p-5">
-                  
-                      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-3xl bg-cream-deep">
-                        {photo &&
-                    <img
-                      src={photo.url}
-                      alt=""
-                      aria-hidden
-                      className="h-full w-full scale-110 object-cover blur-[12px]" />
-
-                    }
-                        <span className="absolute inset-0 flex items-center justify-center bg-plum-500/25 text-white">
-                          <LockIcon className="h-4 w-4" />
-                        </span>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-display text-[19px] leading-tight text-ink">
-                          Someone wants to connect with you ❤
-                        </p>
-                        <p className="mt-1 text-[13px] text-ink-soft">
-                          Sent {relativeTime(wingle.createdAt)} · upgrade your package to see who
-                          sent this wingle.
-                        </p>
-                        <p className="mt-2 rounded-2xl bg-cream px-3.5 py-2 text-[13px] text-ink-muted">
-                          “{wingle.note.slice(0, 14)}
-                          {wingle.note.length > 14 ? ' ▒▒▒▒▒▒▒▒▒▒' : ''}”
-                        </p>
-                      </div>
-                      <Button size="sm" onClick={() => setUpgradeOpen(true)}>
-                        Reveal
-                      </Button>
-                    </li>);
-
+                  className="flex flex-col sm:flex-row sm:items-center gap-4 rounded-4xl bg-cream-deep p-4 shadow-card sm:p-5">
+                  <div className="flex min-w-0 flex-1 items-center gap-4">
+                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-3xl bg-cream-deep">
+                      {photo && (
+                        <img
+                          src={photo.url}
+                          alt=""
+                          aria-hidden
+                          className="h-full w-full scale-110 object-cover blur-[12px]"
+                        />
+                      )}
+                      <span className="absolute inset-0 flex items-center justify-center bg-plum-500/25 text-white">
+                        <LockIcon className="h-4 w-4" />
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-display text-[19px] leading-tight text-ink">
+                        Someone wants to connect with you ❤
+                      </p>
+                      <p className="mt-1 text-[13px] text-ink-soft">
+                        Sent {relativeTime(wingle.createdAt)} · upgrade your package to see who
+                        sent this wingle.
+                      </p>
+                      <p className="mt-2 rounded-2xl bg-cream px-3.5 py-2 text-[13px] text-ink-muted">
+                        “{wingle.note.slice(0, 14)}
+                        {wingle.note.length > 14 ? ' ▒▒▒▒▒▒▒▒▒▒' : ''}”
+                      </p>
+                    </div>
+                  </div>
+                  <Button size="sm" className="w-full sm:w-auto" onClick={() => setUpgradeOpen(true)}>
+                    Reveal
+                  </Button>
+                </li>
+              );
             }
 
             return (
               <li
                 key={wingle.id}
-                className="flex flex-wrap items-center gap-4 rounded-4xl bg-cream-deep p-4 shadow-card sm:p-5">
-                
-                    <button
-                  onClick={() => router.push(`/profile/${sender.id}`)}
-                  className="shrink-0"
-                  aria-label={`View ${sender.name}'s profile`}>
-                  
-                      {photo &&
-                  <img src={photo.url} alt="" className="h-20 w-20 rounded-3xl object-cover" />
-                  }
-                    </button>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-display text-[19px] leading-tight text-ink">
-                          {sender.name}, {sender.age}
-                        </p>
-                        <Badge tone={statusTone(wingle.status)}>{wingle.status}</Badge>
-                      </div>
-                      <p className="mt-1 text-[13px] text-ink-soft">
-                        {sender.location} · sent {relativeTime(wingle.createdAt)}
+                className="flex flex-col sm:flex-row sm:items-center gap-4 rounded-4xl bg-cream-deep p-4 shadow-card sm:p-5">
+                <div className="flex min-w-0 flex-1 items-start sm:items-center gap-4">
+                  <button
+                    onClick={() => router.push(`/profile/${sender.id}`)}
+                    className="shrink-0"
+                    aria-label={`View ${sender.name}'s profile`}>
+                    {photo && (
+                      <img src={photo.url} alt="" className="h-20 w-20 rounded-3xl object-cover" />
+                    )}
+                  </button>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-display text-[19px] leading-tight text-ink truncate">
+                        {sender.name}, {sender.age}
                       </p>
-                      {wingle.note &&
-                  <p className="mt-2 rounded-2xl bg-cream px-3.5 py-2 text-[13px] leading-relaxed text-ink-soft">
-                          “{wingle.note}”
-                        </p>
-                  }
+                      <Badge tone={statusTone(wingle.status)}>{wingle.status}</Badge>
                     </div>
-                    {wingle.status === 'pending' ?
-                <div className="flex gap-2">
-                        <Button
+                    <p className="mt-1 text-[13px] text-ink-soft truncate">
+                      {sender.location} · sent {relativeTime(wingle.createdAt)}
+                    </p>
+                    {wingle.note && (
+                      <p className="mt-2 rounded-2xl bg-cream px-3.5 py-2 text-[13px] leading-relaxed text-ink-soft">
+                        “{wingle.note}”
+                      </p>
+                    )}
+                  </div>
+                </div>
+                {wingle.status === 'pending' ? (
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 sm:flex-none"
+                      onClick={() => {
+                        respondToWingle(wingle.id, 'declined');
+                        toast.success('Wingle declined');
+                      }}>
+                      <XIcon className="h-3.5 w-3.5" />
+                      Decline
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="flex-1 sm:flex-none"
+                      onClick={() => {
+                        respondToWingle(wingle.id, 'accepted');
+                        toast.success(`You are connected with ${sender.name}`);
+                      }}>
+                      <CheckIcon className="h-3.5 w-3.5" />
+                      Accept
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => {
-                      respondToWingle(wingle.id, 'declined');
-                      toast.success('Wingle declined');
-                    }}>
-                    
-                          <XIcon className="h-3.5 w-3.5" />
-                          Decline
-                        </Button>
-                        <Button
-                    size="sm"
-                    onClick={() => {
-                      respondToWingle(wingle.id, 'accepted');
-                      toast.success(`You are connected with ${sender.name}`);
-                    }}>
-                    
-                          <CheckIcon className="h-3.5 w-3.5" />
-                          Accept
-                        </Button>
-                      </div> :
-
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => router.push(`/profile/${sender.id}`)}>
-                  
-                        View profile
-                      </Button>
-                }
-                  </li>);
+                    className="w-full sm:w-auto"
+                    onClick={() => router.push(`/profile/${sender.id}`)}>
+                    View profile
+                  </Button>
+                )}
+              </li>
+            );
 
           })}
             </ul>

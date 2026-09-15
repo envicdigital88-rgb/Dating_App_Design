@@ -3,6 +3,7 @@
 import React from 'react';
 import { BellIcon, DownloadIcon, SmartphoneIcon, WifiOffIcon } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { SectionHeading } from '../ui/Bits';
 import { usePwa } from '../PwaProvider';
 import { seedPhotos } from '@/lib/data/seed';
 
@@ -14,17 +15,15 @@ export function InstallSection() {
   return (
     <section className="border-b border-sand/60 py-16 lg:py-24">
       <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 lg:grid-cols-[1fr_0.8fr] lg:gap-20 lg:px-8">
-        <div>
-          <p className="mb-3 text-[13px] font-semibold text-berry-500">Install Wingle Mingle</p>
-          <h2 className="font-display text-3xl leading-[1.1] text-ink sm:text-4xl">
-            Put it on your home screen, skip the app store
-          </h2>
-          <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-ink-soft">
-            Wingle Mingle installs straight from your browser and runs full screen, with push notifications
-            for new wingles and mingles, and an offline fallback for the tube.
-          </p>
+        <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
+          <SectionHeading
+            align="responsive"
+            overline="Install Wingle Mingle"
+            title="Put it on your home screen, skip the app store"
+            body="Wingle Mingle installs straight from your browser and runs full screen, with push notifications for new wingles and mingles, and an offline fallback for the tube."
+          />
 
-          <ul className="mt-8 grid gap-4 sm:grid-cols-3">
+          <ul className="mt-8 flex flex-col gap-4 w-fit sm:w-auto mx-auto sm:mx-0 sm:grid sm:grid-cols-3">
             {[
             { icon: <SmartphoneIcon className="h-4 w-4" />, label: 'Full-screen app' },
             { icon: <BellIcon className="h-4 w-4" />, label: 'Push notifications' },
@@ -39,13 +38,14 @@ export function InstallSection() {
             )}
           </ul>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button size="lg" onClick={promptInstall} disabled={installed}>
+          <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+            <Button size="lg" className="w-full sm:w-auto" onClick={promptInstall} disabled={installed}>
               <DownloadIcon className="h-4 w-4" />
               {installed ? 'Installed' : 'Install Wingle Mingle'}
             </Button>
             <Button
               size="lg"
+              className="w-full sm:w-auto"
               variant="outline"
               onClick={enableNotifications}
               disabled={notificationsEnabled}>

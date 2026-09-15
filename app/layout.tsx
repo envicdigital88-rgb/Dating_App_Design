@@ -10,9 +10,17 @@ export const metadata: Metadata = {
   description: 'Connect and discover new people with Wingle Mingle',
   icons: {
     icon: [
-      { url: '/favicon.png', type: 'image/png' },
+      { url: '/favicon-96x96.png', type: 'image/png', sizes: '96x96' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
     ],
-    apple: '/favicon.png',
+    shortcut: '/favicon.ico',
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180' }
+    ],
+  },
+  manifest: '/site.webmanifest',
+  appleWebApp: {
+    title: 'WM',
   },
 };
 
@@ -22,10 +30,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className="scroll-smooth">
       <head>
-        <link rel="icon" href="/favicon.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/favicon.png" />
       </head>
       <body className={inter.className} suppressHydrationWarning>
         <Providers>

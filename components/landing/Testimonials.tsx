@@ -20,9 +20,9 @@ export function Testimonials() {
       <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-6 lg:grid-cols-2 lg:gap-20 lg:px-10">
         
         {/* ── Left Side: Header & Lead Card ── */}
-        <div className="flex flex-col gap-10 lg:gap-14">
+        <div className="flex flex-col items-center text-center lg:items-start lg:text-left gap-10 lg:gap-14">
           <div>
-            <div className="mb-4 flex items-center gap-3">
+            <div className="mb-4 flex items-center justify-center lg:justify-start gap-3">
               <div className="h-1 w-8 rounded-full bg-gradient-to-r from-[#ec4899] to-[#0ea5e9]" />
               <span className="text-[12px] font-semibold uppercase tracking-wider text-[#0ea5e9]">From our members</span>
             </div>
@@ -33,7 +33,7 @@ export function Testimonials() {
             </h2>
           </div>
 
-          <div className="relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-[#0d0b28]/60 p-8 shadow-2xl backdrop-blur-xl lg:p-12">
+          <div className="relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-[#0d0b28]/60 p-8 shadow-2xl backdrop-blur-xl lg:p-12 text-left w-full">
             {/* Corner Decorative Wave */}
             <div className="absolute -bottom-20 -right-20 h-56 w-56 rounded-full bg-gradient-to-tl from-[#0ea5e9] via-[#a855f7] to-[#ec4899] opacity-70 blur-2xl" />
             <div className="absolute -bottom-16 -right-16 h-48 w-48 rounded-full bg-gradient-to-tl from-[#0ea5e9] via-[#a855f7] to-[#ec4899]" />
