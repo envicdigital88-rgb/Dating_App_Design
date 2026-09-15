@@ -22,6 +22,7 @@ export function Settings() {
     readReceipts: true,
     discoverable: true
   });
+  const [draftAnonymousName, setDraftAnonymousName] = useState(currentUser?.anonymousName || '');
 
   if (!currentUser) return null;
 
@@ -71,14 +72,25 @@ export function Settings() {
                   <p className="text-[14px] font-medium text-ink">Anonymous Mode</p>
                   <p className="mt-0.5 text-[12px] leading-relaxed text-ink-muted">Hide your photo and real identity.</p>
                   {currentUser.isAnonymous && (
-                    <div className="mt-3">
-                      <Label htmlFor="anonymous-name">Preferred Name</Label>
-                      <Input
-                        id="anonymous-name"
-                        value={currentUser.anonymousName || ''}
-                        onChange={(e) => updateProfile({ anonymousName: e.target.value })}
-                        placeholder="e.g. Mystery User"
-                      />
+                    <div className="mt-3 flex items-end gap-2">
+                      <div className="flex-1">
+                        <Label htmlFor="anonymous-name">Preferred Name</Label>
+                        <Input
+                          id="anonymous-name"
+                          value={draftAnonymousName}
+                          onChange={(e) => setDraftAnonymousName(e.target.value)}
+                          placeholder="e.g. Mystery User"
+                        />
+                      </div>
+                      <Button
+                        variant="primary"
+                        onClick={() => {
+                          updateProfile({ anonymousName: draftAnonymousName });
+                          toast.success('Preferred name saved');
+                        }}
+                      >
+                        Save
+                      </Button>
                     </div>
                   )}
                 </div>
