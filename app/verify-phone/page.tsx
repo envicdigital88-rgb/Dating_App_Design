@@ -1,52 +1,62 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRightIcon, PhoneIcon, ShieldCheckIcon } from 'lucide-react';
 import { useStore } from '@/lib/contexts/StoreContext';
-
+import { verifyPhoneNumber, confirmOtp } from '@/app/actions/verify';
 export default function VerifyPhonePage() {
-  const router = useRouter();
-  const { updateProfile } = useStore();
+  const { updateProfile, currentUser } = useStore();
   
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const handlePhoneSubmit = (e: React.FormEvent) => {
+  const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phone.trim()) {
       toast.error('Please enter a valid mobile number.');
       return;
     }
     setBusy(true);
-    // Simulate sending OTP
-    setTimeout(() => {
-      setBusy(false);
+    
+    const result = await verifyPhoneNumber();
+    setBusy(false);
+    
+    if (result.ok) {
       setStep('otp');
       toast.success(`OTP sent to ${phone}`);
-    }, 1000);
+    } else {
+      toast.error(result.error);
+    }
   };
 
-  const handleOtpSubmit = (e: React.FormEvent) => {
+  const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (otp.length < 4) {
       toast.error('Please enter the OTP sent to your phone.');
       return;
     }
     setBusy(true);
-    // Simulate verifying OTP
-    setTimeout(() => {
-      setBusy(false);
-      // Update the user's phone number in the store
-      updateProfile({ phone });
-      toast.success('Registration complete! Please sign in.');
-      router.push('/sign-in');
-    }, 1500);
+    
+    const result = await confirmOtp(phone, otp);
+    setBusy(false);
+
+    if (result.ok) {
+      // Still update the local store for UI reactivity if needed, but DB is updated.
+      updateProfile({ phone, verified: true });
+      toast.success('Verification complete!');
+      if (currentUser && !currentUser.onboarded) {
+        window.location.href = '/onboarding';
+      } else {
+        window.location.href = '/discover';
+      }
+    } else {
+      toast.error(result.error);
+    }
   };
 
   return (

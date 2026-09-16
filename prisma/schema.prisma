@@ -1,0 +1,248 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+
+model User {
+  id             String         @id @default(uuid())
+  name           String
+  email          String         @unique
+  phone          String
+  password       String
+  role           String         @default("member") // "member" or "admin"
+  age            Int            @default(0)
+  gender         String         @default("woman") // "woman", "man", "non-binary"
+  location       String         @default("")
+  bio            String         @default("")
+  intention      String         @default("Long-term relationship")
+  interests      String         // Stored as JSON string
+  traits         String         // Stored as JSON string
+  lifestyle      String         // Stored as JSON string
+  verified       Boolean        @default(false)
+  suspended      Boolean        @default(false)
+  onboarded      Boolean        @default(false)
+  online         Boolean        @default(true)
+  lastActiveAt   DateTime       @default(now())
+  createdAt      DateTime       @default(now())
+  isAnonymous    Boolean        @default(false)
+  anonymousName  String?
+  
+  photos               Photo[]
+  prompts              Prompt[]
+  subscriptions        Subscription[]
+  payments             Payment[]
+  usage                Usage?
+  
+  sentLikes            Like[]           @relation("LikesSent")
+  receivedLikes        Like[]           @relation("LikesReceived")
+  
+  passesMade           Pass[]           @relation("PassesMade")
+  passesReceived       Pass[]           @relation("PassesReceived")
+  
+  heartBucketMade      HeartBucket[]    @relation("HeartBucketMade")
+  heartBucketReceived  HeartBucket[]    @relation("HeartBucketReceived")
+  
+  winglesSent          Wingle[]         @relation("WinglesSent")
+  winglesReceived      Wingle[]         @relation("WinglesReceived")
+
+  notifications        Notification[]
+  statuses             UserStatus[]
+  
+  reportsMade          Report[]         @relation("ReportsMade")
+  reportsReceived      Report[]         @relation("ReportsReceived")
+  
+  blocksMade           Block[]          @relation("BlocksMade")
+  blocksReceived       Block[]          @relation("BlocksReceived")
+}
+
+model Photo {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  url         String
+  order       Int
+  isPrimary   Boolean  @default(false)
+  moderation  String   @default("approved") // "approved", "pending", "rejected"
+  uploadedAt  DateTime @default(now())
+}
+
+model Prompt {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question  String
+  answer    String
+}
+
+model UserStatus {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  photoUrl  String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}
+
+model Package {
+  id                      String   @id @default(uuid())
+  name                    String
+  price                   Float
+  durationDays            Int
+  chatLimit               Int?     // null means unlimited
+  wingleLimit             Int?     // null means unlimited
+  incomingWinglesUnlocked Boolean  @default(false)
+  priorityVisibility      Boolean  @default(false)
+  features                String   // Stored as JSON string
+  active                  Boolean  @default(true)
+  tagline                 String
+  
+  subscriptions           Subscription[]
+  payments                Payment[]
+}
+
+model Subscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  packageId String
+  package   Package  @relation(fields: [packageId], references: [id], onDelete: Restrict)
+  status    String   // "active", "expired", "cancelled"
+  startedAt DateTime @default(now())
+  expiresAt DateTime
+}
+
+model Payment {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  packageId String
+  package   Package  @relation(fields: [packageId], references: [id], onDelete: Restrict)
+  amount    Float
+  status    String   // "succeeded", "failed", "refunded"
+  method    String
+  reference String
+  createdAt DateTime @default(now())
+}
+
+model Usage {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatUsed    Int      @default(0)
+  winglesUsed Int      @default(0)
+}
+
+model Like {
+  id          String   @id @default(uuid())
+  fromUserId  String
+  fromUser    User     @relation("LikesSent", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUserId    String
+  toUser      User     @relation("LikesReceived", fields: [toUserId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  viewed      Boolean  @default(false)
+  
+  @@unique([fromUserId, toUserId])
+}
+
+model Pass {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation("PassesMade", fields: [userId], references: [id], onDelete: Cascade)
+  targetUserId String
+  targetUser   User     @relation("PassesReceived", fields: [targetUserId], references: [id], onDelete: Cascade)
+  viewed       Boolean  @default(false)
+  
+  @@unique([userId, targetUserId])
+}
+
+model HeartBucket {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation("HeartBucketMade", fields: [userId], references: [id], onDelete: Cascade)
+  targetUserId String
+  targetUser   User     @relation("HeartBucketReceived", fields: [targetUserId], references: [id], onDelete: Cascade)
+  viewed       Boolean  @default(false)
+  
+  @@unique([userId, targetUserId])
+}
+
+model Wingle {
+  id           String   @id @default(uuid())
+  fromUserId   String
+  fromUser     User     @relation("WinglesSent", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUserId     String
+  toUser       User     @relation("WinglesReceived", fields: [toUserId], references: [id], onDelete: Cascade)
+  note         String
+  status       String   @default("pending") // "pending", "accepted", "declined"
+  createdAt    DateTime @default(now())
+  respondedAt  DateTime?
+  viewed       Boolean  @default(false)
+}
+
+model Connection {
+  id        String   @id @default(uuid())
+  userId1   String
+  userId2   String
+  createdAt DateTime @default(now())
+  
+  @@unique([userId1, userId2])
+}
+
+model Conversation {
+  id           String   @id @default(uuid())
+  userId1      String
+  userId2      String
+  createdAt    DateTime @default(now())
+  lastMingleAt DateTime @default(now())
+  
+  mingles      Mingle[]
+  
+  @@unique([userId1, userId2])
+}
+
+model Mingle {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  body           String
+  imageUrl       String?
+  createdAt      DateTime     @default(now())
+  readAt         DateTime?
+  deleted        Boolean      @default(false)
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // "wingle_received", "wingle_accepted", etc.
+  title     String
+  body      String
+  createdAt DateTime @default(now())
+  read      Boolean  @default(false)
+  href      String?
+}
+
+model Report {
+  id           String   @id @default(uuid())
+  reporterId   String
+  reporter     User     @relation("ReportsMade", fields: [reporterId], references: [id], onDelete: Cascade)
+  targetUserId String
+  targetUser   User     @relation("ReportsReceived", fields: [targetUserId], references: [id], onDelete: Cascade)
+  reason       String
+  detail       String
+  context      String   // "profile", "chat", "photo"
+  status       String   @default("open") // "open", "resolved", "dismissed"
+  createdAt    DateTime @default(now())
+}
+
+model Block {
+  id            String   @id @default(uuid())
+  blockerId     String
+  blocker       User     @relation("BlocksMade", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedUserId String
+  blockedUser   User     @relation("BlocksReceived", fields: [blockedUserId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  
+  @@unique([blockerId, blockedUserId])
+}

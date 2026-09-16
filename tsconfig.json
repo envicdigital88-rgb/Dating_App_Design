@@ -3,7 +3,7 @@
     "target": "ES2020",
     "useDefineForClassFields": true,
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
+    "module": "preserve",
     "skipLibCheck": true,
 
     /* Bundler mode */
@@ -28,6 +28,9 @@
       {
         "name": "next"
       }
+    ],
+    "types": [
+      "node"
     ]
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

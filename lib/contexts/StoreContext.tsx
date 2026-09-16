@@ -231,11 +231,6 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        const storedSession = localStorage.getItem('winglemingle_session');
-        if (storedSession) {
-          setSessionId(storedSession);
-        }
-
         const stored = localStorage.getItem('winglemingle_mingles');
         if (stored) {
           const parsed = JSON.parse(stored);
@@ -244,7 +239,45 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
           }
         }
       } catch (e) {}
-      setIsHydrated(true);
+      
+      // Fetch the real user from the server session and all discover users
+      import('@/app/actions/user').then(({ getCurrentUser, getDiscoverUsers }) => {
+        Promise.all([getCurrentUser(), getDiscoverUsers()]).then(([user, discoverRes]) => {
+          let realUsers: User[] = [];
+          if (discoverRes?.ok && Array.isArray(discoverRes.data)) {
+            realUsers = discoverRes.data as User[];
+          }
+
+          if (user) {
+            // Need to convert Prisma Temporal fields to strings for the mock UI to work right now
+            const mappedUser = {
+              ...user,
+              lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
+              createdAt: user.createdAt?.toString() || new Date().toISOString()
+            } as User;
+            
+            setDb(d => {
+              const allUsers = [...realUsers];
+              // Ensure the current user is in the store
+              if (!allUsers.find(u => u.id === mappedUser.id)) {
+                allUsers.push(mappedUser);
+              }
+              const allPhotos = allUsers.flatMap((u: any) => u.photos || []);
+              
+              return { ...d, users: allUsers, photos: allPhotos };
+            });
+            setSessionId(user.id);
+          } else {
+            const allPhotos = realUsers.flatMap((u: any) => u.photos || []);
+            setDb(d => ({ ...d, users: realUsers, photos: allPhotos }));
+            setSessionId(null);
+          }
+          setIsHydrated(true);
+        }).catch((e) => {
+          console.error("Hydration error:", e);
+          setIsHydrated(true);
+        });
+      });
     }
   }, []);
 
@@ -496,9 +529,22 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     (userId) => {
       const u = db.users.find((user) => user.id === userId);
       if (u?.isAnonymous && u.id !== sessionIdRef.current) return [];
-      return db.photos.
+      const userPhotos = db.photos.
       filter((p) => p.userId === userId && p.moderation !== 'rejected').
       sort((a, b) => a.order - b.order);
+      
+      if (userPhotos.length === 0 && u) {
+        return [{
+          id: `default-${u.id}`,
+          userId: u.id,
+          url: `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(u.name || 'User')}&backgroundColor=ff6b6b,ff8e53&textColor=ffffff`,
+          order: 0,
+          isPrimary: true,
+          moderation: 'approved',
+          uploadedAt: new Date().toISOString()
+        }];
+      }
+      return userPhotos;
     },
     [db.photos, db.users]
   );

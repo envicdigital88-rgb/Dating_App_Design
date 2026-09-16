@@ -2,7 +2,6 @@
 
 import { Navigate } from '@/components/Navigate';
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 import { toast } from 'sonner';
 import { ArrowLeftIcon, ArrowRightIcon, CheckIcon, StarIcon, Trash2Icon } from 'lucide-react';
@@ -18,8 +17,7 @@ import { id as makeId } from '@/lib/utils/format';
 const steps = ['About you', 'Your words', 'Interests', 'Personality', 'Lifestyle', 'Vibe Prompts', 'Photos'];
 
 export function Onboarding() {
-  const router = useRouter();
-  const { currentUser, completeOnboarding } = useStore();
+  const { currentUser, completeOnboarding, isHydrated } = useStore();
   const [step, setStep] = useState(0);
   const [error, setError] = useState('');
 
@@ -42,12 +40,11 @@ export function Onboarding() {
   });
   const [prompts, setPrompts] = useState<Prompt[]>([
     { id: makeId('p'), question: 'What are your main hobbies?', answer: '' },
-    { id: makeId('p'), question: 'What\'s your favorite movie or book?', answer: '' },
-    { id: makeId('p'), question: 'A typical weekend for me looks like...', answer: '' },
-    { id: makeId('p'), question: 'The most spontaneous thing I\'ve done recently is...', answer: '' }
+    { id: makeId('p'), question: 'A typical weekend for me looks like...', answer: '' }
   ]);
   const [photos, setPhotos] = useState<string[]>([]);
 
+  if (!isHydrated) return null;
   if (!currentUser) return <Navigate to="/sign-up" replace />;
   if (currentUser.onboarded) return <Navigate to="/discover" replace />;
 
@@ -64,11 +61,11 @@ export function Onboarding() {
       const answered = prompts.filter(p => p.answer.trim().length > 0);
       if (answered.length === 0) return 'Please select an answer for at least one prompt.';
     }
-    if (step === 6 && photos.length < 1) return 'Add at least one photo to continue.';
+    // We removed photo validation so users can skip uploading an image
     return '';
   };
 
-  const next = () => {
+  const next = async () => {
     const mingle = validate();
     if (mingle) {
       setError(mingle);
@@ -79,7 +76,16 @@ export function Onboarding() {
       setStep((s) => s + 1);
       return;
     }
-    completeOnboarding({
+    
+    // We import the server action dynamically to avoid Client Component issues or use a normal import at top.
+    // For ease, we just dynamically import the server action:
+    const { completeUserOnboarding } = await import('@/app/actions/user');
+    
+    const finalPhotos = photos.length > 0 
+      ? photos 
+      : [`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(currentUser.name || 'User')}&backgroundColor=ff6b6b,ff8e53&textColor=ffffff`];
+
+    const payload = {
       age: Number(age),
       gender,
       location: location.trim(),
@@ -89,10 +95,21 @@ export function Onboarding() {
       traits,
       prompts: prompts.filter(p => p.answer.trim().length > 0),
       lifestyle: { ...lifestyle, work: work.trim() },
-      photoUrls: photos
-    });
-    toast.success('Profile live — time to meet people');
-    router.push('/discover');
+      photoUrls: finalPhotos
+    };
+
+    // Update frontend state just in case
+    completeOnboarding(payload);
+
+    // Call server action to actually update the DB
+    const result = await completeUserOnboarding(payload);
+    
+    if (result.ok) {
+      toast.success('Profile live — time to meet people');
+      window.location.href = '/discover';
+    } else {
+      toast.error(result.error || 'Something went wrong');
+    }
   };
 
   const toggleInterest = (interest: string) =>

@@ -9,10 +9,11 @@ import { toast } from 'sonner';
 import { ArrowLeftIcon, ArrowRightIcon, EyeIcon, EyeOffIcon, LockIcon, MailIcon, UserIcon, XCircleIcon, CheckCircle2Icon } from 'lucide-react';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { heroImage } from '@/lib/data/seed';
+import { loginUser, registerUser } from '@/app/actions/auth';
 
 export function Auth({ mode }: {mode: 'signin' | 'register';}) {
   const router = useRouter();
-  const { login, register } = useStore();
+  const { login: mockLogin, register: mockRegister } = useStore(); // Leaving for Google auth fallback right now
   const isRegister = mode === 'register';
 
   const [name, setName] = useState('');
@@ -26,7 +27,7 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
@@ -48,26 +49,42 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
     }
     
     setBusy(true);
-    const result = isRegister ?
-    register({ name, email, phone: '', password }) :
-    login(email, password);
+    const formData = new FormData();
+    formData.append('email', email);
+    formData.append('password', password);
+    
+    if (isRegister) {
+      formData.append('name', name);
+      formData.append('phone', '');
+      formData.append('age', '20'); // Initial defaults
+      formData.append('gender', 'woman');
+      formData.append('intention', 'Long-term relationship');
+    }
+
+    const result = isRegister 
+      ? await registerUser(formData) 
+      : await loginUser(formData);
+      
     setBusy(false);
+    
     if (!result.ok) {
-      setError(result.error);
+      setError(result.error as string);
       return;
     }
+    
     if (isRegister) {
       toast.success('Account created — please verify your phone number');
-      router.push('/verify-phone');
+      window.location.href = '/verify-phone';
       return;
     }
-    toast.success(`Welcome back, ${result.data.name.split(' ')[0]}`);
-    router.push(result.data.role === 'admin' ? '/admin' : '/discover');
+    
+    toast.success(`Welcome back, ${result.data?.name?.split(' ')[0] || ''}`);
+    window.location.href = result.data?.role === 'admin' ? '/admin' : '/discover';
   };
 
   const handleGoogleSignup = () => {
     if (isRegister) {
-      const result = register({ name: 'Google User', email: 'google@example.com', phone: '', password: 'googlepassword123' });
+      const result = mockRegister({ name: 'Google User', email: 'google@example.com', phone: '', password: 'googlepassword123' });
       if (result.ok) {
         toast.success('Signed up with Google — please verify your phone number');
         router.push('/verify-phone');
@@ -75,12 +92,12 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
         toast.error(result.error);
       }
     } else {
-      const result = login('google@example.com', 'googlepassword123');
+      const result = mockLogin('google@example.com', 'googlepassword123');
       if (result.ok) {
         toast.success(`Welcome back, ${result.data.name.split(' ')[0]}`);
         router.push(result.data.role === 'admin' ? '/admin' : '/discover');
       } else {
-        const regResult = register({ name: 'Google User', email: 'google@example.com', phone: '', password: 'googlepassword123' });
+        const regResult = mockRegister({ name: 'Google User', email: 'google@example.com', phone: '', password: 'googlepassword123' });
         if (regResult.ok) {
           toast.success('Account created via Google — please verify your phone number');
           router.push('/verify-phone');
@@ -149,6 +166,7 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
                 <div className="absolute left-11 top-2.5 text-[10px] font-semibold uppercase tracking-wide text-white/35">First name</div>
                 <input
                   id="name"
+                  name="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Sam"
@@ -166,6 +184,7 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
               <div className="absolute left-11 top-2.5 text-[10px] font-semibold uppercase tracking-wide text-white/35">Email</div>
               <input
                 id="email"
+                name="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -185,6 +204,7 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
               <div className="absolute left-11 top-2.5 text-[10px] font-semibold uppercase tracking-wide text-white/35">Password</div>
               <input
                 id="password"
+                name="password"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
