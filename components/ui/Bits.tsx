@@ -8,8 +8,6 @@ export function Badge({
   className
 
 
-
-
 }: {children: React.ReactNode;tone?: 'neutral' | 'berry' | 'moss' | 'amber' | 'red' | 'plum';className?: string;}) {
   const tones = {
     neutral: 'bg-cream-deep text-ink-soft',
