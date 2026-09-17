@@ -2,6 +2,8 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { likeUser as serverLikeUser, passUser as serverPassUser } from '@/app/actions/match';
+import { sendMingleAction, markConversationReadAction } from '@/app/actions/chat';
 import type {
   AppNotification,
   Block,
@@ -242,40 +244,69 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       
       // Fetch the real user from the server session and all discover users
       import('@/app/actions/user').then(({ getCurrentUser, getDiscoverUsers }) => {
-        Promise.all([getCurrentUser(), getDiscoverUsers()]).then(([user, discoverRes]) => {
-          let realUsers: User[] = [];
-          if (discoverRes?.ok && Array.isArray(discoverRes.data)) {
-            realUsers = discoverRes.data as User[];
-          }
+        import('@/app/actions/chat').then(({ getConversationsAction }) => {
+          Promise.all([getCurrentUser(), getDiscoverUsers(), getConversationsAction()]).then(([user, discoverRes, chatRes]) => {
+            let realUsers: User[] = [];
+            if (discoverRes?.ok && Array.isArray(discoverRes.data)) {
+              realUsers = discoverRes.data as User[];
+            }
 
-          if (user) {
-            // Need to convert Prisma Temporal fields to strings for the mock UI to work right now
-            const mappedUser = {
-              ...user,
-              lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
-              createdAt: user.createdAt?.toString() || new Date().toISOString()
-            } as User;
-            
-            setDb(d => {
-              const allUsers = [...realUsers];
-              // Ensure the current user is in the store
-              if (!allUsers.find(u => u.id === mappedUser.id)) {
-                allUsers.push(mappedUser);
-              }
-              const allPhotos = allUsers.flatMap((u: any) => u.photos || []);
+            if (user) {
+              // Need to convert Prisma Temporal fields to strings for the mock UI to work right now
+              const mappedUser = {
+                ...user,
+                lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
+                createdAt: user.createdAt?.toString() || new Date().toISOString()
+              } as User;
               
-              return { ...d, users: allUsers, photos: allPhotos };
-            });
-            setSessionId(user.id);
+              setDb(d => {
+                const allUsers = [...realUsers];
+                // Ensure the current user is in the store
+                if (!allUsers.find(u => u.id === mappedUser.id)) {
+                  allUsers.push(mappedUser);
+                }
+                const allPhotos = allUsers.flatMap((u: any) => u.photos || []);
+                
+                let updatedConvs = d.conversations;
+                let updatedMingles = d.mingles;
+                if (chatRes?.ok && chatRes.data) {
+                  updatedConvs = chatRes.data.conversations as unknown as Conversation[];
+                  updatedMingles = chatRes.data.mingles as unknown as Mingle[];
+                }
+                
+                return { 
+                  ...d, 
+                  users: allUsers, 
+                  photos: allPhotos,
+                  conversations: updatedConvs,
+                  mingles: updatedMingles
+                };
+              });
+              setSessionId(user.id);
           } else {
             const allPhotos = realUsers.flatMap((u: any) => u.photos || []);
-            setDb(d => ({ ...d, users: realUsers, photos: allPhotos }));
+            setDb(d => {
+              let updatedConvs = d.conversations;
+              let updatedMingles = d.mingles;
+              if (chatRes?.ok && chatRes.data) {
+                updatedConvs = chatRes.data.conversations as unknown as Conversation[];
+                updatedMingles = chatRes.data.mingles as unknown as Mingle[];
+              }
+              return { 
+                ...d, 
+                users: realUsers, 
+                photos: allPhotos,
+                conversations: updatedConvs,
+                mingles: updatedMingles
+              };
+            });
             setSessionId(null);
           }
           setIsHydrated(true);
         }).catch((e) => {
           console.error("Hydration error:", e);
           setIsHydrated(true);
+        });
         });
       });
     }
@@ -671,6 +702,11 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
 
       };
     });
+    serverLikeUser(userId).then((res) => {
+      if (res.ok && res.matched) {
+        toast.success("It's a Match! 🎉");
+      }
+    });
   }, []);
 
   const passUser = useCallback<StoreValue['passUser']>((userId) => {
@@ -678,6 +714,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       ...d,
       passes: [...d.passes, { userId: sessionIdRef.current as string, targetUserId: userId }]
     }));
+    serverPassUser(userId);
   }, []);
 
   const hasLiked = useCallback<StoreValue['hasLiked']>(
@@ -965,6 +1002,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         u.userId === currentUser.id ? { ...u, chatUsed: u.chatUsed + 1 } : u
         )
       }));
+      
+      sendMingleAction(conversationId, body.trim(), imageUrl).catch(console.error);
 
       const remainingAfter =
       entitlements.chatRemaining === null ? null : entitlements.chatRemaining - 1;
@@ -1021,6 +1060,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       });
 
       if (changed) {
+        markConversationReadAction(conversationId).catch(console.error);
         const conversation = d.conversations.find((c) => c.id === conversationId);
         const otherId = conversation?.userIds.find((uid) => uid !== sessionIdRef.current);
         if (otherId && peerRef.current) {

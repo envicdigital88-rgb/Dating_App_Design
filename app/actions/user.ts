@@ -2,6 +2,7 @@
 
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
+import { not } from '@prisma/orm-postgres/orm-client'
 
 export async function getCurrentUser() {
   try {
@@ -70,12 +71,23 @@ export async function getDiscoverUsers() {
   try {
     const session = await getSession()
     if (!session?.userId) return { ok: false, error: 'Unauthorized', data: [] }
+    const userId = session.userId as string
+    
+    const likes = await db.orm.public.Like.where({ fromUserId: userId }).all()
+    const passes = await db.orm.public.Pass.where({ userId }).all()
+    
+    const excludedIds = [
+      userId,
+      ...likes.map((l: any) => l.toUserId),
+      ...passes.map((p: any) => p.targetUserId)
+    ]
     
     const users = await db.orm.public.User.where({
       onboarded: true,
       role: 'member',
       suspended: false
     })
+      .where((u) => not(u.id.in(excludedIds)))
       .include('prompts')
       .include('photos')
       .all()
@@ -163,12 +175,19 @@ export async function getDiscoverProfiles() {
   try {
     const session = await getSession()
     if (!session?.userId) return { ok: false, error: 'Unauthorized' }
+    const userId = session.userId as string
 
-    // Fetch users except current user
-    // Also, we should exclude users who have already been liked/passed/blocked.
-    // For now, let's just get a basic list of users that are not the current user.
+    const likes = await db.orm.public.Like.where({ fromUserId: userId }).all()
+    const passes = await db.orm.public.Pass.where({ userId }).all()
+    
+    const excludedIds = [
+      userId,
+      ...likes.map((l: any) => l.toUserId),
+      ...passes.map((p: any) => p.targetUserId)
+    ]
+
     const users = await db.orm.public.User.where(
-      (u) => u.id.neq(session.userId as string)
+      (u) => not(u.id.in(excludedIds))
     ).all()
     
     // In a real app we'd map this, fetch photos, and calculate vibe match score here.
