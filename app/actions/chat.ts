@@ -2,9 +2,10 @@
 
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
-import { or } from '@prisma/orm-postgres/orm-client'
+import { Temporal } from 'temporal-polyfill'
+import { or, and } from '@prisma/orm-postgres/orm-client'
 
-export async function sendMingleAction(conversationId: string, body: string, imageUrl?: string) {
+export async function sendMingleAction(conversationId: string, body: string, imageUrl?: string, replyToId?: string | null, forwarded?: boolean, viewOnce?: boolean) {
   try {
     const session = await getSession()
     if (!session?.userId) return { ok: false, error: 'Unauthorized' }
@@ -18,15 +19,17 @@ export async function sendMingleAction(conversationId: string, body: string, ima
     }
 
     const mingle = await db.orm.public.Mingle.create({
-      id: `mgl_${Math.random().toString(36).substr(2, 9)}`,
       conversationId,
       senderId,
       body,
-      imageUrl: imageUrl || null
+      imageUrl: imageUrl || null,
+      replyToId: replyToId || null,
+      forwarded: forwarded || false,
+      viewOnce: viewOnce || false
     })
 
     await db.orm.public.Conversation.where({ id: conversationId }).update({
-      lastMingleAt: new Date()
+      lastMingleAt: Temporal.Now.instant()
     })
 
     return { 
@@ -34,7 +37,9 @@ export async function sendMingleAction(conversationId: string, body: string, ima
       data: {
         ...mingle,
         createdAt: mingle.createdAt.toString(),
-        readAt: mingle.readAt ? mingle.readAt.toString() : null
+        readAt: mingle.readAt ? mingle.readAt.toString() : null,
+        deliveredAt: mingle.deliveredAt ? mingle.deliveredAt.toString() : null,
+        reactions: mingle.reactions ? (mingle.reactions as any) : null
       } 
     }
   } catch (err) {
@@ -50,16 +55,84 @@ export async function markConversationReadAction(conversationId: string) {
     const userId = session.userId as string
 
     // Mark mingles where sender is NOT the current user as read
-    await db.orm.public.Mingle
-      .where((m) => m.conversationId.eq(conversationId))
-      .where((m) => m.senderId.neq(userId))
-      .where((m) => m.readAt.isNull())
-      .update({ readAt: new Date() })
+    await db.orm.public.Mingle.where((m) =>
+      and(m.conversationId.eq(conversationId), m.senderId.neq(userId), m.readAt.isNull())
+    ).update({ readAt: Temporal.Now.instant() })
 
     return { ok: true }
   } catch (err) {
     console.error('markConversationReadAction error:', err)
     return { ok: false, error: 'Failed to mark as read' }
+  }
+}
+
+export async function markMingleDeliveredAction(mingleIds: string[]) {
+  try {
+    const session = await getSession()
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' }
+
+    if (mingleIds.length === 0) return { ok: true }
+
+    await db.orm.public.Mingle.where((m) =>
+      and(m.id.in(mingleIds), m.deliveredAt.isNull())
+    ).update({ deliveredAt: Temporal.Now.instant() })
+
+    return { ok: true }
+  } catch (err) {
+    console.error('markMingleDeliveredAction error:', err)
+    return { ok: false, error: 'Failed to mark as delivered' }
+  }
+}
+
+export async function reactToMingleAction(mingleId: string, reactions: any) {
+  try {
+    const session = await getSession()
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' }
+
+    await db.orm.public.Mingle.where({ id: mingleId }).update({ reactions })
+
+    return { ok: true }
+  } catch (err) {
+    console.error('reactToMingleAction error:', err)
+    return { ok: false, error: 'Failed to react' }
+  }
+}
+
+export async function deleteMingleAction(mingleId: string, type: 'me' | 'everyone') {
+  try {
+    const session = await getSession()
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' }
+    const userId = session.userId as string
+
+    const mingle = await db.orm.public.Mingle.where({ id: mingleId }).first()
+    if (!mingle) {
+      return { ok: false, error: 'Mingle not found' }
+    }
+
+    if (type === 'everyone') {
+      if (mingle.senderId !== userId) {
+        return { ok: false, error: 'Cannot delete this message for everyone' }
+      }
+      await db.orm.public.Mingle.where({ id: mingleId }).update({
+        deleted: true,
+        body: '',
+        imageUrl: null,
+        reactions: null
+      })
+    } else {
+      // Delete for me
+      const deletedFor = mingle.deletedFor ? (mingle.deletedFor as string[]) : [];
+      if (!deletedFor.includes(userId)) {
+        await db.orm.public.Mingle.where({ id: mingleId }).update({
+          deletedFor: [...deletedFor, userId]
+        })
+      }
+    }
+
+    return { ok: true }
+  } catch (err) {
+    console.error('deleteMingleAction error:', err)
+    return { ok: false, error: 'Failed to delete' }
   }
 }
 
@@ -82,11 +155,21 @@ export async function getConversationsAction() {
       lastMingleAt: c.lastMingleAt.toString()
     }))
 
-    const formattedMingles = convs.flatMap(c => c.mingles.map(m => ({
-      ...m,
-      createdAt: m.createdAt.toString(),
-      readAt: m.readAt ? m.readAt.toString() : null
-    })))
+    const formattedMingles = convs.flatMap(c => c.mingles
+      .filter(m => {
+        const deletedFor = m.deletedFor ? (m.deletedFor as string[]) : [];
+        if (m.viewOnce) return true;
+        return !deletedFor.includes(userId);
+      })
+      .map(m => ({
+        ...m,
+        createdAt: m.createdAt.toString(),
+        readAt: m.readAt ? m.readAt.toString() : null,
+        deliveredAt: m.deliveredAt ? m.deliveredAt.toString() : null,
+        reactions: m.reactions ? (m.reactions as any) : null,
+        deletedFor: m.deletedFor ? (m.deletedFor as string[]) : [],
+        viewOnce: m.viewOnce
+      })))
 
     return { ok: true, data: { conversations: formattedConvs, mingles: formattedMingles } }
   } catch (err) {

@@ -2,7 +2,6 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { likeUser as serverLikeUser, passUser as serverPassUser } from '@/app/actions/match';
 import { sendMingleAction, markConversationReadAction } from '@/app/actions/chat';
 import type {
   AppNotification,
@@ -155,9 +154,11 @@ interface StoreValue {
   conversationWith: (userId: string) => Conversation | undefined;
   ensureConversation: (userId: string) => Conversation;
   minglesOf: (conversationId: string) => Mingle[];
-  sendMingle: (conversationId: string, body: string, imageUrl?: string) => ServerResult<Mingle>;
+  sendMingle: (conversationId: string, body: string, imageUrl?: string, replyToId?: string | null, forwarded?: boolean, viewOnce?: boolean) => ServerResult<Mingle>;
   markConversationRead: (conversationId: string) => void;
-  deleteMingle: (mingleId: string) => void;
+  deleteMingle: (mingleId: string, type: 'me' | 'everyone') => void;
+  reactToMingle: (mingleId: string, emoji: string) => void;
+  forwardMingles: (mingleIds: string[], conversationIds: string[]) => void;
   typingIn: string | null;
   activePopupChatId: string | null;
   openChatPopup: (conversationId: string) => void;
@@ -243,16 +244,20 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       } catch (e) {}
       
       // Fetch the real user from the server session and all discover users
-      import('@/app/actions/user').then(({ getCurrentUser, getDiscoverUsers }) => {
+      import('@/app/actions/user').then(({ getCurrentUser, getDiscoverUsers, getUserStateAction }) => {
         import('@/app/actions/chat').then(({ getConversationsAction }) => {
-          Promise.all([getCurrentUser(), getDiscoverUsers(), getConversationsAction()]).then(([user, discoverRes, chatRes]) => {
+          Promise.all([
+            getCurrentUser(), 
+            getDiscoverUsers(), 
+            getConversationsAction(),
+            getUserStateAction()
+          ]).then(([user, discoverRes, chatRes, stateRes]) => {
             let realUsers: User[] = [];
             if (discoverRes?.ok && Array.isArray(discoverRes.data)) {
               realUsers = discoverRes.data as User[];
             }
 
             if (user) {
-              // Need to convert Prisma Temporal fields to strings for the mock UI to work right now
               const mappedUser = {
                 ...user,
                 lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
@@ -261,7 +266,6 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
               
               setDb(d => {
                 const allUsers = [...realUsers];
-                // Ensure the current user is in the store
                 if (!allUsers.find(u => u.id === mappedUser.id)) {
                   allUsers.push(mappedUser);
                 }
@@ -273,13 +277,32 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                   updatedConvs = chatRes.data.conversations as unknown as Conversation[];
                   updatedMingles = chatRes.data.mingles as unknown as Mingle[];
                 }
+
+                let newLikes = d.likes;
+                let newPasses = d.passes;
+                let newHeartBucket = d.heartBucket;
+                let newWingles = d.wingles;
+                let newConns = d.connections;
+
+                if (stateRes?.ok && stateRes.data) {
+                  newLikes = stateRes.data.likes as any[];
+                  newPasses = stateRes.data.passes as any[];
+                  newHeartBucket = stateRes.data.heartBucket as any[];
+                  newWingles = stateRes.data.wingles as any[];
+                  newConns = stateRes.data.connections as any[];
+                }
                 
                 return { 
                   ...d, 
                   users: allUsers, 
                   photos: allPhotos,
                   conversations: updatedConvs,
-                  mingles: updatedMingles
+                  mingles: updatedMingles,
+                  likes: newLikes,
+                  passes: newPasses,
+                  heartBucket: newHeartBucket,
+                  wingles: newWingles,
+                  connections: newConns
                 };
               });
               setSessionId(user.id);
@@ -342,14 +365,84 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
             const mingle = data.mingle;
             setDb((d) => {
               if (d.mingles.find(m => m.id === mingle.id)) return d;
+              
+              const convExists = d.conversations.find((c) => c.id === mingle.conversationId);
+              let newConvs = d.conversations;
+              if (convExists) {
+                newConvs = d.conversations.map((c) =>
+                  c.id === mingle.conversationId ? { ...c, lastMingleAt: mingle.createdAt } : c
+                );
+              } else {
+                newConvs = [...d.conversations, {
+                  id: mingle.conversationId,
+                  userIds: [sessionId, mingle.senderId],
+                  createdAt: mingle.createdAt,
+                  lastMingleAt: mingle.createdAt
+                }];
+              }
+              
               return {
                 ...d,
                 mingles: [...d.mingles, mingle],
-                conversations: d.conversations.map((c) =>
-                  c.id === mingle.conversationId ? { ...c, lastMingleAt: mingle.createdAt } : c
-                )
+                conversations: newConvs
               };
             });
+
+            // Send delivery receipt back to sender
+            import('@/app/actions/chat').then(({ markMingleDeliveredAction }) => {
+              markMingleDeliveredAction([mingle.id]).catch(console.error);
+            });
+            const now = new Date().toISOString();
+            setDb((d) => ({
+              ...d,
+              mingles: d.mingles.map((m) => m.id === mingle.id ? { ...m, deliveredAt: now } : m)
+            }));
+
+            try {
+              const replyConn = peer.connect(mingle.senderId, { reliable: true });
+              if (replyConn) {
+                replyConn.on('open', () => {
+                  replyConn.send({ type: 'delivery_receipt', mingleIds: [mingle.id], deliveredAt: now });
+                  
+                });
+              }
+            } catch (err) {
+              console.error("PeerJS delivery receipt error", err);
+            }
+
+          } else if (data.type === 'delivery_receipt') {
+            const { mingleIds, deliveredAt } = data;
+            setDb((d) => ({
+              ...d,
+              mingles: d.mingles.map((m) =>
+                mingleIds.includes(m.id) && !m.deliveredAt ? { ...m, deliveredAt } : m
+              )
+            }));
+          } else if (data.type === 'delete_mingle') {
+            const { mingleId, deleteType } = data;
+            if (deleteType === 'everyone') {
+              setDb((d) => ({
+                ...d,
+                mingles: d.mingles.map((m) => 
+                  m.id === mingleId ? { ...m, deleted: true, body: '', imageUrl: undefined, reactions: null } : m
+                )
+              }));
+            } else {
+              setDb((d) => ({
+                ...d,
+                mingles: d.mingles.map((m) =>
+                  m.id === mingleId ? { ...m, deletedFor: [...(m.deletedFor || []), conn.peer] } : m
+                )
+              }));
+            }
+          } else if (data.type === 'react_mingle') {
+            const { mingleId, reactions } = data;
+            setDb((d) => ({
+              ...d,
+              mingles: d.mingles.map((m) =>
+                m.id === mingleId ? { ...m, reactions } : m
+              )
+            }));
           } else if (data.type === 'read_receipt') {
             const { conversationId, readAt } = data;
             setDb((d) => ({
@@ -360,6 +453,45 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                   : m
               )
             }));
+          } else if (data.type === 'wingle_received') {
+            const wingle = data.wingle;
+            setDb((d) => {
+              if (d.wingles.find(w => w.id === wingle.id)) return d;
+              return { ...d, wingles: [wingle, ...d.wingles] };
+            });
+          } else if (data.type === 'wingle_accepted') {
+            const { wingleId, connectionId, conversationId, u1, u2 } = data;
+            setDb((d) => {
+              const wingle = d.wingles.find(w => w.id === wingleId);
+              if (!wingle || wingle.status === 'accepted') return d;
+              return {
+                ...d,
+                wingles: d.wingles.map(w => w.id === wingleId ? { ...w, status: 'accepted' as any } : w),
+                connections: [...d.connections, { id: connectionId, userIds: [u1, u2], createdAt: new Date().toISOString() }],
+                conversations: [...d.conversations, { id: conversationId, userIds: [u1, u2], createdAt: new Date().toISOString(), lastMingleAt: new Date().toISOString() }]
+              };
+            });
+          } else if (data.type === 'wingle_declined') {
+            const { wingleId } = data;
+            setDb((d) => {
+              const wingle = d.wingles.find(w => w.id === wingleId);
+              if (!wingle || wingle.status === 'declined') return d;
+              return {
+                ...d,
+                wingles: d.wingles.map(w => w.id === wingleId ? { ...w, status: 'declined' as any } : w)
+              };
+            });
+          } else if (data.type === 'new_match') {
+            const { connectionId, conversationId, u1, u2 } = data;
+            setDb((d) => {
+              const connectionExists = d.connections.find(c => c.id === connectionId);
+              if (connectionExists) return d;
+              return {
+                ...d,
+                connections: [...d.connections, { id: connectionId, userIds: [u1, u2], createdAt: new Date().toISOString() }],
+                conversations: [...d.conversations, { id: conversationId, userIds: [u1, u2], createdAt: new Date().toISOString(), lastMingleAt: new Date().toISOString() }]
+              };
+            });
           }
         });
       });
@@ -406,18 +538,17 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     { userId: currentUser.id, chatUsed: 0, winglesUsed: 0 } as Usage;
     return {
       packageId: pkg.id,
-      packageName: pkg.name,
-      chatLimit: pkg.chatLimit,
+      packageName: 'Unlimited (Beta)',
+      chatLimit: null,
       chatUsed: usage.chatUsed,
-      chatRemaining: pkg.chatLimit === null ? null : Math.max(0, pkg.chatLimit - usage.chatUsed),
-      wingleLimit: pkg.wingleLimit,
+      chatRemaining: null,
+      wingleLimit: null,
       winglesUsed: usage.winglesUsed,
-      winglesRemaining:
-      pkg.wingleLimit === null ? null : Math.max(0, pkg.wingleLimit - usage.winglesUsed),
-      incomingWinglesUnlocked: pkg.incomingWinglesUnlocked,
-      priorityVisibility: pkg.priorityVisibility,
-      subscriptionStatus: sub ? 'active' : 'free',
-      subscriptionExpiry: sub?.expiresAt ?? null
+      winglesRemaining: null,
+      incomingWinglesUnlocked: true,
+      priorityVisibility: true,
+      subscriptionStatus: 'active',
+      subscriptionExpiry: null
     };
   }, [currentUser, db.packages, db.subscriptions, db.usage, freePackage]);
 
@@ -429,6 +560,22 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       ...d.notifications]
 
     }));
+  }, []);
+
+  const sendPeerEvent = useCallback((userId: string, data: any) => {
+    if (peerRef.current) {
+      try {
+        const conn = peerRef.current.connect(userId, { reliable: true });
+        if (conn) {
+          conn.on('open', () => {
+            conn.send(data);
+            
+          });
+        }
+      } catch (err) {
+        console.error("PeerJS connect error", err);
+      }
+    }
   }, []);
 
   /* ---------------------------------------------------------------- auth */
@@ -691,21 +838,76 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   }, [db.blocks, db.packages, db.passes, db.subscriptions, db.users, sessionId]);
 
   const likeUser = useCallback<StoreValue['likeUser']>((userId) => {
+    // 1. Optimistic Like update
     setDb((d) => {
       const uid = sessionIdRef.current as string;
       if (d.likes.some((l) => l.fromUserId === uid && l.toUserId === userId)) return d;
-      return {
-        ...d,
-        likes: [
-        ...d.likes,
-        { id: makeId('lk'), fromUserId: uid, toUserId: userId, createdAt: new Date().toISOString() }]
-
+      const like: Like = {
+        id: makeId('lk'),
+        fromUserId: uid,
+        toUserId: userId,
+        createdAt: new Date().toISOString(),
+        viewed: false
       };
-    });
-    serverLikeUser(userId).then((res) => {
-      if (res.ok && res.matched) {
-        toast.success("It's a Match! 🎉");
+      
+      const isMatch = d.likes.some((l) => l.fromUserId === userId && l.toUserId === uid);
+      
+      if (isMatch) {
+        const connection: Connection = {
+          id: makeId('co'),
+          userIds: [uid < userId ? uid : userId, uid < userId ? userId : uid],
+          createdAt: new Date().toISOString()
+        };
+        return {
+          ...d,
+          likes: [...d.likes, like],
+          connections: [...d.connections, connection]
+        };
       }
+      return { ...d, likes: [...d.likes, like] };
+    });
+
+    // 2. Server action
+    import('@/app/actions/match').then(({ likeUser: serverLikeUser }) => {
+      serverLikeUser(userId).then((res) => {
+        if (res.ok && res.matched) {
+          toast.success("It's a Match! 🎉");
+          // Update DB with the real connection/conversation from the backend
+          setDb(d => {
+            const uid = sessionIdRef.current as string;
+            const u1 = uid < userId ? uid : userId;
+            const u2 = uid < userId ? userId : uid;
+            
+            // Remove the optimistically created fake connection and conversation
+            const connections = d.connections.filter(c => !(c.userIds[0] === u1 && c.userIds[1] === u2 && (c.id.startsWith('co') || c.id.startsWith('cn'))));
+            const conversations = d.conversations.filter(c => !(c.userIds[0] === u1 && c.userIds[1] === u2 && c.id.startsWith('cv')));
+            
+            return {
+              ...d,
+              connections: [...connections, { 
+                id: res.connectionId!, 
+                userIds: [u1, u2],
+                createdAt: new Date().toISOString() 
+              }],
+              conversations: [...conversations, { 
+                id: res.conversationId!, 
+                userIds: [u1, u2],
+                createdAt: new Date().toISOString(), 
+                lastMingleAt: new Date().toISOString() 
+              }]
+            };
+          });
+
+          // Broadcast the new match to the other user
+          sendPeerEvent(userId, {
+            type: 'new_match',
+            connectionId: res.connectionId,
+            conversationId: res.conversationId,
+            u1: sessionIdRef.current! < userId ? sessionIdRef.current! : userId,
+            u2: sessionIdRef.current! < userId ? userId : sessionIdRef.current!
+          });
+        }
+      }).catch(console.error);
     });
   }, []);
 
@@ -714,7 +916,9 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       ...d,
       passes: [...d.passes, { userId: sessionIdRef.current as string, targetUserId: userId }]
     }));
-    serverPassUser(userId);
+    import('@/app/actions/match').then(({ passUser: serverPassUser }) => {
+      serverPassUser(userId).catch(console.error);
+    });
   }, []);
 
   const hasLiked = useCallback<StoreValue['hasLiked']>(
@@ -757,6 +961,10 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         ...d,
         heartBucket: [...d.heartBucket, { userId: uid, targetUserId: userId }]
       };
+    });
+
+    import('@/app/actions/match').then(({ addToHeartBucketAction }) => {
+      addToHeartBucketAction(userId).catch(console.error);
     });
   }, []);
 
@@ -844,6 +1052,20 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         u.userId === currentUser.id ? { ...u, winglesUsed: u.winglesUsed + 1 } : u
         )
       }));
+
+      import('@/app/actions/wingle').then(({ sendWingle: serverSendWingle }) => {
+        serverSendWingle(toUserId, note).then((res) => {
+          if (res.ok && res.wingleId) {
+            setDb(d => ({
+              ...d,
+              wingles: d.wingles.map(w => w.id === wingle.id ? { ...w, id: res.wingleId! } : w)
+            }));
+            // Broadcast wingle_received to the recipient
+            sendPeerEvent(toUserId, { type: 'wingle_received', wingle: { ...wingle, id: res.wingleId! } });
+          }
+        }).catch(console.error);
+      });
+
       return { ok: true, data: wingle };
     },
     [currentUser, db.wingles, entitlements]
@@ -883,6 +1105,67 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         }
         return next;
       });
+
+      import('@/app/actions/wingle').then(({ respondToWingle: serverRespondToWingle }) => {
+        serverRespondToWingle(wingleId, status === 'accepted').then((res) => {
+          if (res.ok) {
+            let wingleForEvent: WinglingWingle | undefined;
+            setDb(d => {
+              const wingle = d.wingles.find(r => r.id === wingleId);
+              if (!wingle) return d;
+              wingleForEvent = wingle;
+              
+              const updatedWingles = d.wingles.map(w => w.id === wingleId ? { ...w, status } : w);
+              
+              if (status === 'accepted' && res.connectionId) {
+                const u1 = wingle.fromUserId < wingle.toUserId ? wingle.fromUserId : wingle.toUserId;
+                const u2 = wingle.fromUserId < wingle.toUserId ? wingle.toUserId : wingle.fromUserId;
+                const connections = d.connections.filter(c => !(c.userIds[0] === u1 && c.userIds[1] === u2 && (c.id.startsWith('cn') || c.id.startsWith('co'))));
+                const conversations = d.conversations.filter(c => !(c.userIds[0] === u1 && c.userIds[1] === u2 && c.id.startsWith('cv')));
+                
+                return {
+                  ...d,
+                  wingles: updatedWingles,
+                  connections: [...connections, {
+                    id: res.connectionId!,
+                    userIds: [u1, u2],
+                    createdAt: new Date().toISOString()
+                  }],
+                  conversations: [...conversations, {
+                    id: res.conversationId!,
+                    userIds: [u1, u2],
+                    createdAt: new Date().toISOString(),
+                    lastMingleAt: new Date().toISOString()
+                  }]
+                };
+              }
+              
+              return { ...d, wingles: updatedWingles };
+            });
+            
+            // Broadcast acceptance or decline to the sender
+            if (wingleForEvent) {
+              if (status === 'accepted') {
+                const u1 = wingleForEvent.fromUserId < wingleForEvent.toUserId ? wingleForEvent.fromUserId : wingleForEvent.toUserId;
+                const u2 = wingleForEvent.fromUserId < wingleForEvent.toUserId ? wingleForEvent.toUserId : wingleForEvent.fromUserId;
+                sendPeerEvent(wingleForEvent.fromUserId, {
+                  type: 'wingle_accepted',
+                  wingleId,
+                  connectionId: res.connectionId,
+                  conversationId: res.conversationId,
+                  u1, u2
+                });
+              } else if (status === 'declined') {
+                sendPeerEvent(wingleForEvent.fromUserId, {
+                  type: 'wingle_declined',
+                  wingleId
+                });
+              }
+            }
+          }
+        }).catch(console.error);
+      });
+
       if (status === 'accepted') {
         notify({
           userId: sessionIdRef.current as string,
@@ -905,7 +1188,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   );
 
   const incomingWingles = useCallback<StoreValue['incomingWingles']>(
-    () => db.wingles.filter((w) => w.toUserId === sessionId).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    () => db.wingles.filter((w) => w.toUserId === sessionId && w.status !== 'declined').sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     [db.wingles, sessionId]
   );
 
@@ -976,7 +1259,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   );
 
   const sendMingle = useCallback<StoreValue['sendMingle']>(
-    (conversationId, body, imageUrl) => {
+    (conversationId, body, imageUrl, replyToId, forwarded, viewOnce) => {
       if (!currentUser || !entitlements) return { ok: false, error: 'Sign in first.' };
       if (!body.trim() && !imageUrl) return { ok: false, error: 'Write something first.', reason: 'invalid' };
       if (entitlements.chatRemaining !== null && entitlements.chatRemaining <= 0)
@@ -990,7 +1273,12 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         imageUrl,
         createdAt: new Date().toISOString(),
         readAt: null,
-        deleted: false
+        deliveredAt: null,
+        deleted: false,
+        replyToId: replyToId || null,
+        forwarded: forwarded || false,
+        reactions: null,
+        viewOnce: viewOnce || false
       };
       setDb((d) => ({
         ...d,
@@ -1002,8 +1290,14 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         u.userId === currentUser.id ? { ...u, chatUsed: u.chatUsed + 1 } : u
         )
       }));
-      
-      sendMingleAction(conversationId, body.trim(), imageUrl).catch(console.error);
+      sendMingleAction(conversationId, body.trim(), imageUrl, replyToId, forwarded, viewOnce).then((res) => {
+        if (res.ok && res.data) {
+          setDb((d) => ({
+            ...d,
+            mingles: d.mingles.map((m) => m.id === mingle.id ? (res.data as unknown as Mingle) : m)
+          }));
+        }
+      }).catch(console.error);
 
       const remainingAfter =
       entitlements.chatRemaining === null ? null : entitlements.chatRemaining - 1;
@@ -1035,7 +1329,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
           if (conn) {
             conn.on('open', () => {
               conn.send({ type: 'mingle', mingle });
-              setTimeout(() => conn.close(), 1000);
+              
             });
           }
         } catch (err) {
@@ -1060,36 +1354,130 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       });
 
       if (changed) {
-        markConversationReadAction(conversationId).catch(console.error);
-        const conversation = d.conversations.find((c) => c.id === conversationId);
-        const otherId = conversation?.userIds.find((uid) => uid !== sessionIdRef.current);
+        setTimeout(() => {
+          markConversationReadAction(conversationId).catch(console.error);
+          const conversation = d.conversations.find((c) => c.id === conversationId);
+          const otherId = conversation?.userIds.find((uid) => uid !== sessionIdRef.current);
+          if (otherId && peerRef.current) {
+            try {
+              const conn = peerRef.current.connect(otherId, { reliable: true });
+              if (conn) {
+                conn.on('open', () => {
+                  conn.send({ type: 'read_receipt', conversationId, readAt: now });
+                  
+                });
+              }
+            } catch (err) {
+              console.error("PeerJS read receipt error", err);
+            }
+          }
+        }, 0);
+        return { ...d, mingles: nextMingles };
+      }
+
+      return d;
+    });
+  }, []);
+  const deleteMingle = useCallback<StoreValue['deleteMingle']>((mingleId, type) => {
+    const targetMingle = db.mingles.find(m => m.id === mingleId);
+    let otherId: string | undefined;
+    if (targetMingle) {
+      const conv = db.conversations.find(c => c.id === targetMingle.conversationId);
+      otherId = conv?.userIds.find(uid => uid !== sessionIdRef.current);
+    }
+    
+    if (type === 'everyone') {
+      setDb((d) => ({
+        ...d,
+        mingles: d.mingles.map((m) =>
+        m.id === mingleId ? { ...m, deleted: true, body: '', imageUrl: undefined, reactions: null } : m
+        )
+      }));
+    } else {
+      setDb((d) => ({
+        ...d,
+        mingles: d.mingles.map((m) =>
+          m.id === mingleId ? { ...m, deletedFor: [...(m.deletedFor || []), sessionIdRef.current!] } : m
+        )
+      }));
+    }
+    
+    import('@/app/actions/chat').then(({ deleteMingleAction }) => {
+      deleteMingleAction(mingleId, type).catch(console.error);
+    });
+
+    if (otherId && peerRef.current) {
+      try {
+        const conn = peerRef.current.connect(otherId, { reliable: true });
+        if (conn) {
+          conn.on('open', () => {
+            conn.send({ type: 'delete_mingle', mingleId, deleteType: type });
+            
+          });
+        }
+      } catch (err) {
+        console.error("PeerJS connect error", err);
+      }
+    }
+  }, [db.mingles, db.conversations]);
+
+  const reactToMingle = useCallback<StoreValue['reactToMingle']>((mingleId, emoji) => {
+    if (!sessionIdRef.current) return;
+    setDb((d) => {
+      const mingle = d.mingles.find(m => m.id === mingleId);
+      if (!mingle) return d;
+      
+      const reactions = mingle.reactions || {};
+      const emojiUsers = reactions[emoji] || [];
+      const isReacted = emojiUsers.includes(sessionIdRef.current!);
+      
+      const newEmojiUsers = isReacted 
+        ? emojiUsers.filter(id => id !== sessionIdRef.current)
+        : [...emojiUsers, sessionIdRef.current!];
+        
+      const newReactions = { ...reactions, [emoji]: newEmojiUsers };
+      if (newReactions[emoji].length === 0) delete newReactions[emoji];
+      
+      setTimeout(() => {
+        import('@/app/actions/chat').then(({ reactToMingleAction }) => {
+          reactToMingleAction(mingleId, newReactions).catch(console.error);
+        });
+        const conv = d.conversations.find(c => c.id === mingle.conversationId);
+        const otherId = conv?.userIds.find(uid => uid !== sessionIdRef.current);
+
         if (otherId && peerRef.current) {
           try {
             const conn = peerRef.current.connect(otherId, { reliable: true });
             if (conn) {
               conn.on('open', () => {
-                conn.send({ type: 'read_receipt', conversationId, readAt: now });
-                setTimeout(() => conn.close(), 1000);
+                conn.send({ type: 'react_mingle', mingleId, reactions: newReactions });
+                
               });
             }
           } catch (err) {
-            console.error("PeerJS read receipt error", err);
+            console.error("PeerJS connect error", err);
           }
         }
-      }
+      }, 0);
 
-      return changed ? { ...d, mingles: nextMingles } : d;
+      return {
+        ...d,
+        mingles: d.mingles.map(m => m.id === mingleId ? { ...m, reactions: newReactions } : m)
+      };
     });
   }, []);
 
-  const deleteMingle = useCallback<StoreValue['deleteMingle']>((mingleId) => {
-    setDb((d) => ({
-      ...d,
-      mingles: d.mingles.map((m) =>
-      m.id === mingleId ? { ...m, deleted: true, body: '', imageUrl: undefined } : m
-      )
-    }));
-  }, []);
+  const forwardMingles = useCallback<StoreValue['forwardMingles']>((mingleIds, conversationIds) => {
+    if (!sessionIdRef.current) return;
+    const minglesToForward = db.mingles.filter(m => mingleIds.includes(m.id));
+    if (minglesToForward.length === 0) return;
+
+    conversationIds.forEach(convId => {
+      minglesToForward.forEach(m => {
+        sendMingle(convId, m.body, m.imageUrl, null, true);
+      });
+    });
+  }, [db.mingles, sendMingle]);
 
   const openChatPopup = useCallback((conversationId: string) => {
     setActivePopupChatId(conversationId);
@@ -1378,6 +1766,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     sendMingle,
     markConversationRead,
     deleteMingle,
+    reactToMingle,
+    forwardMingles,
     typingIn,
     activePopupChatId,
     openChatPopup,

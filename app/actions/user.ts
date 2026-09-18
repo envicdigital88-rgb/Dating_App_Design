@@ -2,7 +2,7 @@
 
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
-import { not } from '@prisma/orm-postgres/orm-client'
+import { not, or } from '@prisma/orm-postgres/orm-client'
 
 export async function getCurrentUser() {
   try {
@@ -137,7 +137,6 @@ export async function completeUserOnboarding(data: any) {
     if (prompts && prompts.length > 0) {
       await db.orm.public.Prompt.where({ userId }).delete();
       const promptsToInsert = prompts.map((p: any) => ({
-        id: `pr_${Math.random().toString(36).substr(2, 9)}`,
         userId,
         question: p.question,
         answer: p.answer
@@ -152,7 +151,6 @@ export async function completeUserOnboarding(data: any) {
     if (photoUrls && photoUrls.length > 0) {
       await db.orm.public.Photo.where({ userId }).delete();
       const photosToInsert = photoUrls.map((url: string, index: number) => ({
-        id: `ph_${Math.random().toString(36).substr(2, 9)}`,
         userId,
         url,
         order: index,
@@ -195,5 +193,42 @@ export async function getDiscoverProfiles() {
   } catch (err) {
     console.error('Discover profiles error:', err)
     return { ok: false, error: 'Failed to fetch profiles' }
+  }
+}
+
+export async function getUserStateAction() {
+  try {
+    const session = await getSession()
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' }
+    const userId = session.userId as string
+    
+    const [likes, passes, heartBucket, wingles, connections] = await Promise.all([
+      db.orm.public.Like.where((l) => or(l.fromUserId.eq(userId), l.toUserId.eq(userId))).all(),
+      db.orm.public.Pass.where((p) => or(p.userId.eq(userId), p.targetUserId.eq(userId))).all(),
+      db.orm.public.HeartBucket.where((h) => or(h.userId.eq(userId), h.targetUserId.eq(userId))).all(),
+      db.orm.public.Wingle.where((w) => or(w.fromUserId.eq(userId), w.toUserId.eq(userId))).all(),
+      db.orm.public.Connection.where((c) => or(c.userId1.eq(userId), c.userId2.eq(userId))).all()
+    ])
+
+    const payload = {
+      likes: likes.map(l => ({ ...l, createdAt: l.createdAt.toString() })),
+      passes,
+      heartBucket,
+      wingles: wingles.map(w => ({ ...w, createdAt: w.createdAt.toString(), respondedAt: w.respondedAt?.toString() })),
+      connections: connections.map(c => ({
+        id: c.id,
+        userIds: [c.userId1, c.userId2],
+        createdAt: c.createdAt.toString()
+      }))
+    };
+
+    console.log(`[getUserStateAction] Returning state for ${userId}: ${wingles.length} wingles, ${connections.length} connections`);
+    return { 
+      ok: true, 
+      data: payload
+    }
+  } catch (err) {
+    console.error('getUserStateAction error:', err)
+    return { ok: false, error: 'Failed to fetch user state' }
   }
 }

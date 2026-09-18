@@ -58,7 +58,7 @@ export function ProfileDetail() {
 
   const photos = photosOf(user.id);
   const wingle = wingleStatusWith(user.id);
-  const connected = !!conversationWith(user.id) && wingle?.status === 'accepted';
+  const connected = !!conversationWith(user.id);
 
   const openChat = () => {
     if (!connected) {

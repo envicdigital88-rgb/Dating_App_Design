@@ -34,7 +34,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'a08a70b72c1b1b449ada93d4c3ab442d7e3a8eda8eef177e8f10dbb0b5f5d8ff'>;
+  StorageHashBase<'93a1d264bfdbad96bb63a33bf9b3140068e2ec65206da5b0221d04f070536008'>;
 export type ExecutionHash =
   ExecutionHashBase<'8914efbab8e807f6989b035e3edba0d96f34065c527f684e35f269395dc43c64'>;
 export type ProfileHash =
@@ -288,7 +288,6 @@ export type FieldOutputTypes = {
       readonly forwarded: CodecTypes['pg/bool@1']['output'];
       readonly reactions: CodecTypes['pg/json@1']['output'] | null;
       readonly deletedFor: ReadonlyArray<CodecTypes['pg/text@1']['output']>;
-      readonly viewOnce: CodecTypes['pg/bool@1']['output'];
     };
     readonly Notification: {
       readonly id: CodecTypes['pg/text@1']['output'];
@@ -459,7 +458,6 @@ export type FieldInputTypes = {
       readonly forwarded: CodecTypes['pg/bool@1']['input'];
       readonly reactions: CodecTypes['pg/json@1']['input'] | null;
       readonly deletedFor: ReadonlyArray<CodecTypes['pg/text@1']['input']>;
-      readonly viewOnce: CodecTypes['pg/bool@1']['input'];
     };
     readonly Notification: {
       readonly id: CodecTypes['pg/text@1']['input'];
@@ -630,7 +628,6 @@ export type StorageColumnTypes = {
       readonly readAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
       readonly replyToId: CodecTypes['pg/text@1']['output'] | null;
       readonly senderId: CodecTypes['pg/text@1']['output'];
-      readonly viewOnce: CodecTypes['pg/bool@1']['output'];
     };
     readonly notification: {
       readonly body: CodecTypes['pg/text@1']['output'];
@@ -801,7 +798,6 @@ export type StorageColumnInputTypes = {
       readonly readAt: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
       readonly replyToId: CodecTypes['pg/text@1']['input'] | null;
       readonly senderId: CodecTypes['pg/text@1']['input'];
-      readonly viewOnce: CodecTypes['pg/bool@1']['input'];
     };
     readonly notification: {
       readonly body: CodecTypes['pg/text@1']['input'];
@@ -1136,7 +1132,6 @@ export namespace Models {
     forwarded: CodecTypes['pg/bool@1']['output'];
     reactions: CodecTypes['pg/json@1']['output'] | null;
     deletedFor: ReadonlyArray<CodecTypes['pg/text@1']['output']>;
-    viewOnce: CodecTypes['pg/bool@1']['output'];
     conversation: public_Conversation;
     readonly [RelationKeys]?: 'conversation';
   };
@@ -1572,15 +1567,6 @@ type ContractBase = Omit<
                   readonly default: {
                     readonly kind: 'literal';
                     readonly value: DefaultLiteralValue<'pg/text@1', readonly []>;
-                  };
-                };
-                readonly viewOnce: {
-                  readonly nativeType: 'bool';
-                  readonly codecId: 'pg/bool@1';
-                  readonly nullable: false;
-                  readonly default: {
-                    readonly kind: 'literal';
-                    readonly value: DefaultLiteralValue<'pg/bool@1', false>;
                   };
                 };
               };
@@ -2929,10 +2915,6 @@ type ContractBase = Omit<
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
                 readonly many: true;
               };
-              readonly viewOnce: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
-              };
             };
             readonly relations: {
               readonly conversation: {
@@ -2965,7 +2947,6 @@ type ContractBase = Omit<
                 readonly forwarded: { readonly column: 'forwarded' };
                 readonly reactions: { readonly column: 'reactions' };
                 readonly deletedFor: { readonly column: 'deletedFor' };
-                readonly viewOnce: { readonly column: 'viewOnce' };
               };
             };
           };

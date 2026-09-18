@@ -1,0 +1,1 @@
+[respondToWingle] wingleId: 629a32c9-70a7-4b73-af8d-6c4e9a264e46, accept: true, session: fc932536-398f-49e8-833a-5f3915bb6343, toUserId: fc932536-398f-49e8-833a-5f3915bb6343

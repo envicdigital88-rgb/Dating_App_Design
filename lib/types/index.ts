@@ -142,7 +142,13 @@ export interface Mingle {
   imageUrl?: string;
   createdAt: string;
   readAt: string | null;
+  deliveredAt?: string | null;
   deleted: boolean;
+  replyToId?: string | null;
+  forwarded: boolean;
+  reactions: Record<string, string[]> | null;
+  deletedFor?: string[];
+  viewOnce: boolean;
 }
 
 export interface Conversation {

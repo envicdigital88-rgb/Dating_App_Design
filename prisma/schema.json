@@ -501,6 +501,28 @@
                   "kind": "scalar"
                 }
               },
+              "deletedFor": {
+                "many": true,
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "deliveredAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "forwarded": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
               "id": {
                 "nullable": false,
                 "type": {
@@ -515,6 +537,13 @@
                   "kind": "scalar"
                 }
               },
+              "reactions": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/json@1",
+                  "kind": "scalar"
+                }
+              },
               "readAt": {
                 "nullable": true,
                 "type": {
@@ -522,10 +551,24 @@
                   "kind": "scalar"
                 }
               },
+              "replyToId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "senderId": {
                 "nullable": false,
                 "type": {
                   "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "viewOnce": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
                   "kind": "scalar"
                 }
               }
@@ -562,17 +605,35 @@
                 "deleted": {
                   "column": "deleted"
                 },
+                "deletedFor": {
+                  "column": "deletedFor"
+                },
+                "deliveredAt": {
+                  "column": "deliveredAt"
+                },
+                "forwarded": {
+                  "column": "forwarded"
+                },
                 "id": {
                   "column": "id"
                 },
                 "imageUrl": {
                   "column": "imageUrl"
                 },
+                "reactions": {
+                  "column": "reactions"
+                },
                 "readAt": {
                   "column": "readAt"
                 },
+                "replyToId": {
+                  "column": "replyToId"
+                },
                 "senderId": {
                   "column": "senderId"
+                },
+                "viewOnce": {
+                  "column": "viewOnce"
                 }
               },
               "namespaceId": "public",
@@ -2628,6 +2689,13 @@
               ]
             },
             "mingle": {
+              "checks": [
+                {
+                  "expression": "array_position(\"deletedFor\", NULL) IS NULL",
+                  "name": "mingle_deletedFor_elem_not_null_864b4a02",
+                  "prefix": "mingle_deletedFor_elem_not_null"
+                }
+              ],
               "columns": {
                 "body": {
                   "codecId": "pg/text@1",
@@ -2657,6 +2725,30 @@
                   "nativeType": "bool",
                   "nullable": false
                 },
+                "deletedFor": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": []
+                  },
+                  "many": true,
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "deliveredAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
+                },
+                "forwarded": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
                 "id": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
@@ -2667,14 +2759,33 @@
                   "nativeType": "text",
                   "nullable": true
                 },
+                "reactions": {
+                  "codecId": "pg/json@1",
+                  "nativeType": "json",
+                  "nullable": true
+                },
                 "readAt": {
                   "codecId": "pg/timestamptz-temporal@1",
                   "nativeType": "timestamptz",
                   "nullable": true
                 },
+                "replyToId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
                 "senderId": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
+                  "nullable": false
+                },
+                "viewOnce": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nativeType": "bool",
                   "nullable": false
                 }
               },
@@ -3872,7 +3983,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "4f4bbd8def393c97540e3060b36d3ffdc95db7ff05fff7b8cbd38043772a3966"
+    "storageHash": "a08a70b72c1b1b449ada93d4c3ab442d7e3a8eda8eef177e8f10dbb0b5f5d8ff"
   },
   "execution": {
     "executionHash": "8914efbab8e807f6989b035e3edba0d96f34065c527f684e35f269395dc43c64",

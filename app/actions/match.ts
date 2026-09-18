@@ -45,7 +45,6 @@ export async function likeUser(targetUserId: string) {
       let connection = await db.orm.public.Connection.where({ userId1: u1, userId2: u2 }).first()
       if (!connection) {
         connection = await db.orm.public.Connection.create({
-          id: `conn_${Math.random().toString(36).substr(2, 9)}`,
           userId1: u1,
           userId2: u2,
         })
@@ -54,7 +53,6 @@ export async function likeUser(targetUserId: string) {
       let conversation = await db.orm.public.Conversation.where({ userId1: u1, userId2: u2 }).first()
       if (!conversation) {
         conversation = await db.orm.public.Conversation.create({
-          id: `conv_${Math.random().toString(36).substr(2, 9)}`,
           userId1: u1,
           userId2: u2,
         })
@@ -111,5 +109,34 @@ export async function passUser(targetUserId: string) {
   } catch (err) {
     console.error('passUser error:', err)
     return { ok: false, error: 'Failed to process pass' }
+  }
+}
+
+export async function addToHeartBucketAction(targetUserId: string) {
+  try {
+    const session = await getSession()
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' }
+
+    const userId = session.userId as string
+
+    if (userId === targetUserId) {
+      return { ok: false, error: 'Cannot add yourself' }
+    }
+
+    const existing = await db.orm.public.HeartBucket.where({ userId, targetUserId }).first()
+    if (existing) {
+      return { ok: false, error: 'Already in Heart Bucket' }
+    }
+
+    await db.orm.public.HeartBucket.create({
+      id: `hb_${Math.random().toString(36).substr(2, 9)}`,
+      userId,
+      targetUserId,
+    })
+
+    return { ok: true }
+  } catch (err) {
+    console.error('addToHeartBucketAction error:', err)
+    return { ok: false, error: 'Failed to add to heart bucket' }
   }
 }

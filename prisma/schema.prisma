@@ -208,7 +208,13 @@ model Mingle {
   imageUrl       String?
   createdAt      DateTime     @default(now())
   readAt         DateTime?
+  deliveredAt    DateTime?
   deleted        Boolean      @default(false)
+  replyToId      String?
+  forwarded      Boolean      @default(false)
+  reactions      Json?
+  deletedFor     String[]     @default([])
+  viewOnce       Boolean      @default(false)
 }
 
 model Notification {
