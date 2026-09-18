@@ -290,6 +290,16 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                   newHeartBucket = stateRes.data.heartBucket as any[];
                   newWingles = stateRes.data.wingles as any[];
                   newConns = stateRes.data.connections as any[];
+                  
+                  if (stateRes.data.relatedUsers) {
+                    const relatedUsers = stateRes.data.relatedUsers as any[];
+                    relatedUsers.forEach(ru => {
+                      if (!allUsers.find(u => u.id === ru.id)) {
+                        allUsers.push(ru);
+                        allPhotos.push(...(ru.photos || []));
+                      }
+                    });
+                  }
                 }
                 
                 return { 

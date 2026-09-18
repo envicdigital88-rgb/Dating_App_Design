@@ -210,6 +210,33 @@ export async function getUserStateAction() {
       db.orm.public.Connection.where((c) => or(c.userId1.eq(userId), c.userId2.eq(userId))).all()
     ])
 
+    const relatedUserIds = new Set<string>();
+    likes.forEach(l => { relatedUserIds.add(l.fromUserId); relatedUserIds.add(l.toUserId); });
+    passes.forEach(p => { relatedUserIds.add(p.userId); relatedUserIds.add(p.targetUserId); });
+    heartBucket.forEach(h => { relatedUserIds.add(h.userId); relatedUserIds.add(h.targetUserId); });
+    wingles.forEach(w => { relatedUserIds.add(w.fromUserId); relatedUserIds.add(w.toUserId); });
+    connections.forEach(c => { relatedUserIds.add(c.userId1); relatedUserIds.add(c.userId2); });
+    relatedUserIds.delete(userId);
+
+    const relatedUsers = await db.orm.public.User.where(
+      (u) => u.id.in(Array.from(relatedUserIds))
+    )
+      .include('photos')
+      .all();
+
+    const mappedRelatedUsers = relatedUsers.map((user: any) => ({
+      ...user,
+      lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
+      createdAt: user.createdAt?.toString() || new Date().toISOString(),
+      interests: typeof user.interests === 'string' ? JSON.parse(user.interests) : user.interests,
+      traits: typeof user.traits === 'string' ? JSON.parse(user.traits) : user.traits,
+      lifestyle: typeof user.lifestyle === 'string' ? JSON.parse(user.lifestyle) : user.lifestyle,
+      photos: user.photos?.map((p: any) => ({
+        ...p,
+        uploadedAt: p.uploadedAt?.toString() || new Date().toISOString()
+      })) || []
+    }));
+
     const payload = {
       likes: likes.map(l => ({ ...l, createdAt: l.createdAt.toString() })),
       passes,
@@ -219,10 +246,11 @@ export async function getUserStateAction() {
         id: c.id,
         userIds: [c.userId1, c.userId2],
         createdAt: c.createdAt.toString()
-      }))
+      })),
+      relatedUsers: mappedRelatedUsers
     };
 
-    console.log(`[getUserStateAction] Returning state for ${userId}: ${wingles.length} wingles, ${connections.length} connections`);
+    console.log(`[getUserStateAction] Returning state for ${userId}: ${wingles.length} wingles, ${connections.length} connections, ${relatedUsers.length} related users`);
     return { 
       ok: true, 
       data: payload
