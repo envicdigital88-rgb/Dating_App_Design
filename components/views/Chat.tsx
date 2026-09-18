@@ -727,7 +727,7 @@ export function Chat() {
                 aspect={3 / 4}
                 onCropChange={setCrop}
                 onZoomChange={setZoom}
-                onCropComplete={(croppedArea, croppedAreaPixels) => setCroppedAreaPixels(croppedAreaPixels as any)}
+                onCropComplete={(_croppedArea, croppedAreaPixels) => setCroppedAreaPixels(croppedAreaPixels as any)}
               />
             ) : (
               <img src={imagePreview.url} alt="Preview" className="max-w-full max-h-full object-contain" />

@@ -375,7 +375,10 @@ export const seedMingles: Mingle[] = [
   body: 'Okay, wingle accepted — mostly for the karaoke potential.',
   createdAt: daysAgo(4),
   readAt: daysAgo(4),
-  deleted: false
+  deleted: false,
+  forwarded: false,
+  reactions: null,
+  viewOnce: false
 },
 {
   id: 'ms-2',
@@ -384,7 +387,10 @@ export const seedMingles: Mingle[] = [
   body: 'I have one song and I have ruined it for everyone. Coffee first, though?',
   createdAt: daysAgo(4),
   readAt: daysAgo(3),
-  deleted: false
+  deleted: false,
+  forwarded: false,
+  reactions: null,
+  viewOnce: false
 },
 {
   id: 'ms-3',
@@ -393,7 +399,10 @@ export const seedMingles: Mingle[] = [
   body: 'There is a place on Columbia Road that does an unreasonable cardamom bun.',
   createdAt: daysAgo(3),
   readAt: daysAgo(3),
-  deleted: false
+  deleted: false,
+  forwarded: false,
+  reactions: null,
+  viewOnce: false
 },
 {
   id: 'ms-4',
@@ -403,7 +412,10 @@ export const seedMingles: Mingle[] = [
   imageUrl: IMG.lifestyle,
   createdAt: minsAgo(8),
   readAt: null,
-  deleted: false
+  deleted: false,
+  forwarded: false,
+  reactions: null,
+  viewOnce: false
 },
 {
   id: 'ms-5',
@@ -412,7 +424,10 @@ export const seedMingles: Mingle[] = [
   body: 'Hey! Loved your prompt about the best hidden spots in the city. Where should we start?',
   createdAt: hoursAgo(12),
   readAt: hoursAgo(10),
-  deleted: false
+  deleted: false,
+  forwarded: false,
+  reactions: null,
+  viewOnce: false
 },
 {
   id: 'ms-6',
@@ -421,7 +436,10 @@ export const seedMingles: Mingle[] = [
   body: 'Are you going to the food festival this weekend?',
   createdAt: hoursAgo(2),
   readAt: minsAgo(60),
-  deleted: false
+  deleted: false,
+  forwarded: false,
+  reactions: null,
+  viewOnce: false
 },
 {
   id: 'ms-7',
@@ -430,7 +448,10 @@ export const seedMingles: Mingle[] = [
   body: 'Yes definitely! We should grab a bite together if you are around 🌮',
   createdAt: minsAgo(45),
   readAt: null,
-  deleted: false
+  deleted: false,
+  forwarded: false,
+  reactions: null,
+  viewOnce: false
 },
 {
   id: 'ms-8',
@@ -439,7 +460,10 @@ export const seedMingles: Mingle[] = [
   body: 'Hi there! Nice to connect with you. Have a great day!',
   createdAt: hoursAgo(2),
   readAt: null,
-  deleted: false
+  deleted: false,
+  forwarded: false,
+  reactions: null,
+  viewOnce: false
 }];
 
 
