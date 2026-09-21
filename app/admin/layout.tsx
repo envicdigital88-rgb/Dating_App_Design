@@ -6,18 +6,19 @@ import { useStore } from '@/lib/contexts/StoreContext';
 import { AdminShell } from '@/components/views/admin/AdminShell';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { currentUser } = useStore();
+  const { currentUser, isHydrated } = useStore();
   const router = useRouter();
 
   useEffect(() => {
+    if (!isHydrated) return;
     if (!currentUser) {
       router.replace('/sign-in');
     } else if (currentUser.role !== 'admin') {
       router.replace('/discover');
     }
-  }, [currentUser, router]);
+  }, [currentUser, router, isHydrated]);
 
-  if (!currentUser || currentUser.role !== 'admin') {
+  if (!isHydrated || !currentUser || currentUser.role !== 'admin') {
     return null; // Or a loading spinner
   }
 
