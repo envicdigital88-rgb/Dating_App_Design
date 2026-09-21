@@ -1,2 +1,3 @@
 [respondToWingle] wingleId: 629a32c9-70a7-4b73-af8d-6c4e9a264e46, accept: true, session: fc932536-398f-49e8-833a-5f3915bb6343, toUserId: fc932536-398f-49e8-833a-5f3915bb6343
 [respondToWingle] wingleId: f04ee217-1711-4431-a4ad-3d0f5407e220, accept: true, session: fc932536-398f-49e8-833a-5f3915bb6343, toUserId: fc932536-398f-49e8-833a-5f3915bb6343
+[respondToWingle] wingleId: 7b47a0cd-7209-4dc8-8765-2c0a4323f600, accept: true, session: fc932536-398f-49e8-833a-5f3915bb6343, toUserId: fc932536-398f-49e8-833a-5f3915bb6343

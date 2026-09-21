@@ -56,6 +56,10 @@
       "model": "Report",
       "namespace": "public"
     },
+    "secretWingle": {
+      "model": "SecretWingle",
+      "namespace": "public"
+    },
     "subscription": {
       "model": "Subscription",
       "namespace": "public"
@@ -1398,6 +1402,94 @@
               "table": "report"
             }
           },
+          "SecretWingle": {
+            "fields": {
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "message": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "senderId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "targetPhone": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "unlocked": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "sender": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "senderId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "message": {
+                  "column": "message"
+                },
+                "senderId": {
+                  "column": "senderId"
+                },
+                "targetPhone": {
+                  "column": "targetPhone"
+                },
+                "unlocked": {
+                  "column": "unlocked"
+                }
+              },
+              "namespaceId": "public",
+              "table": "secretWingle"
+            }
+          },
           "Subscription": {
             "fields": {
               "expiresAt": {
@@ -1920,6 +2012,21 @@
                 },
                 "to": {
                   "model": "Report",
+                  "namespace": "public"
+                }
+              },
+              "secretWinglesSent": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "senderId"
+                  ]
+                },
+                "to": {
+                  "model": "SecretWingle",
                   "namespace": "public"
                 }
               },
@@ -3451,6 +3558,83 @@
               },
               "uniques": []
             },
+            "secretWingle": {
+              "columns": {
+                "createdAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "message": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "senderId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "targetPhone": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "unlocked": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "senderId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "secretWingle"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "user"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "senderId"
+                  ],
+                  "name": "secretWingle_senderId_idx_4689c490",
+                  "prefix": "secretWingle_senderId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
             "subscription": {
               "columns": {
                 "expiresAt": {
@@ -3983,10 +4167,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "a08a70b72c1b1b449ada93d4c3ab442d7e3a8eda8eef177e8f10dbb0b5f5d8ff"
+    "storageHash": "efde04d1f16db8db4fb2e04087470bc9b59e001c0c52276cbc7ac0d91763129a"
   },
   "execution": {
-    "executionHash": "8914efbab8e807f6989b035e3edba0d96f34065c527f684e35f269395dc43c64",
+    "executionHash": "a5adc5541b3fd7927038173e2e24d5bc916f2e5380bc626e3fd73f8506f47aee",
     "mutations": {
       "defaults": [
         {
@@ -4130,6 +4314,17 @@
             "column": "id",
             "namespace": "public",
             "table": "report"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "secretWingle"
           }
         },
         {

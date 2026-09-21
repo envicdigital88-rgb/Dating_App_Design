@@ -52,6 +52,8 @@ model User {
   
   blocksMade           Block[]          @relation("BlocksMade")
   blocksReceived       Block[]          @relation("BlocksReceived")
+  
+  secretWinglesSent    SecretWingle[]   @relation("SecretWinglesSent")
 }
 
 model Photo {
@@ -176,6 +178,16 @@ model Wingle {
   createdAt    DateTime @default(now())
   respondedAt  DateTime?
   viewed       Boolean  @default(false)
+}
+
+model SecretWingle {
+  id           String   @id @default(uuid())
+  senderId     String
+  sender       User     @relation("SecretWinglesSent", fields: [senderId], references: [id], onDelete: Cascade)
+  targetPhone  String
+  message      String
+  createdAt    DateTime @default(now())
+  unlocked     Boolean  @default(false)
 }
 
 model Connection {

@@ -105,3 +105,78 @@ export async function respondToWingle(wingleId: string, accept: boolean) {
     return { ok: false, error: 'Failed to respond to Wingle' }
   }
 }
+
+export async function sendSecretWingleAction(targetPhone: string, message: string) {
+  try {
+    const session = await getSession()
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' }
+
+    if (!targetPhone || !message) {
+      return { ok: false, error: 'Phone number and message are required' }
+    }
+
+    const newSecretWingle = await db.orm.public.SecretWingle.create({
+      senderId: session.userId as string,
+      targetPhone: targetPhone,
+      message: message
+    })
+
+    // Simulate sending SMS and WhatsApp
+    console.log(`[SIMULATED TWILIO API] SMS sent to ${targetPhone}: "Someone has a secret crush on you! They sent you a message on WingleMingle: '${message}'. Sign up to see who it is!"`);
+    console.log(`[SIMULATED WHATSAPP API] WhatsApp sent to ${targetPhone}: "Someone has a secret crush on you! They sent you a message on WingleMingle: '${message}'. Sign up to see who it is!"`);
+
+    return { ok: true, data: newSecretWingle }
+  } catch (err) {
+    console.error('Send Secret Wingle error:', err)
+    return { ok: false, error: 'Failed to send Secret Wingle' }
+  }
+}
+
+export async function getReceivedSecretWinglesAction() {
+  try {
+    const session = await getSession()
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' }
+
+    const currentUser = await db.orm.public.User.where({ id: session.userId as string }).first()
+    if (!currentUser || !currentUser.phone) {
+      return { ok: true, data: [] }
+    }
+
+    const secretWingles = await db.orm.public.SecretWingle.where({
+      targetPhone: currentUser.phone
+    }).all()
+
+    // Unlock all of them since the user is now signed in
+    if (secretWingles.length > 0) {
+      for (const sw of secretWingles) {
+        if (!sw.unlocked) {
+          await db.orm.public.SecretWingle.where({ id: sw.id }).update({ unlocked: true })
+        }
+      }
+    }
+
+    const sendersIds = Array.from(new Set(secretWingles.map(sw => sw.senderId)));
+    const senders = await Promise.all(sendersIds.map(id => db.orm.public.User.where({ id }).first()));
+    const validSenders = senders.filter(Boolean);
+
+    const populatedSecretWingles = secretWingles.map(sw => {
+      const sender = validSenders.find(s => s && s.id === sw.senderId);
+      return {
+        ...sw,
+        unlocked: true,
+        sender: sender ? {
+          id: sender.id,
+          name: sender.name,
+          age: sender.age,
+          gender: sender.gender,
+          location: sender.location
+        } : null
+      }
+    });
+
+    return { ok: true, data: populatedSecretWingles }
+  } catch (err) {
+    console.error('Get Secret Wingles error:', err)
+    return { ok: false, error: 'Failed to fetch Secret Wingles' }
+  }
+}
