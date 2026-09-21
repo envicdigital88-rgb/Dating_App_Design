@@ -1,5 +1,4 @@
 'use client';
-import { useRouter } from 'next/navigation';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -7,14 +6,11 @@ import Image from 'next/image';
 
 import { toast } from 'sonner';
 import { ArrowLeftIcon, ArrowRightIcon, EyeIcon, EyeOffIcon, LockIcon, MailIcon, UserIcon, XCircleIcon, CheckCircle2Icon } from 'lucide-react';
-import { useStore } from '@/lib/contexts/StoreContext';
 import { heroImage } from '@/lib/data/seed';
 import { loginUser, registerUser, googleAuthAction } from '@/app/actions/auth';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 
 export function Auth({ mode }: {mode: 'signin' | 'register';}) {
-  const router = useRouter();
-  const { login: mockLogin, register: mockRegister } = useStore(); // Leaving for Google auth fallback right now
   const isRegister = mode === 'register';
 
   const [name, setName] = useState('');
