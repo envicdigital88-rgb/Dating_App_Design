@@ -46,7 +46,12 @@ export async function updateUserProfile(data: any) {
     const session = await getSession()
     if (!session?.userId) return { ok: false, error: 'Unauthorized' }
 
-    await db.orm.public.User.where({ id: session.userId as string }).update(data)
+    const updatePayload = { ...data }
+    if (updatePayload.lifestyle) updatePayload.lifestyle = JSON.stringify(updatePayload.lifestyle)
+    if (updatePayload.interests) updatePayload.interests = JSON.stringify(updatePayload.interests)
+    if (updatePayload.traits) updatePayload.traits = JSON.stringify(updatePayload.traits)
+
+    await db.orm.public.User.where({ id: session.userId as string }).update(updatePayload)
     return { ok: true }
   } catch (err) {
     console.error('Update profile error:', err)
@@ -64,6 +69,25 @@ export async function deleteUserProfile() {
   } catch (err) {
     console.error('Delete profile error:', err)
     return { ok: false, error: 'Failed to delete profile' }
+  }
+}
+
+export async function suspendUserAction(targetUserId: string, suspended: boolean) {
+  try {
+    const session = await getSession()
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' }
+
+    // Verify caller is admin
+    const caller = await db.orm.public.User.where({ id: session.userId as string }).first()
+    if (!caller || caller.role !== 'admin') {
+      return { ok: false, error: 'Forbidden' }
+    }
+
+    await db.orm.public.User.where({ id: targetUserId }).update({ suspended })
+    return { ok: true }
+  } catch (err) {
+    console.error('Suspend user error:', err)
+    return { ok: false, error: 'Failed to update suspension status' }
   }
 }
 

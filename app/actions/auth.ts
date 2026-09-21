@@ -98,6 +98,10 @@ export async function loginUser(formData: FormData) {
       return { ok: false, error: "Invalid email or password" }
     }
 
+    if (user.suspended) {
+      return { ok: false, error: "Your account has been suspended." }
+    }
+
     // Update last active
     await db.orm.public.User.where({ id: user.id }).update({ 
       online: true 

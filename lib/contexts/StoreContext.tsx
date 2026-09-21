@@ -710,7 +710,20 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     timers.current.forEach(window.clearTimeout);
     timers.current = [];
     setSessionId(null);
+    import('@/app/actions/auth').then(({ logoutUser }) => {
+      logoutUser().catch(console.error);
+    });
   }, []);
+
+  useEffect(() => {
+    if (currentUser?.suspended) {
+      toast.error('Your account has been suspended.');
+      logout();
+      if (typeof window !== 'undefined' && window.location.pathname !== '/sign-in') {
+        window.location.href = '/sign-in';
+      }
+    }
+  }, [currentUser?.suspended, logout]);
 
   const completeOnboarding = useCallback<StoreValue['completeOnboarding']>((input) => {
     setDb((d) => {
@@ -754,6 +767,9 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       ...d,
       users: d.users.map((u) => u.id === sessionIdRef.current ? { ...u, ...patch } : u)
     }));
+    import('@/app/actions/user').then(({ updateUserProfile }) => {
+      updateUserProfile(patch).catch(console.error);
+    });
   }, []);
 
   const deleteAccount = useCallback(() => {
@@ -1740,6 +1756,9 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
 
   const setUserSuspended = useCallback<StoreValue['setUserSuspended']>((userId, suspended) => {
     setDb((d) => ({ ...d, users: d.users.map((u) => u.id === userId ? { ...u, suspended } : u) }));
+    import('@/app/actions/user').then(({ suspendUserAction }) => {
+      suspendUserAction(userId, suspended).catch(console.error);
+    });
   }, []);
 
   const setUserVerified = useCallback<StoreValue['setUserVerified']>((userId, verified) => {
@@ -1752,6 +1771,9 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       users: d.users.filter((u) => u.id !== userId),
       photos: d.photos.filter((p) => p.userId !== userId)
     }));
+    import('@/app/actions/admin').then(({ deleteUserAction }) => {
+      deleteUserAction(userId).catch(console.error);
+    });
   }, []);
 
   const moderatePhoto = useCallback<StoreValue['moderatePhoto']>((photoId, state) => {

@@ -34,11 +34,11 @@ export function AdminShell({ children }: { children?: React.ReactNode }) {
   return (
     <div className="min-h-full w-full bg-cream">
       <div className="mx-auto flex w-full max-w-[1500px]">
-        <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-sand/70 bg-plum-600 px-4 py-6 lg:flex">
+        <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r border-sand/70 bg-black px-4 py-6 lg:flex">
           <div className="mb-1 px-1">
             <BrandMark />
           </div>
-          <p className="mb-7 px-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-cream/45">
+          <p className="mb-7 px-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/50">
             Admin console
           </p>
 
@@ -51,7 +51,7 @@ export function AdminShell({ children }: { children?: React.ReactNode }) {
                   href={item.to}
                   className={cn(
                     'flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-colors duration-150 ease-soft',
-                    isActive ? 'bg-cream/12 text-cream' : 'text-cream/65 hover:bg-cream/8 hover:text-cream'
+                    isActive ? 'bg-white/10 text-white' : 'text-white/65 hover:bg-white/10 hover:text-white'
                   )}>
                     {item.icon}
                     {item.label}
@@ -60,10 +60,10 @@ export function AdminShell({ children }: { children?: React.ReactNode }) {
             })}
           </nav>
 
-          <div className="mt-auto space-y-1 border-t border-cream/12 pt-4">
+          <div className="mt-auto space-y-1 border-t border-white/10 pt-4">
             <button
               onClick={() => router.push('/discover')}
-              className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-cream/65 transition-colors duration-150 ease-soft hover:bg-cream/8 hover:text-cream">
+              className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-white/65 transition-colors duration-150 ease-soft hover:bg-white/10 hover:text-white">
               
               <UsersIcon className="h-[18px] w-[18px]" />
               Member view
@@ -73,12 +73,12 @@ export function AdminShell({ children }: { children?: React.ReactNode }) {
                 logout();
                 router.push('/');
               }}
-              className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-cream/65 transition-colors duration-150 ease-soft hover:bg-cream/8 hover:text-cream">
+              className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-white/65 transition-colors duration-150 ease-soft hover:bg-white/10 hover:text-white">
               
               <LogOutIcon className="h-[18px] w-[18px]" />
               Sign out
             </button>
-            <p className="px-3 pt-2 text-[12px] text-cream/40">{currentUser?.email}</p>
+            <p className="px-3 pt-2 text-[12px] text-white/40">{currentUser?.email}</p>
           </div>
         </aside>
 
