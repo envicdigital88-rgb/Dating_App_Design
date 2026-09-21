@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { CheckCircle2Icon, SearchIcon, Trash2Icon } from 'lucide-react';
+import { CheckCircle2Icon, SearchIcon, Trash2Icon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 import { AdminHeader } from './AdminShell';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Field';
@@ -17,6 +17,12 @@ export function AdminUsers() {
   const [filter, setFilter] = useState<'all' | 'verified' | 'unverified' | 'suspended'>('all');
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [detail, setDetail] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 50;
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, filter]);
 
   const users = db.users.
   filter((u) => u.role === 'member').
@@ -32,6 +38,9 @@ export function AdminUsers() {
   !u.verified :
   u.suspended
   );
+
+  const totalPages = Math.ceil(users.length / itemsPerPage);
+  const paginatedUsers = users.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   const detailUser = db.users.find((u) => u.id === detail);
 
@@ -80,7 +89,7 @@ export function AdminUsers() {
             </tr>
           </thead>
           <tbody className="divide-y divide-sand">
-            {users.map((user) =>
+            {paginatedUsers.map((user) =>
             <tr key={user.id} className="align-middle">
                 <td className="px-5 py-3.5">
                   <button
@@ -153,6 +162,33 @@ export function AdminUsers() {
             No members match that search.
           </p>
         }
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-sand px-5 py-3">
+            <p className="text-[13px] text-ink-muted">
+              Showing {(page - 1) * itemsPerPage + 1} to {Math.min(page * itemsPerPage, users.length)} of {users.length}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                <ChevronLeftIcon className="mr-1 h-4 w-4" />
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              >
+                Next
+                <ChevronRightIcon className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       <Modal

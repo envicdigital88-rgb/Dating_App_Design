@@ -20,6 +20,7 @@ export function MyProfile() {
   useStore();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({
+    name: currentUser?.name ?? '',
     location: currentUser?.location ?? '',
     bio: currentUser?.bio ?? '',
     intention: (currentUser?.intention ?? 'Long-term relationship') as WinglingIntention,
@@ -41,6 +42,7 @@ export function MyProfile() {
 
   const save = () => {
     updateProfile({
+      name: draft.name.trim(),
       location: draft.location.trim(),
       bio: draft.bio.trim(),
       intention: draft.intention as WinglingIntention,
@@ -128,6 +130,13 @@ export function MyProfile() {
         <div>
           {editing ?
           <div className="space-y-5 rounded-4xl bg-cream-deep p-6 shadow-card">
+              <div>
+                <Label htmlFor="my-name">Name</Label>
+                <Input
+                id="my-name"
+                value={draft.name}
+                onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} />
+              </div>
               <div>
                 <Label htmlFor="my-location">Location</Label>
                 <Input

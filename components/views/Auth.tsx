@@ -9,7 +9,8 @@ import { toast } from 'sonner';
 import { ArrowLeftIcon, ArrowRightIcon, EyeIcon, EyeOffIcon, LockIcon, MailIcon, UserIcon, XCircleIcon, CheckCircle2Icon } from 'lucide-react';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { heroImage } from '@/lib/data/seed';
-import { loginUser, registerUser } from '@/app/actions/auth';
+import { loginUser, registerUser, googleAuthAction } from '@/app/actions/auth';
+import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 
 export function Auth({ mode }: {mode: 'signin' | 'register';}) {
   const router = useRouter();
@@ -17,8 +18,8 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
   const isRegister = mode === 'register';
 
   const [name, setName] = useState('');
-  const [email, setEmail] = useState(isRegister ? '' : 'demo@winglemingle.app');
-  const [password, setPassword] = useState(isRegister ? '' : 'winglemingle123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -82,33 +83,33 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
     window.location.href = result.data?.role === 'admin' ? '/admin' : '/discover';
   };
 
-  const handleGoogleSignup = () => {
-    if (isRegister) {
-      const result = mockRegister({ name: 'Google User', email: 'google@example.com', phone: '', password: 'googlepassword123' });
-      if (result.ok) {
-        toast.success('Signed up with Google — please verify your phone number');
-        router.push('/verify-phone');
-      } else {
-        toast.error(result.error);
-      }
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    setBusy(true);
+    const result = await googleAuthAction(credentialResponse.credential);
+    setBusy(false);
+    
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    
+    if (result.data?.isNewUser) {
+      toast.success('Account created via Google — please verify your phone number');
+      window.location.href = '/verify-phone';
     } else {
-      const result = mockLogin('google@example.com', 'googlepassword123');
-      if (result.ok) {
-        toast.success(`Welcome back, ${result.data.name.split(' ')[0]}`);
-        router.push(result.data.role === 'admin' ? '/admin' : '/discover');
-      } else {
-        const regResult = mockRegister({ name: 'Google User', email: 'google@example.com', phone: '', password: 'googlepassword123' });
-        if (regResult.ok) {
-          toast.success('Account created via Google — please verify your phone number');
-          router.push('/verify-phone');
-        } else {
-          toast.error('Could not authenticate with Google');
-        }
-      }
+      toast.success(`Welcome back, ${result.data?.name?.split(' ')[0] || ''}`);
+      window.location.href = result.data?.role === 'admin' ? '/admin' : '/discover';
     }
   };
 
+  const handleGoogleError = () => {
+    toast.error('Google login failed');
+  };
+
+  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || 'dummy-client-id';
+
   return (
+    <GoogleOAuthProvider clientId={clientId}>
     <div className="grid min-h-full w-full lg:grid-cols-[1fr_1.05fr]">
 
       {/* ── LEFT: Glassmorphism form side ── */}
@@ -330,19 +331,16 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
             </div>
 
             {/* Google Button */}
-            <button
-              type="button"
-              onClick={handleGoogleSignup}
-              className="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 py-3.5 text-[14px] font-medium text-white transition-all hover:bg-white/10"
-            >
-              <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-              </svg>
-              Google
-            </button>
+            <div className="flex w-full justify-center">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                theme="filled_black"
+                shape="pill"
+                text={isRegister ? 'signup_with' : 'signin_with'}
+                context={isRegister ? 'signup' : 'signin'}
+              />
+            </div>
           </form>
 
           {/* Switch mode */}
@@ -358,17 +356,6 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
             </p>
             <div className="h-px flex-1 bg-white/10" />
           </div>
-
-          {/* Demo accounts */}
-          {!isRegister && (
-            <div
-              className="mt-5 rounded-2xl border border-white/8 p-4 text-[12px] leading-relaxed text-white/35"
-              style={{ background: 'rgba(255,255,255,0.03)' }}>
-              <p className="mb-1 font-semibold text-white/55">Demo accounts</p>
-              <p>Member — <span className="font-mono text-white/50">demo@winglemingle.app</span> / <span className="font-mono text-white/50">winglemingle123</span></p>
-              <p>Admin — <span className="font-mono text-white/50">admin@winglemingle.app</span> / <span className="font-mono text-white/50">admin123</span></p>
-            </div>
-          )}
         </div>
       </div>
 
@@ -380,5 +367,6 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
           className="h-full w-full object-cover" />
       </div>
     </div>
+    </GoogleOAuthProvider>
   );
 }
