@@ -139,16 +139,32 @@ export interface Mingle {
   conversationId: string;
   senderId: string;
   body: string;
-  imageUrl?: string;
+  imageUrl?: string | null;
   createdAt: string;
-  readAt: string | null;
+  readAt?: string | null;
   deliveredAt?: string | null;
   deleted: boolean;
   replyToId?: string | null;
   forwarded: boolean;
-  reactions: Record<string, string[]> | null;
+  reactions?: Record<string, any> | null;
   deletedFor?: string[];
   viewOnce: boolean;
+}
+
+export interface SecretWingle {
+  id: string;
+  senderId: string;
+  targetPhone: string;
+  message: string;
+  createdAt: string;
+  unlocked: boolean;
+  sender?: {
+    id: string;
+    name: string;
+    age: number;
+    gender: string;
+    location: string;
+  } | null;
 }
 
 export interface Conversation {

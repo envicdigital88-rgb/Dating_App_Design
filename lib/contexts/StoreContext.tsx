@@ -12,6 +12,7 @@ import type {
   Entitlements,
   Like,
   Mingle,
+  SecretWingle,
   Package,
   Payment,
   Photo,
@@ -63,6 +64,7 @@ interface Db {
   reports: Report[];
   blocks: Block[];
   statuses: UserStatus[];
+  secretWingles: SecretWingle[];
 }
 
 const initialDb: Db = {
@@ -82,7 +84,8 @@ const initialDb: Db = {
   notifications: seedNotifications,
   reports: seedReports,
   blocks: [],
-  statuses: seedStatuses
+  statuses: seedStatuses,
+  secretWingles: []
 };
 
 interface RegisterInput {
@@ -149,6 +152,9 @@ interface StoreValue {
   unreadWinglesCount: () => number;
   markWinglesViewed: () => void;
   wingleStatusWith: (userId: string) => WinglingWingle | undefined;
+  // secret wingles
+  secretWinglesReceived: () => SecretWingle[];
+  sendSecretWingle: (targetPhone: string, message: string) => Promise<ServerResult<SecretWingle>>;
   // chat
   conversationsOf: () => Conversation[];
   conversationWith: (userId: string) => Conversation | undefined;
@@ -246,18 +252,20 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       // Fetch the real user from the server session and all discover users
       import('@/app/actions/user').then(({ getCurrentUser, getDiscoverUsers, getUserStateAction }) => {
         import('@/app/actions/chat').then(({ getConversationsAction }) => {
-          Promise.all([
-            getCurrentUser(), 
-            getDiscoverUsers(), 
-            getConversationsAction(),
-            getUserStateAction()
-          ]).then(([user, discoverRes, chatRes, stateRes]) => {
-            let realUsers: User[] = [];
-            if (discoverRes?.ok && Array.isArray(discoverRes.data)) {
-              realUsers = discoverRes.data as User[];
-            }
+          import('@/app/actions/wingle').then(({ getReceivedSecretWinglesAction }) => {
+            Promise.all([
+              getCurrentUser(), 
+              getDiscoverUsers(), 
+              getConversationsAction(),
+              getUserStateAction(),
+              getReceivedSecretWinglesAction()
+            ]).then(([user, discoverRes, chatRes, stateRes, secretWinglesRes]) => {
+              let realUsers: User[] = [];
+              if (discoverRes?.ok && Array.isArray(discoverRes.data)) {
+                realUsers = discoverRes.data as User[];
+              }
 
-            if (user) {
+              if (user) {
               const mappedUser = {
                 ...user,
                 lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
@@ -283,6 +291,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                 let newHeartBucket = d.heartBucket;
                 let newWingles = d.wingles;
                 let newConns = d.connections;
+                let newSecretWingles = d.secretWingles;
 
                 if (stateRes?.ok && stateRes.data) {
                   newLikes = stateRes.data.likes as any[];
@@ -301,6 +310,15 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                     });
                   }
                 }
+
+                if (secretWinglesRes?.ok && secretWinglesRes.data) {
+                  newSecretWingles = secretWinglesRes.data as SecretWingle[];
+                  newSecretWingles.forEach(sw => {
+                    if (sw.sender && !allUsers.find(u => u.id === sw.senderId)) {
+                      allUsers.push(sw.sender as User);
+                    }
+                  });
+                }
                 
                 return { 
                   ...d, 
@@ -312,7 +330,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                   passes: newPasses,
                   heartBucket: newHeartBucket,
                   wingles: newWingles,
-                  connections: newConns
+                  connections: newConns,
+                  secretWingles: newSecretWingles
                 };
               });
               setSessionId(user.id);
@@ -341,6 +360,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
           setIsHydrated(true);
         });
         });
+        });
       });
     }
   }, []);
@@ -354,6 +374,41 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       }
     }
   }, [sessionId]);
+
+  // Fallback polling mechanism to ensure real-time updates if PeerJS fails
+  useEffect(() => {
+    if (!sessionId || !isHydrated) return;
+    const interval = setInterval(() => {
+      import('@/app/actions/chat').then(({ getConversationsAction }) => {
+        getConversationsAction().then(res => {
+          if (res?.ok && res.data) {
+            setDb(d => {
+              const updatedConvs = res.data.conversations as unknown as Conversation[];
+              const updatedMingles = res.data.mingles as unknown as Mingle[];
+              
+              // Fast check: if the lengths or the last mingle's ID/status changed, update.
+              // For robustness, simply check if the stringified lengths are different or stringified data differs
+              const isDifferent = 
+                d.mingles.length !== updatedMingles.length ||
+                d.conversations.length !== updatedConvs.length ||
+                JSON.stringify(d.mingles) !== JSON.stringify(updatedMingles);
+
+              if (isDifferent) {
+                return {
+                  ...d,
+                  conversations: updatedConvs,
+                  mingles: updatedMingles
+                };
+              }
+              return d;
+            });
+          }
+        }).catch(console.error);
+      });
+    }, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(interval);
+  }, [sessionId, isHydrated]);
 
   useEffect(() => {
     if (db.mingles !== initialDb.mingles && typeof window !== 'undefined') {
@@ -1226,6 +1281,27 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     [db.wingles, sessionId]
   );
 
+  /* ---------------------------------------------------------------- secret wingles */
+  
+  const secretWinglesReceived = useCallback<StoreValue['secretWinglesReceived']>(
+    () => db.secretWingles.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [db.secretWingles]
+  );
+
+  const sendSecretWingle = useCallback<StoreValue['sendSecretWingle']>(
+    async (targetPhone, message) => {
+      const { sendSecretWingleAction } = await import('@/app/actions/wingle');
+      const res = await sendSecretWingleAction(targetPhone, message);
+      if (res.ok && res.data) {
+        // We do not add it to our local db since we are the sender and the SecretWingles tab is for received ones.
+        // Wait, if there was a "sent" view, we would add it. For now just return ok.
+        return { ok: true, data: res.data as any };
+      }
+      return { ok: false, error: res.error || 'Failed to send' };
+    },
+    []
+  );
+
   /* ---------------------------------------------------------------- chat */
 
   const conversationsOf = useCallback<StoreValue['conversationsOf']>(
@@ -1288,6 +1364,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         replyToId: replyToId || null,
         forwarded: forwarded || false,
         reactions: null,
+        deletedFor: [],
         viewOnce: viewOnce || false
       };
       setDb((d) => ({
@@ -1442,7 +1519,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       const isReacted = emojiUsers.includes(sessionIdRef.current!);
       
       const newEmojiUsers = isReacted 
-        ? emojiUsers.filter(id => id !== sessionIdRef.current)
+        ? emojiUsers.filter((id: string) => id !== sessionIdRef.current)
         : [...emojiUsers, sessionIdRef.current!];
         
       const newReactions = { ...reactions, [emoji]: newEmojiUsers };
@@ -1484,7 +1561,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
 
     conversationIds.forEach(convId => {
       minglesToForward.forEach(m => {
-        sendMingle(convId, m.body, m.imageUrl, null, true);
+        sendMingle(convId, m.body, m.imageUrl || undefined, undefined, true);
       });
     });
   }, [db.mingles, sendMingle]);
@@ -1769,6 +1846,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     unreadWinglesCount,
     markWinglesViewed,
     wingleStatusWith,
+    secretWinglesReceived,
+    sendSecretWingle,
     conversationsOf,
     conversationWith,
     ensureConversation,

@@ -69,19 +69,16 @@ export function Chat() {
   // New WhatsApp Features State
   const [selectedMingles, setSelectedMingles] = useState<string[]>([]);
   const [replyToId, setReplyToId] = useState<string | null>(null);
-  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [lightboxMingleId, setLightboxMingleId] = useState<string | null>(null);
   const [activeMingleId, setActiveMingleId] = useState<string | null>(null);
   const [forwardModalOpen, setForwardModalOpen] = useState(false);
   const [infoModalMingle, setInfoModalMingle] = useState<string | null>(null);
   const [reactionMingleId, setReactionMingleId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
-  const [imagePreview, setImagePreview] = useState<{ url: string; file: File } | null>(null);
+  const [imagePreviews, setImagePreviews] = useState<{ url: string; file: File; isCropping: boolean; crop: any; zoom: number; croppedAreaPixels: any }[]>([]);
+  const [activePreviewIndex, setActivePreviewIndex] = useState(0);
   const [previewCaption, setPreviewCaption] = useState('');
   const [viewOnce, setViewOnce] = useState(false);
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
-  const [isCropping, setIsCropping] = useState(false);
   const [showPreviewEmoji, setShowPreviewEmoji] = useState(false);
   
   const fileRef = useRef<HTMLInputElement>(null);
@@ -129,38 +126,58 @@ export function Chat() {
   };
 
   const attach = async (files: FileList | null) => {
-    if (!files?.[0]) return;
-    const screen = screenPhoto(files[0]);
-    if (!screen.ok) {
-      toast.error(screen.error as string);
-      return;
-    }
-    if (limitReached) {
-      setUpgradeOpen(true);
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setImagePreview({ url: e.target?.result as string, file: files[0] });
-    };
-    reader.readAsDataURL(files[0]);
+    if (!files || files.length === 0) return;
+    const validFiles = Array.from(files).filter(f => {
+      const { ok, error } = screenPhoto(f);
+      if (!ok) toast.error(error);
+      return ok;
+    });
+    if (validFiles.length === 0) return;
+
+    const newPreviews = await Promise.all(validFiles.map(file => {
+      return new Promise<any>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          resolve({ 
+            url: e.target?.result as string, 
+            file,
+            isCropping: false,
+            crop: { x: 0, y: 0 },
+            zoom: 1,
+            croppedAreaPixels: null
+          });
+        };
+        reader.readAsDataURL(file);
+      });
+    }));
+
+    setImagePreviews(prev => {
+      const updated = [...prev, ...newPreviews];
+      if (prev.length === 0) setActivePreviewIndex(0);
+      return updated;
+    });
   };
 
   const submitPreview = async () => {
-    if (!imagePreview || !conversation) return;
-    let url = imagePreview.url;
-    if (isCropping && croppedAreaPixels) {
-      url = await getCroppedImg(imagePreview.url, croppedAreaPixels);
-    } else {
-      url = await processPhoto(imagePreview.file, { maxWidth: 720, quality: 0.75, cropToProfile: false });
-    }
+    if (imagePreviews.length === 0 || !conversation) return;
     
-    const res = sendMingle(conversation.id, previewCaption, url, replyToId, false, viewOnce);
-    if (!res.ok) toast.error(res.error as string);
-    setImagePreview(null);
+    for (let i = 0; i < imagePreviews.length; i++) {
+      const preview = imagePreviews[i];
+      let url = preview.url;
+      if (preview.isCropping && preview.croppedAreaPixels) {
+        url = await getCroppedImg(preview.url, preview.croppedAreaPixels);
+      } else {
+        url = await processPhoto(preview.file, { maxWidth: 720, quality: 0.75, cropToProfile: false });
+      }
+      
+      const body = i === 0 ? previewCaption : '';
+      const res = sendMingle(conversation.id, body, url, i === 0 ? replyToId : null, false, viewOnce);
+      if (!res.ok) toast.error(res.error as string);
+    }
+
+    setImagePreviews([]);
     setPreviewCaption('');
     setViewOnce(false);
-    setIsCropping(false);
     setShowPreviewEmoji(false);
     setReplyToId(null);
     if (fileRef.current) fileRef.current.value = '';
@@ -316,7 +333,10 @@ export function Chat() {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   if (!mine && !mingle.deletedFor?.includes(currentUser.id)) {
-                                    setLightboxImage(mingle.imageUrl!);
+                                    setLightboxMingleId(mingle.id);
+                                    if (mingle.viewOnce) {
+                                      deleteMingle(mingle.id, 'me');
+                                    }
                                   }
                                 }}
                                 className={`flex items-center gap-2 p-3 bg-black/20 rounded-xl cursor-pointer ${mingle.body ? 'mb-2' : ''}`}
@@ -330,8 +350,14 @@ export function Chat() {
                               <img
                                 src={mingle.imageUrl}
                                 alt="Shared photo"
-                                onClick={(e) => { e.stopPropagation(); setLightboxImage(mingle.imageUrl!); }}
-                                className={`max-h-72 max-w-full rounded-2xl cursor-zoom-in ${mingle.body ? 'mb-2' : ''}`} 
+                                onClick={(e) => { 
+                                  e.stopPropagation(); 
+                                  setLightboxMingleId(mingle.id); 
+                                  if (mingle.viewOnce) {
+                                    deleteMingle(mingle.id, 'me');
+                                  }
+                                }}
+                                className={`max-h-72 max-w-full object-contain rounded-2xl cursor-zoom-in ${mingle.body ? 'mb-2' : ''}`} 
                               />
                             )}
                             
@@ -469,6 +495,7 @@ export function Chat() {
               <input
                 ref={fileRef}
                 type="file"
+                multiple
                 accept="image/*"
                 className="hidden"
                 onChange={(e) => attach(e.target.files)} />
@@ -634,23 +661,29 @@ export function Chat() {
       </Modal>
 
       {/* Lightbox Modal */}
-      {lightboxImage && (
-        <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
-          onClick={() => {
-            const m = mingles.find(msg => msg.imageUrl === lightboxImage);
-            if (m && m.viewOnce && m.senderId !== currentUser.id) {
-               deleteMingle(m.id, 'me');
-            }
-            setLightboxImage(null);
-          }}
-        >
-          <button className="absolute top-4 right-4 text-white p-2">
-            <XIcon className="h-6 w-6" />
-          </button>
-          <img src={lightboxImage} className="max-w-full max-h-full object-contain" alt="Fullscreen" />
-        </div>
-      )}
+      {lightboxMingleId && (() => {
+        const m = mingles.find(msg => msg.id === lightboxMingleId);
+        if (!m || !m.imageUrl) return null;
+        return (
+          <div 
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
+            onClick={() => {
+              setLightboxMingleId(null);
+            }}
+          >
+            <button 
+              className="absolute top-4 right-4 text-white p-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxMingleId(null);
+              }}
+            >
+              <XIcon className="h-6 w-6" />
+            </button>
+            <img src={m.imageUrl} className="max-w-full max-h-full object-contain" alt="Fullscreen" />
+          </div>
+        );
+      })()}
 
       {/* Existing Modals */}
       <Modal
@@ -701,16 +734,18 @@ export function Chat() {
         } 
       />
 
-      {imagePreview && (
+      {imagePreviews.length > 0 && (
         <div className="fixed inset-0 z-[100] bg-[#0b141a] flex flex-col w-full overflow-hidden">
           {/* Top Bar */}
           <div className="flex items-center justify-between p-4 bg-transparent text-white z-50">
-            <button onClick={() => { setImagePreview(null); setPreviewCaption(''); setViewOnce(false); setIsCropping(false); setShowPreviewEmoji(false); if (fileRef.current) fileRef.current.value = ''; }}>
+            <button onClick={() => { setImagePreviews([]); setPreviewCaption(''); setViewOnce(false); setShowPreviewEmoji(false); if (fileRef.current) fileRef.current.value = ''; }}>
               <XIcon className="h-7 w-7" />
             </button>
             <div className="flex items-center gap-6">
-              <button onClick={() => setIsCropping(!isCropping)}>
-                <CropIcon className={`h-6 w-6 ${isCropping ? 'text-[#53bdeb]' : 'text-white'}`} />
+              <button onClick={() => {
+                setImagePreviews(prev => prev.map((p, i) => i === activePreviewIndex ? { ...p, isCropping: !p.isCropping } : p));
+              }}>
+                <CropIcon className={`h-6 w-6 ${imagePreviews[activePreviewIndex].isCropping ? 'text-[#53bdeb]' : 'text-white'}`} />
               </button>
               <button onClick={() => toast.info('Stickers coming soon!')}><StickerIcon className="h-6 w-6" /></button>
               <button onClick={() => toast.info('Text overlay coming soon!')}><TypeIcon className="h-6 w-6" /></button>
@@ -719,18 +754,18 @@ export function Chat() {
           </div>
           
           <div className="flex-1 relative flex items-center justify-center min-h-0 overflow-hidden">
-            {isCropping ? (
+            {imagePreviews[activePreviewIndex].isCropping ? (
               <Cropper
-                image={imagePreview.url}
-                crop={crop}
-                zoom={zoom}
+                image={imagePreviews[activePreviewIndex].url}
+                crop={imagePreviews[activePreviewIndex].crop}
+                zoom={imagePreviews[activePreviewIndex].zoom}
                 aspect={3 / 4}
-                onCropChange={setCrop}
-                onZoomChange={setZoom}
-                onCropComplete={(_croppedArea, croppedAreaPixels) => setCroppedAreaPixels(croppedAreaPixels as any)}
+                onCropChange={(crop) => setImagePreviews(prev => prev.map((p, i) => i === activePreviewIndex ? { ...p, crop } : p))}
+                onZoomChange={(zoom) => setImagePreviews(prev => prev.map((p, i) => i === activePreviewIndex ? { ...p, zoom } : p))}
+                onCropComplete={(_croppedArea, croppedAreaPixels) => setImagePreviews(prev => prev.map((p, i) => i === activePreviewIndex ? { ...p, croppedAreaPixels } : p))}
               />
             ) : (
-              <img src={imagePreview.url} alt="Preview" className="max-w-full max-h-full object-contain" />
+              <img src={imagePreviews[activePreviewIndex].url} alt="Preview" className="max-w-full max-h-full object-contain" />
             )}
           </div>
           
@@ -748,10 +783,11 @@ export function Chat() {
               )}
               <input
                 type="text"
-                placeholder="Type a message"
-                value={previewCaption}
-                onChange={(e) => setPreviewCaption(e.target.value)}
-                className="flex-1 bg-transparent text-white placeholder-white/60 focus:outline-none text-[15px]"
+                placeholder={activePreviewIndex === 0 ? "Type a message" : "Caption is added to the first image"}
+                value={activePreviewIndex === 0 ? previewCaption : ''}
+                onChange={(e) => activePreviewIndex === 0 && setPreviewCaption(e.target.value)}
+                disabled={activePreviewIndex !== 0}
+                className="flex-1 bg-transparent text-white placeholder-white/60 focus:outline-none text-[15px] disabled:opacity-50"
                 onKeyDown={(e) => { if (e.key === 'Enter') submitPreview(); }}
               />
               <div className="flex items-center gap-4 text-white/60 ml-2">
@@ -768,20 +804,37 @@ export function Chat() {
             </div>
 
             <div className="flex items-center justify-between mt-2">
-              <div className="flex items-center gap-3">
-                <div className="relative w-12 h-12 rounded-lg overflow-hidden border-2 border-white">
-                   <img src={imagePreview.url} className="w-full h-full object-cover" />
-                </div>
+              <div className="flex flex-1 items-center gap-3 overflow-x-auto overflow-y-hidden pb-1 px-1">
+                {imagePreviews.map((preview, i) => (
+                  <div 
+                    key={i} 
+                    className={`relative w-12 h-12 rounded-lg overflow-hidden border-2 flex-shrink-0 cursor-pointer ${i === activePreviewIndex ? 'border-white' : 'border-transparent'}`}
+                    onClick={() => setActivePreviewIndex(i)}
+                  >
+                     <img src={preview.url} className="w-full h-full object-cover" />
+                     <button 
+                       className="absolute top-0 right-0 bg-black/50 text-white rounded-bl-lg p-0.5"
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         setImagePreviews(prev => prev.filter((_, idx) => idx !== i));
+                         if (activePreviewIndex >= i && activePreviewIndex > 0) setActivePreviewIndex(activePreviewIndex - 1);
+                       }}
+                     >
+                       <XIcon className="h-3 w-3" />
+                     </button>
+                  </div>
+                ))}
+                
                 <button 
-                  onClick={() => toast.info('Multiple images coming soon!')}
-                  className="w-12 h-12 rounded-lg border border-white/20 flex items-center justify-center text-white/60 bg-white/5">
+                  onClick={() => fileRef.current?.click()}
+                  className="w-12 h-12 rounded-lg border border-white/20 flex items-center justify-center text-white/60 bg-white/5 flex-shrink-0">
                   <span className="text-2xl font-light leading-none mb-1">+</span>
                 </button>
               </div>
               
               <button
                 onClick={submitPreview}
-                className="w-12 h-12 rounded-full bg-[#00a884] flex items-center justify-center text-white hover:bg-[#008f6f] shadow-lg flex-shrink-0"
+                className="w-12 h-12 rounded-full bg-[#00a884] flex items-center justify-center text-white hover:bg-[#008f6f] shadow-lg flex-shrink-0 ml-4"
               >
                 <SendIcon className="h-5 w-5 ml-1" />
               </button>
