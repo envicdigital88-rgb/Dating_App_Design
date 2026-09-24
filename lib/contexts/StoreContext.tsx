@@ -901,8 +901,19 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       ...d,
       users: d.users.map((u) => u.id === sessionIdRef.current ? { ...u, ...patch } : u)
     }));
-    import('@/app/actions/user').then(({ updateUserProfile }) => {
-      updateUserProfile(patch).catch(console.error);
+    import('@/app/actions/user').then(({ updateUserProfileAction }) => {
+      updateUserProfileAction(patch as any).then((res) => {
+        if (res.ok && res.data) {
+          setDb((d) => ({
+            ...d,
+            users: d.users.map((u) => u.id === sessionIdRef.current ? { ...u, ...(res.data as any) } : u),
+            photos: [
+              ...d.photos.filter(p => p.userId !== sessionIdRef.current),
+              ...((res.data as any).photos || [])
+            ]
+          }));
+        }
+      }).catch(console.error);
     });
   }, []);
 

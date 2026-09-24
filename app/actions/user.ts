@@ -97,14 +97,15 @@ export async function getDiscoverUsers() {
     if (!session?.userId) return { ok: false, error: 'Unauthorized', data: [] }
     const userId = session.userId as string
     
-    const likes = await db.orm.public.Like.where({ fromUserId: userId }).all()
-    const passes = await db.orm.public.Pass.where({ userId }).all()
-    const heartBucket = await db.orm.public.HeartBucket.where({ userId }).all()
+    // Run all exclusion queries in parallel
+    const [likes, passes, heartBucket] = await Promise.all([
+      db.orm.public.Like.where({ fromUserId: userId }).all(),
+      db.orm.public.Pass.where({ userId }).all(),
+      db.orm.public.HeartBucket.where({ userId }).all(),
+    ]);
     
     const tenDaysAgo = new Date();
     tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
-    
-    // Only exclude passes that are less than 10 days old
     const recentPasses = passes.filter((p: any) => new Date(p.createdAt) >= tenDaysAgo);
 
     const excludedIds = [
@@ -114,21 +115,22 @@ export async function getDiscoverUsers() {
       ...heartBucket.map((h: any) => h.targetUserId)
     ]
     
+    // Fetch users only (no includes) - much faster
     const rawUsers = await db.orm.public.User.where({
       onboarded: true,
       role: 'member',
       suspended: false
     }).all()
     
-    // Filter excluded ids in JS to avoid slow Prisma closure evaluation
     const excludedSet = new Set(excludedIds);
-    const usersWithoutRelations = rawUsers.filter(u => !excludedSet.has(u.id));
+    const usersWithoutRelations = rawUsers.filter(u => !excludedSet.has(u.id)).slice(0, 20);
     const userIds = usersWithoutRelations.map(u => u.id);
 
-    // Fetch relations in parallel
-    const [photos, prompts, heartReactsRaw] = await Promise.all([
+    if (userIds.length === 0) return { ok: true, data: [] };
+
+    // Fetch photos and heartReacts in parallel - NO prompts in initial load
+    const [photos, heartReactsRaw] = await Promise.all([
       db.orm.public.Photo.where((p) => p.userId.in(userIds)).all(),
-      db.orm.public.Prompt.where((p) => p.userId.in(userIds)).all(),
       db.orm.public.HeartBucket.where((h) => h.targetUserId.in(userIds)).all()
     ]);
 
@@ -140,7 +142,6 @@ export async function getDiscoverUsers() {
     }
 
     const mappedUsers = usersWithoutRelations.map((user: any) => {
-      // Fake random count for mock profiles (1-50) if real count is 0
       const realCount = heartReactsMap.get(user.id) || 0;
       const fakeCount = ((user.id.charCodeAt(0) + user.id.charCodeAt(user.id.length - 1)) % 50) + 1;
 
@@ -148,22 +149,98 @@ export async function getDiscoverUsers() {
         ...user,
         lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
         createdAt: user.createdAt?.toString() || new Date().toISOString(),
-        interests: typeof user.interests === 'string' ? JSON.parse(user.interests) : user.interests,
-        traits: typeof user.traits === 'string' ? JSON.parse(user.traits) : user.traits,
-        lifestyle: typeof user.lifestyle === 'string' ? JSON.parse(user.lifestyle) : user.lifestyle,
+        interests: typeof user.interests === 'string' ? JSON.parse(user.interests) : (user.interests || []),
+        traits: typeof user.traits === 'string' ? JSON.parse(user.traits) : (user.traits || []),
+        lifestyle: typeof user.lifestyle === 'string' ? JSON.parse(user.lifestyle) : (user.lifestyle || {}),
         photos: photos.filter(p => p.userId === user.id).map((p: any) => ({
           ...p,
           uploadedAt: p.uploadedAt?.toString() || new Date().toISOString()
         })),
-        prompts: prompts.filter(p => p.userId === user.id),
+        prompts: [], // Loaded lazily on profile open
         heartReacts: realCount > 0 ? realCount : fakeCount
       };
+
     });
     
     return { ok: true, data: mappedUsers }
   } catch (err) {
     console.error('getDiscoverUsers error:', err)
     return { ok: false, error: 'Failed to fetch discover users', data: [] }
+  }
+}
+
+export async function getUserPromptsAction(userId: string) {
+  try {
+    const prompts = await db.orm.public.Prompt.where({ userId }).all();
+    return { ok: true, data: prompts };
+  } catch (err) {
+    return { ok: false, error: 'Failed to fetch prompts' };
+  }
+}
+
+export async function updateUserProfileAction(data: {
+  name?: string;
+  age?: number;
+  bio?: string;
+  location?: string;
+  interests?: string[];
+  traits?: string[];
+  lifestyle?: Record<string, string>;
+  photoUrls?: string[];
+  prompts?: { question: string; answer: string }[];
+}) {
+  try {
+    const session = await getSession();
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
+    const userId = session.userId as string;
+
+    const { photoUrls, prompts, ...userData } = data;
+
+    const updatePayload: Record<string, any> = {};
+    if (userData.name !== undefined) updatePayload.name = userData.name;
+    if (userData.age !== undefined) updatePayload.age = userData.age;
+    if (userData.bio !== undefined) updatePayload.bio = userData.bio;
+    if (userData.location !== undefined) updatePayload.location = userData.location;
+    if (userData.interests !== undefined) updatePayload.interests = JSON.stringify(userData.interests);
+    if (userData.traits !== undefined) updatePayload.traits = JSON.stringify(userData.traits);
+    if (userData.lifestyle !== undefined) updatePayload.lifestyle = JSON.stringify(userData.lifestyle);
+
+    if (Object.keys(updatePayload).length > 0) {
+      await db.orm.public.User.where({ id: userId }).update(updatePayload);
+    }
+
+    if (photoUrls && photoUrls.length > 0) {
+      await db.orm.public.Photo.where({ userId }).delete();
+      await Promise.all(photoUrls.map((url, index) => db.orm.public.Photo.create({
+        userId, url, order: index, isPrimary: index === 0, moderation: 'approved',
+      })));
+    }
+
+    if (prompts && prompts.length > 0) {
+      await db.orm.public.Prompt.where({ userId }).delete();
+      await Promise.all(prompts.map(p => db.orm.public.Prompt.create({
+        userId, question: p.question, answer: p.answer,
+      })));
+    }
+
+    const updatedUser = await db.orm.public.User.where({ id: userId }).include('photos').include('prompts').first();
+    if (!updatedUser) return { ok: false, error: 'User not found' };
+
+    return {
+      ok: true,
+      data: {
+        ...updatedUser,
+        lastActiveAt: updatedUser.lastActiveAt?.toString() || new Date().toISOString(),
+        createdAt: updatedUser.createdAt?.toString() || new Date().toISOString(),
+        interests: typeof updatedUser.interests === 'string' ? JSON.parse(updatedUser.interests) : (updatedUser.interests || []),
+        traits: typeof updatedUser.traits === 'string' ? JSON.parse(updatedUser.traits) : (updatedUser.traits || []),
+        lifestyle: typeof updatedUser.lifestyle === 'string' ? JSON.parse(updatedUser.lifestyle) : (updatedUser.lifestyle || {}),
+        photos: (updatedUser.photos || []).map((p: any) => ({ ...p, uploadedAt: p.uploadedAt?.toString() || new Date().toISOString() })),
+      }
+    };
+  } catch (err) {
+    console.error('updateUserProfileAction error:', err);
+    return { ok: false, error: 'Failed to update profile' };
   }
 }
 
