@@ -2,7 +2,7 @@
 
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
-import { not, or } from '@prisma/orm-postgres/orm-client'
+import { not } from '@prisma/orm-postgres/orm-client'
 
 export async function getCurrentUser() {
   try {
