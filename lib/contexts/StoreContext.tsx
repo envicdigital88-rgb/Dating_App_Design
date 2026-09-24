@@ -430,9 +430,14 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
               let changed = false;
 
               if (chatRes?.ok && chatRes.data) {
-                const updatedConvs = chatRes.data.conversations as unknown as Conversation[];
+                const dbConvs = chatRes.data.conversations as unknown as Conversation[];
                 const updatedMingles = chatRes.data.mingles as unknown as Mingle[];
                 
+                // Merge conversations: keep optimistic ones (local-only IDs) + update DB ones
+                const dbConvIds = new Set(dbConvs.map(c => c.id));
+                const optimisticConvs = d.conversations.filter(c => !dbConvIds.has(c.id));
+                const updatedConvs = [...dbConvs, ...optimisticConvs];
+
                 const now = new Date().getTime();
                 const localMingles = d.mingles.filter(m => 
                   !updatedMingles.some(um => um.id === m.id) &&
@@ -462,11 +467,20 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
 
               if (stateRes?.ok && stateRes.data) {
                 const now = new Date().getTime();
+                // Match by id if available, otherwise by userId+targetUserId (heartBucket, passes)
+                const isSameItem = (a: any, b: any) => {
+                  if (a.id && b.id) return a.id === b.id;
+                  // heartBucket / passes style: userId + targetUserId
+                  if (a.userId && a.targetUserId) return a.userId === b.userId && a.targetUserId === b.targetUserId;
+                  return false;
+                };
                 const mergeItems = (local: any[], remote: any[]) => {
-                  const recentLocal = local.filter(m => 
-                    !remote.some(um => um.id === m.id) &&
-                    (now - new Date(m.createdAt || now).getTime() < 60000)
-                  );
+                  // Keep local optimistic items that aren't in remote yet
+                  const recentLocal = local.filter(m => {
+                    if (remote.some(um => isSameItem(um, m))) return false; // already in DB
+                    const age = m.createdAt ? now - new Date(m.createdAt).getTime() : 0;
+                    return age < 60000; // keep for 60 seconds
+                  });
                   return [...remote, ...recentLocal];
                 };
 
@@ -1213,7 +1227,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       if (d.heartBucket.some((h) => h.userId === uid && h.targetUserId === userId)) return d;
       return {
         ...d,
-        heartBucket: [...d.heartBucket, { userId: uid, targetUserId: userId, createdAt: new Date().toISOString() }],
+        heartBucket: [...d.heartBucket, { id: `hb_${uid}_${userId}`, userId: uid, targetUserId: userId, createdAt: new Date().toISOString() }],
         users: d.users.map((u) => u.id === userId ? { ...u, heartReacts: (u.heartReacts || 0) + 1 } : u)
       };
     });
