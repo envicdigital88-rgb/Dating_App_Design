@@ -3,7 +3,7 @@
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { Temporal } from 'temporal-polyfill'
-import { or, and } from '@prisma/orm-postgres/orm-client'
+import { and } from '@prisma/orm-postgres/orm-client'
 
 export async function sendMingleAction(conversationId: string, body: string, imageUrl?: string, replyToId?: string | null, forwarded?: boolean, viewOnce?: boolean) {
   try {

@@ -442,7 +442,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                   if (newMingles.length > 0 && typeof document !== 'undefined' && document.hidden) {
                     const latest = newMingles[newMingles.length - 1];
                     const sender = d.users?.find((u: any) => u.id === latest.senderId);
-                    showNotification(`New message from ${sender?.name || 'someone'}`, latest.body || '📷 Photo', sender?.photos?.[0]?.url);
+                    const senderPhoto = d.photos?.find(p => p.userId === latest.senderId && p.isPrimary)?.url || d.photos?.find(p => p.userId === latest.senderId)?.url;
+                    showNotification(`New message from ${sender?.name || 'someone'}`, latest.body || '📷 Photo', senderPhoto);
                   }
                   nextDb.conversations = updatedConvs;
                   nextDb.mingles = updatedMingles;
@@ -535,7 +536,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
               
               if (typeof document !== 'undefined' && document.hidden) {
                 const sender = d.users.find((u) => u.id === mingle.senderId);
-                showNotification(`New message from ${sender?.name || 'someone'}`, mingle.body || '📷 Photo', sender?.photos?.[0]?.url);
+                const senderPhoto = d.photos.find(p => p.userId === mingle.senderId && p.isPrimary)?.url || d.photos.find(p => p.userId === mingle.senderId)?.url;
+                showNotification(`New message from ${sender?.name || 'someone'}`, mingle.body || '📷 Photo', senderPhoto);
               }
 
               const convExists = d.conversations.find((c) => c.id === mingle.conversationId);
