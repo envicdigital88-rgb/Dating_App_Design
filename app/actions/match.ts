@@ -75,6 +75,30 @@ export async function likeUser(targetUserId: string) {
   }
 }
 
+export async function unlikeUserAction(targetUserId: string) {
+  try {
+    const session = await getSession()
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' }
+
+    const userId = session.userId as string
+
+    const existingLike = await db.orm.public.Like.where({ fromUserId: userId, toUserId: targetUserId }).first()
+    if (!existingLike) {
+      return { ok: false, error: 'Not liked' }
+    }
+
+    await db.orm.public.Like.where({ id: existingLike.id }).delete()
+
+    // We keep the connections/conversations intact in case they had a match, but we could also delete them if we wanted to fully "unmatch"
+    // For now, unlike just removes the like record.
+
+    return { ok: true }
+  } catch (err) {
+    console.error('unlikeUser error:', err)
+    return { ok: false, error: 'Failed to process unlike' }
+  }
+}
+
 export async function passUser(targetUserId: string) {
   try {
     const session = await getSession()
@@ -138,5 +162,66 @@ export async function addToHeartBucketAction(targetUserId: string) {
   } catch (err) {
     console.error('addToHeartBucketAction error:', err)
     return { ok: false, error: 'Failed to add to heart bucket' }
+  }
+}
+
+export async function getHeartReactsCountAction(userIds: string[]) {
+  try {
+    const session = await getSession()
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' }
+
+    const allReacts = await db.orm.public.HeartBucket
+      .where((h) => h.targetUserId.in(userIds))
+      .all();
+    
+    // Aggregate manually in JS to avoid Prisma 8 complex aggregates
+    const counts = allReacts.reduce((acc, h) => {
+      acc[h.targetUserId] = (acc[h.targetUserId] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const result = userIds.reduce((acc, id) => {
+      acc[id] = counts[id] || 0;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return { ok: true, data: result }
+  } catch (err) {
+    console.error('getHeartReactsCountAction error:', err)
+    return { ok: false, error: 'Failed to get heart reacts count' }
+  }
+}
+
+export async function removeFromHeartBucketAction(targetUserId: string) {
+  try {
+    const session = await getSession()
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' }
+    const userId = session.userId as string
+
+    const existing = await db.orm.public.HeartBucket.where({ userId, targetUserId }).first()
+    if (existing) {
+      await db.orm.public.HeartBucket.where({ id: existing.id }).delete()
+    }
+    return { ok: true }
+  } catch (err) {
+    console.error('removeFromHeartBucketAction error:', err)
+    return { ok: false, error: 'Failed to remove from heart bucket' }
+  }
+}
+
+export async function removeFromPassesAction(targetUserId: string) {
+  try {
+    const session = await getSession()
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' }
+    const userId = session.userId as string
+
+    const existing = await db.orm.public.Pass.where({ userId, targetUserId }).first()
+    if (existing) {
+      await db.orm.public.Pass.where({ id: existing.id }).delete()
+    }
+    return { ok: true }
+  } catch (err) {
+    console.error('removeFromPassesAction error:', err)
+    return { ok: false, error: 'Failed to remove from passes' }
   }
 }

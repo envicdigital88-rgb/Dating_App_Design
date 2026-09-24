@@ -38,6 +38,7 @@ export function ProfileDetail() {
     photosOf,
     hasLiked,
     likeUser,
+    unlikeUser,
     wingleStatusWith,
     conversationWith,
     ensureConversation,
@@ -98,6 +99,12 @@ export function ProfileDetail() {
                   {user.name}{!user.isAnonymous && `, ${user.age}`}
                 </h1>
                 {user.verified && <VerifiedMark className="mt-1" />}
+                {user.heartReacts && user.heartReacts > 0 && (
+                  <div className="mt-1 flex items-center gap-1.5 rounded-full bg-berry-500/10 px-3 py-1 text-sm font-bold text-berry-600 border border-berry-500/20">
+                    <HeartIcon className="h-4 w-4 fill-berry-600" />
+                    {user.heartReacts}
+                  </div>
+                )}
               </div>
               {!user.isAnonymous ? (
                 <p className="mt-2 flex items-center justify-center sm:justify-start gap-1.5 text-[14px] text-ink-soft">
@@ -155,8 +162,13 @@ export function ProfileDetail() {
             <Button
               variant="outline"
               onClick={() => {
-                likeUser(user.id);
-                toast.success(`You liked ${user.name}`);
+                if (hasLiked(user.id)) {
+                  unlikeUser(user.id);
+                  toast.success(`You unliked ${user.name}`);
+                } else {
+                  likeUser(user.id);
+                  toast.success(`You liked ${user.name}`);
+                }
               }}
             >
               <HeartIcon className="h-4 w-4" fill={hasLiked(user.id) ? 'currentColor' : 'none'} />

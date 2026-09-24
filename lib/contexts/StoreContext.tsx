@@ -27,19 +27,8 @@ import type {
 import { seedPackages } from '@/lib/data/packages';
 import {
   ADMIN_USER_ID,
-  DEMO_USER_ID,
-  seedConnections,
-  seedConversations,
-  seedLikes,
-  seedMingles,
-  seedNotifications,
-  seedPayments,
-  seedPhotos,
-  seedReports,
-  seedWingles,
-  seedStatuses,
-  seedUsers } from
-'@/lib/data/seed';
+  DEMO_USER_ID
+} from '@/lib/data/seed';
 import { id as makeId } from '@/lib/utils/format';
 
 /**
@@ -54,8 +43,8 @@ interface Db {
   payments: Payment[];
   usage: Usage[];
   likes: Like[];
-  passes: {userId: string;targetUserId: string; viewed?: boolean}[];
-  heartBucket: {userId: string;targetUserId: string; viewed?: boolean}[];
+  passes: {userId: string;targetUserId: string; viewed?: boolean; createdAt?: string}[];
+  heartBucket: {userId: string;targetUserId: string; viewed?: boolean; createdAt?: string}[];
   wingles: WinglingWingle[];
   connections: Connection[];
   conversations: Conversation[];
@@ -68,23 +57,23 @@ interface Db {
 }
 
 const initialDb: Db = {
-  users: seedUsers,
-  photos: seedPhotos,
+  users: [],
+  photos: [],
   packages: seedPackages,
   subscriptions: [],
-  payments: seedPayments,
+  payments: [],
   usage: [{ userId: DEMO_USER_ID, chatUsed: 2, winglesUsed: 3 }],
-  likes: seedLikes,
+  likes: [],
   passes: [],
   heartBucket: [],
-  wingles: seedWingles,
-  connections: seedConnections,
-  conversations: seedConversations,
-  mingles: seedMingles,
-  notifications: seedNotifications,
-  reports: seedReports,
+  wingles: [],
+  connections: [],
+  conversations: [],
+  mingles: [],
+  notifications: [],
+  reports: [],
   blocks: [],
-  statuses: seedStatuses,
+  statuses: [],
   secretWingles: []
 };
 
@@ -130,6 +119,7 @@ interface StoreValue {
   discoverFeed: () => User[];
   userById: (userId: string) => User | undefined;
   likeUser: (userId: string) => void;
+  unlikeUser: (userId: string) => void;
   passUser: (userId: string) => void;
   hasLiked: (userId: string) => boolean;
   likesReceived: () => Like[];
@@ -238,6 +228,28 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   const peerRef = useRef<any>(null);
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().catch(console.error);
+      }
+    }
+  }, []);
+
+  const showNotification = useCallback((title: string, body: string, icon?: string) => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted' && document.hidden) {
+      try {
+        const notif = new Notification(title, { body, icon: icon || '/favicon.png' });
+        notif.onclick = () => {
+          window.focus();
+          notif.close();
+        };
+      } catch (e) {
+        console.error("Failed to show notification", e);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
         const stored = localStorage.getItem('winglemingle_mingles');
@@ -251,115 +263,145 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       
       // Fetch the real user from the server session and all discover users
       import('@/app/actions/user').then(({ getCurrentUser, getDiscoverUsers, getUserStateAction }) => {
-        import('@/app/actions/chat').then(({ getConversationsAction }) => {
-          import('@/app/actions/wingle').then(({ getReceivedSecretWinglesAction }) => {
-            Promise.all([
-              getCurrentUser(), 
-              getDiscoverUsers(), 
-              getConversationsAction(),
-              getUserStateAction(),
-              getReceivedSecretWinglesAction()
-            ]).then(([user, discoverRes, chatRes, stateRes, secretWinglesRes]) => {
-              let realUsers: User[] = [];
-              if (discoverRes?.ok && Array.isArray(discoverRes.data)) {
-                realUsers = discoverRes.data as User[];
+        Promise.all([
+          getCurrentUser(), 
+          getDiscoverUsers()
+        ]).then(([user, discoverRes]) => {
+          let realUsers: User[] = [];
+          if (discoverRes?.ok && Array.isArray(discoverRes.data)) {
+            realUsers = discoverRes.data as User[];
+          }
+
+          if (user) {
+            const mappedUser = {
+              ...user,
+              lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
+              createdAt: user.createdAt?.toString() || new Date().toISOString()
+            } as User;
+            
+            setDb(d => {
+              const allUsers = [...realUsers];
+              if (!allUsers.find(u => u.id === mappedUser.id)) {
+                allUsers.push(mappedUser);
               }
-
-              if (user) {
-              const mappedUser = {
-                ...user,
-                lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
-                createdAt: user.createdAt?.toString() || new Date().toISOString()
-              } as User;
+              const allPhotos = allUsers.flatMap((u: any) => u.photos || []);
               
-              setDb(d => {
-                const allUsers = [...realUsers];
-                if (!allUsers.find(u => u.id === mappedUser.id)) {
-                  allUsers.push(mappedUser);
+              // Ensure all users have heartReacts, even mock ones
+              allUsers.forEach(u => {
+                if (u.heartReacts === undefined) {
+                  u.heartReacts = ((u.id.charCodeAt(0) + u.id.charCodeAt(u.id.length - 1)) % 50) + 1;
                 }
-                const allPhotos = allUsers.flatMap((u: any) => u.photos || []);
-                
-                let updatedConvs = d.conversations;
-                let updatedMingles = d.mingles;
-                if (chatRes?.ok && chatRes.data) {
-                  updatedConvs = chatRes.data.conversations as unknown as Conversation[];
-                  updatedMingles = chatRes.data.mingles as unknown as Mingle[];
-                }
-
-                let newLikes = d.likes;
-                let newPasses = d.passes;
-                let newHeartBucket = d.heartBucket;
-                let newWingles = d.wingles;
-                let newConns = d.connections;
-                let newSecretWingles = d.secretWingles;
-
-                if (stateRes?.ok && stateRes.data) {
-                  newLikes = stateRes.data.likes as any[];
-                  newPasses = stateRes.data.passes as any[];
-                  newHeartBucket = stateRes.data.heartBucket as any[];
-                  newWingles = stateRes.data.wingles as any[];
-                  newConns = stateRes.data.connections as any[];
-                  
-                  if (stateRes.data.relatedUsers) {
-                    const relatedUsers = stateRes.data.relatedUsers as any[];
-                    relatedUsers.forEach(ru => {
-                      if (!allUsers.find(u => u.id === ru.id)) {
-                        allUsers.push(ru);
-                        allPhotos.push(...(ru.photos || []));
-                      }
-                    });
-                  }
-                }
-
-                if (secretWinglesRes?.ok && secretWinglesRes.data) {
-                  newSecretWingles = secretWinglesRes.data as SecretWingle[];
-                  newSecretWingles.forEach(sw => {
-                    if (sw.sender && !allUsers.find(u => u.id === sw.senderId)) {
-                      allUsers.push(sw.sender as User);
-                    }
-                  });
-                }
-                
-                return { 
-                  ...d, 
-                  users: allUsers, 
-                  photos: allPhotos,
-                  conversations: updatedConvs,
-                  mingles: updatedMingles,
-                  likes: newLikes,
-                  passes: newPasses,
-                  heartBucket: newHeartBucket,
-                  wingles: newWingles,
-                  connections: newConns,
-                  secretWingles: newSecretWingles
-                };
               });
-              setSessionId(user.id);
+              
+              return { 
+                ...d, 
+                users: allUsers, 
+                photos: allPhotos
+              };
+            });
+            setSessionId(user.id);
           } else {
             const allPhotos = realUsers.flatMap((u: any) => u.photos || []);
             setDb(d => {
-              let updatedConvs = d.conversations;
-              let updatedMingles = d.mingles;
-              if (chatRes?.ok && chatRes.data) {
-                updatedConvs = chatRes.data.conversations as unknown as Conversation[];
-                updatedMingles = chatRes.data.mingles as unknown as Mingle[];
-              }
+              // Ensure all users have heartReacts, even mock ones
+              realUsers.forEach(u => {
+                if (u.heartReacts === undefined) {
+                  u.heartReacts = ((u.id.charCodeAt(0) + u.id.charCodeAt(u.id.length - 1)) % 50) + 1;
+                }
+              });
               return { 
                 ...d, 
                 users: realUsers, 
-                photos: allPhotos,
-                conversations: updatedConvs,
-                mingles: updatedMingles
+                photos: allPhotos
               };
             });
             setSessionId(null);
           }
+          
           setIsHydrated(true);
+
+          // Now fetch secondary data in the background
+          if (user) {
+            import('@/app/actions/chat').then(({ getConversationsAction }) => {
+              import('@/app/actions/wingle').then(({ getReceivedSecretWinglesAction }) => {
+                Promise.all([
+                  getConversationsAction(),
+                  getUserStateAction(),
+                  getReceivedSecretWinglesAction()
+                ]).then(([chatRes, stateRes, secretWinglesRes]) => {
+                  setDb(d => {
+                    let updatedConvs = d.conversations;
+                    let updatedMingles = d.mingles;
+                    if (chatRes?.ok && chatRes.data) {
+                      updatedConvs = chatRes.data.conversations as unknown as Conversation[];
+                      updatedMingles = chatRes.data.mingles as unknown as Mingle[];
+                    }
+
+                    let newLikes = d.likes;
+                    let newPasses = d.passes;
+                    let newHeartBucket = d.heartBucket;
+                    let newWingles = d.wingles;
+                    let newConns = d.connections;
+                    let newSecretWingles = d.secretWingles;
+                    const allUsers = [...d.users];
+                    const allPhotos = [...d.photos];
+
+                    if (stateRes?.ok && stateRes.data) {
+                      newLikes = stateRes.data.likes as any[];
+                      newPasses = stateRes.data.passes as any[];
+                      newHeartBucket = stateRes.data.heartBucket as any[];
+                      newWingles = stateRes.data.wingles as any[];
+                      newConns = stateRes.data.connections as any[];
+                      
+                      if (stateRes.data.relatedUsers) {
+                        const relatedUsers = stateRes.data.relatedUsers as any[];
+                        relatedUsers.forEach(ru => {
+                          if (!allUsers.find(u => u.id === ru.id)) {
+                            if (ru.heartReacts === undefined) {
+                              ru.heartReacts = ((ru.id.charCodeAt(0) + ru.id.charCodeAt(ru.id.length - 1)) % 50) + 1;
+                            }
+                            allUsers.push(ru);
+                            allPhotos.push(...(ru.photos || []));
+                          }
+                        });
+                      }
+                    }
+
+                    if (secretWinglesRes?.ok && secretWinglesRes.data) {
+                      newSecretWingles = secretWinglesRes.data as SecretWingle[];
+                      newSecretWingles.forEach(sw => {
+                        if (sw.sender && !allUsers.find(u => u.id === sw.senderId)) {
+                          const s = sw.sender as any;
+                          if (s.heartReacts === undefined) {
+                            s.heartReacts = ((s.id.charCodeAt(0) + s.id.charCodeAt(s.id.length - 1)) % 50) + 1;
+                          }
+                          allUsers.push(s);
+                          allPhotos.push(...(s.photos || []));
+                        }
+                      });
+                    }
+
+                    return { 
+                      ...d, 
+                      users: allUsers, 
+                      photos: allPhotos,
+                      conversations: updatedConvs,
+                      mingles: updatedMingles,
+                      likes: newLikes,
+                      passes: newPasses,
+                      heartBucket: newHeartBucket,
+                      wingles: newWingles,
+                      connections: newConns,
+                      secretWingles: newSecretWingles
+                    };
+                  });
+                });
+              });
+            });
+          }
         }).catch((e) => {
           console.error("Hydration error:", e);
           setIsHydrated(true);
-        });
-        });
         });
       });
     }
@@ -380,30 +422,90 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     if (!sessionId || !isHydrated) return;
     const interval = setInterval(() => {
       import('@/app/actions/chat').then(({ getConversationsAction }) => {
-        getConversationsAction().then(res => {
-          if (res?.ok && res.data) {
+        import('@/app/actions/user').then(({ getUserStateAction }) => {
+          Promise.all([getConversationsAction(), getUserStateAction()]).then(([chatRes, stateRes]) => {
             setDb(d => {
-              const updatedConvs = res.data.conversations as unknown as Conversation[];
-              const updatedMingles = res.data.mingles as unknown as Mingle[];
-              
-              // Fast check: if the lengths or the last mingle's ID/status changed, update.
-              // For robustness, simply check if the stringified lengths are different or stringified data differs
-              const isDifferent = 
-                d.mingles.length !== updatedMingles.length ||
-                d.conversations.length !== updatedConvs.length ||
-                JSON.stringify(d.mingles) !== JSON.stringify(updatedMingles);
+              let nextDb = { ...d };
+              let changed = false;
 
-              if (isDifferent) {
-                return {
-                  ...d,
-                  conversations: updatedConvs,
-                  mingles: updatedMingles
-                };
+              if (chatRes?.ok && chatRes.data) {
+                const updatedConvs = chatRes.data.conversations as unknown as Conversation[];
+                const updatedMingles = chatRes.data.mingles as unknown as Mingle[];
+                
+                const isDifferent = 
+                  d.mingles.length !== updatedMingles.length ||
+                  d.conversations.length !== updatedConvs.length ||
+                  JSON.stringify(d.mingles) !== JSON.stringify(updatedMingles);
+
+                if (isDifferent) {
+                  const newMingles = updatedMingles.filter(m => m.senderId !== sessionIdRef.current && !d.mingles.find(dm => dm.id === m.id));
+                  if (newMingles.length > 0 && typeof document !== 'undefined' && document.hidden) {
+                    const latest = newMingles[newMingles.length - 1];
+                    const sender = d.users?.find((u: any) => u.id === latest.senderId);
+                    showNotification(`New message from ${sender?.name || 'someone'}`, latest.body || '📷 Photo', sender?.photos?.[0]?.url);
+                  }
+                  nextDb.conversations = updatedConvs;
+                  nextDb.mingles = updatedMingles;
+                  changed = true;
+                }
               }
-              return d;
+
+              if (stateRes?.ok && stateRes.data) {
+                const newWingles = stateRes.data.wingles as any[];
+                if (d.wingles.length !== newWingles.length || JSON.stringify(d.wingles) !== JSON.stringify(newWingles)) {
+                  nextDb.wingles = newWingles;
+                  changed = true;
+                }
+                const newConnections = stateRes.data.connections as any[];
+                if (d.connections.length !== newConnections.length) {
+                  nextDb.connections = newConnections;
+                  changed = true;
+                }
+                const newLikes = stateRes.data.likes as any[];
+                if (d.likes.length !== newLikes.length) {
+                  nextDb.likes = newLikes;
+                  changed = true;
+                }
+                const newPasses = stateRes.data.passes as any[];
+                if (d.passes.length !== newPasses.length) {
+                  nextDb.passes = newPasses;
+                  changed = true;
+                }
+                const newHeartBucket = stateRes.data.heartBucket as any[];
+                if (d.heartBucket.length !== newHeartBucket.length) {
+                  nextDb.heartBucket = newHeartBucket;
+                  changed = true;
+                }
+                
+                if (stateRes.data.relatedUsers) {
+                  const rUsers = stateRes.data.relatedUsers as any[];
+                  const allUsers = [...(nextDb.users || d.users)];
+                  const allPhotos = [...(nextDb.photos || d.photos)];
+                  let usersChanged = false;
+                  
+                  rUsers.forEach(ru => {
+                    if (!allUsers.find(u => u.id === ru.id)) {
+                      if (ru.heartReacts === undefined) {
+                        ru.heartReacts = ((ru.id.charCodeAt(0) + ru.id.charCodeAt(ru.id.length - 1)) % 50) + 1;
+                      }
+                      allUsers.push(ru);
+                      allPhotos.push(...(ru.photos || []));
+                      usersChanged = true;
+                    }
+                  });
+                  
+                  if (usersChanged) {
+                    nextDb.users = allUsers;
+                    nextDb.photos = allPhotos;
+                    changed = true;
+                  }
+                }
+              }
+
+              return changed ? nextDb : d;
             });
-          }
-        }).catch(console.error);
+          }).catch(console.error);
+        });
       });
     }, 3000); // Poll every 3 seconds
 
@@ -431,6 +533,11 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
             setDb((d) => {
               if (d.mingles.find(m => m.id === mingle.id)) return d;
               
+              if (typeof document !== 'undefined' && document.hidden) {
+                const sender = d.users.find((u) => u.id === mingle.senderId);
+                showNotification(`New message from ${sender?.name || 'someone'}`, mingle.body || '📷 Photo', sender?.photos?.[0]?.url);
+              }
+
               const convExists = d.conversations.find((c) => c.id === mingle.conversationId);
               let newConvs = d.conversations;
               if (convExists) {
@@ -890,8 +997,15 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     const blocked = new Set(
       db.blocks.filter((b) => b.blockerId === sessionId).map((b) => b.blockedUserId)
     );
+    const tenDaysAgo = new Date();
+    tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
     const passed = new Set(
-      db.passes.filter((p) => p.userId === sessionId).map((p) => p.targetUserId)
+      db.passes
+        .filter((p) => p.userId === sessionId && (!p.createdAt || new Date(p.createdAt) >= tenDaysAgo))
+        .map((p) => p.targetUserId)
+    );
+    const hearted = new Set(
+      db.heartBucket.filter((h) => h.userId === sessionId).map((h) => h.targetUserId)
     );
     const premiumIds = new Set(
       db.subscriptions.
@@ -907,7 +1021,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       u.onboarded &&
       !u.suspended &&
       !blocked.has(u.id) &&
-      !passed.has(u.id)
+      !passed.has(u.id) &&
+      !hearted.has(u.id)
     ).
     sort((a, b) => {
       const pa = premiumIds.has(a.id) ? 1 : 0;
@@ -942,10 +1057,15 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         return {
           ...d,
           likes: [...d.likes, like],
-          connections: [...d.connections, connection]
+          connections: [...d.connections, connection],
+          users: d.users.map((u) => u.id === userId ? { ...u, heartReacts: (u.heartReacts || 0) + 1 } : u)
         };
       }
-      return { ...d, likes: [...d.likes, like] };
+      return { 
+        ...d, 
+        likes: [...d.likes, like],
+        users: d.users.map((u) => u.id === userId ? { ...u, heartReacts: (u.heartReacts || 0) + 1 } : u)
+      };
     });
 
     // 2. Server action
@@ -992,10 +1112,25 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     });
   }, []);
 
+  const unlikeUser = useCallback<StoreValue['unlikeUser']>((userId) => {
+    setDb((d) => {
+      const uid = sessionIdRef.current as string;
+      return {
+        ...d,
+        likes: d.likes.filter((l) => !(l.fromUserId === uid && l.toUserId === userId)),
+        users: d.users.map((u) => u.id === userId ? { ...u, heartReacts: Math.max(0, (u.heartReacts || 0) - 1) } : u)
+      };
+    });
+
+    import('@/app/actions/match').then(({ unlikeUserAction }) => {
+      unlikeUserAction(userId).catch(console.error);
+    });
+  }, []);
+
   const passUser = useCallback<StoreValue['passUser']>((userId) => {
     setDb((d) => ({
       ...d,
-      passes: [...d.passes, { userId: sessionIdRef.current as string, targetUserId: userId }]
+      passes: [...d.passes, { userId: sessionIdRef.current as string, targetUserId: userId, createdAt: new Date().toISOString() }]
     }));
     import('@/app/actions/match').then(({ passUser: serverPassUser }) => {
       serverPassUser(userId).catch(console.error);
@@ -1040,7 +1175,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       if (d.heartBucket.some((h) => h.userId === uid && h.targetUserId === userId)) return d;
       return {
         ...d,
-        heartBucket: [...d.heartBucket, { userId: uid, targetUserId: userId }]
+        heartBucket: [...d.heartBucket, { userId: uid, targetUserId: userId, createdAt: new Date().toISOString() }],
+        users: d.users.map((u) => u.id === userId ? { ...u, heartReacts: (u.heartReacts || 0) + 1 } : u)
       };
     });
 
@@ -1054,8 +1190,12 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       const uid = sessionIdRef.current as string;
       return {
         ...d,
-        heartBucket: d.heartBucket.filter((h) => !(h.userId === uid && h.targetUserId === userId))
+        heartBucket: d.heartBucket.filter((h) => !(h.userId === uid && h.targetUserId === userId)),
+        users: d.users.map((u) => u.id === userId ? { ...u, heartReacts: Math.max(0, (u.heartReacts || 0) - 1) } : u)
       };
+    });
+    import('@/app/actions/match').then(({ removeFromHeartBucketAction }) => {
+      removeFromHeartBucketAction(userId).catch(console.error);
     });
   }, []);
 
@@ -1074,6 +1214,9 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         ...d,
         passes: d.passes.filter((p) => !(p.userId === uid && p.targetUserId === userId))
       };
+    });
+    import('@/app/actions/match').then(({ removeFromPassesAction }) => {
+      removeFromPassesAction(userId).catch(console.error);
     });
   }, []);
 
@@ -1285,6 +1428,9 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         w.toUserId === sessionIdRef.current && w.status === 'pending' ? { ...w, viewed: true } : w
       )
     }));
+    import('@/app/actions/wingle').then(({ markWinglesViewedAction }) => {
+      markWinglesViewedAction().catch(console.error);
+    });
   }, []);
 
   const wingleStatusWith = useCallback<StoreValue['wingleStatusWith']>(
@@ -1847,6 +1993,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     discoverFeed,
     userById,
     likeUser,
+    unlikeUser,
     passUser,
     hasLiked,
     likesReceived,

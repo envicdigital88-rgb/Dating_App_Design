@@ -180,3 +180,28 @@ export async function getReceivedSecretWinglesAction() {
     return { ok: false, error: 'Failed to fetch Secret Wingles' }
   }
 }
+
+export async function markWinglesViewedAction() {
+  try {
+    const session = await getSession()
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' }
+
+    // Using raw SQL as bulk update for where + multiple matches is limited in Prisma 8 ORM
+    // Or we can just fetch and loop. Let's fetch and update since it's simple.
+    const wingles = await db.orm.public.Wingle.where({
+      toUserId: session.userId as string,
+      status: 'pending'
+    }).all()
+
+    for (const w of wingles) {
+      if (!w.viewed) {
+        await db.orm.public.Wingle.where({ id: w.id }).update({ viewed: true })
+      }
+    }
+    
+    return { ok: true }
+  } catch (err) {
+    console.error('markWinglesViewedAction error:', err)
+    return { ok: false, error: 'Failed to mark wingles viewed' }
+  }
+}

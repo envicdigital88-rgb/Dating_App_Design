@@ -197,15 +197,24 @@ export function ProfileCard({
           }}
         />
 
-        {/* Vibe Match Badge */}
-        {matchResult && matchResult.score > 0 && (
-          <div className="absolute left-4 top-6 z-10 flex flex-col gap-1.5 pointer-events-none">
+        {/* Badges container */}
+        <div className="absolute left-4 top-6 z-10 flex flex-col gap-2 pointer-events-none">
+          {/* Vibe Match Badge */}
+          {matchResult && matchResult.score > 0 && (
             <div className="inline-flex items-center gap-1.5 rounded-full bg-berry-500/95 px-3 py-1.5 text-sm font-bold text-white shadow-md backdrop-blur-md">
               <ZapIcon className="h-4 w-4 fill-white" />
               {matchResult.score}% Vibe Match
             </div>
-          </div>
-        )}
+          )}
+          
+          {/* Heart Reacts Badge */}
+          {user.heartReacts && user.heartReacts > 0 ? (
+            <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 text-sm font-bold text-white shadow-md backdrop-blur-md border border-white/10">
+              <HeartIcon className="h-4 w-4 fill-berry-400 text-berry-400" />
+              {user.heartReacts} Likes
+            </div>
+          ) : null}
+        </div>
       </div>
 
       {/* Card body */}

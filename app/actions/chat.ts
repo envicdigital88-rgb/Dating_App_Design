@@ -143,19 +143,26 @@ export async function getConversationsAction() {
     const userId = session.userId as string
 
     // Get all conversations where userId1 or userId2 is the current user
-    const convs = await db.orm.public.Conversation
-      .where((c) => or(c.userId1.eq(userId), c.userId2.eq(userId)))
-      .include('mingles')
-      .all()
+    const [convs1, convs2] = await Promise.all([
+      db.orm.public.Conversation.where({ userId1: userId }).all(),
+      db.orm.public.Conversation.where({ userId2: userId }).all()
+    ]);
+    const convs = Array.from(new Map([...convs1, ...convs2].map(c => [c.id, c])).values());
+    const convIds = convs.map(c => c.id);
+    
+    let allMingles: any[] = [];
+    if (convIds.length > 0) {
+      allMingles = await db.orm.public.Mingle.where((m) => m.conversationId.in(convIds)).all();
+    }
 
     const formattedConvs = convs.map(c => ({
       id: c.id,
       userIds: [c.userId1, c.userId2],
       createdAt: c.createdAt.toString(),
       lastMingleAt: c.lastMingleAt.toString()
-    }))
+    }));
 
-    const formattedMingles = convs.flatMap(c => c.mingles
+    const formattedMingles = allMingles
       .filter(m => {
         const deletedFor = m.deletedFor ? (m.deletedFor as string[]) : [];
         if (m.viewOnce) return true;
@@ -169,7 +176,7 @@ export async function getConversationsAction() {
         reactions: m.reactions ? (m.reactions as any) : null,
         deletedFor: m.deletedFor ? (m.deletedFor as string[]) : [],
         viewOnce: m.viewOnce
-      })))
+      }))
 
     return { ok: true, data: { conversations: formattedConvs, mingles: formattedMingles } }
   } catch (err) {

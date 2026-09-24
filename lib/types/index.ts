@@ -58,6 +58,7 @@ export interface User {
   createdAt: string;
   isAnonymous?: boolean;
   anonymousName?: string;
+  heartReacts?: number;
 }
 
 export interface UserStatus {

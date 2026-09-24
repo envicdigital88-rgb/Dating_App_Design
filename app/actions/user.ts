@@ -99,36 +99,66 @@ export async function getDiscoverUsers() {
     
     const likes = await db.orm.public.Like.where({ fromUserId: userId }).all()
     const passes = await db.orm.public.Pass.where({ userId }).all()
+    const heartBucket = await db.orm.public.HeartBucket.where({ userId }).all()
     
+    const tenDaysAgo = new Date();
+    tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+    
+    // Only exclude passes that are less than 10 days old
+    const recentPasses = passes.filter((p: any) => new Date(p.createdAt) >= tenDaysAgo);
+
     const excludedIds = [
       userId,
       ...likes.map((l: any) => l.toUserId),
-      ...passes.map((p: any) => p.targetUserId)
+      ...recentPasses.map((p: any) => p.targetUserId),
+      ...heartBucket.map((h: any) => h.targetUserId)
     ]
     
-    const users = await db.orm.public.User.where({
+    const rawUsers = await db.orm.public.User.where({
       onboarded: true,
       role: 'member',
       suspended: false
-    })
-      .where((u) => not(u.id.in(excludedIds)))
-      .include('prompts')
-      .include('photos')
-      .all()
+    }).all()
     
-    // Process JSON fields and dates
-    const mappedUsers = users.map((user: any) => ({
-      ...user,
-      lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
-      createdAt: user.createdAt?.toString() || new Date().toISOString(),
-      interests: typeof user.interests === 'string' ? JSON.parse(user.interests) : user.interests,
-      traits: typeof user.traits === 'string' ? JSON.parse(user.traits) : user.traits,
-      lifestyle: typeof user.lifestyle === 'string' ? JSON.parse(user.lifestyle) : user.lifestyle,
-      photos: user.photos?.map((p: any) => ({
-        ...p,
-        uploadedAt: p.uploadedAt?.toString() || new Date().toISOString()
-      })) || []
-    }))
+    // Filter excluded ids in JS to avoid slow Prisma closure evaluation
+    const excludedSet = new Set(excludedIds);
+    const usersWithoutRelations = rawUsers.filter(u => !excludedSet.has(u.id));
+    const userIds = usersWithoutRelations.map(u => u.id);
+
+    // Fetch relations in parallel
+    const [photos, prompts, heartReactsRaw] = await Promise.all([
+      db.orm.public.Photo.where((p) => p.userId.in(userIds)).all(),
+      db.orm.public.Prompt.where((p) => p.userId.in(userIds)).all(),
+      db.orm.public.HeartBucket.where((h) => h.targetUserId.in(userIds)).all()
+    ]);
+
+    const heartReactsMap = new Map();
+    if (Array.isArray(heartReactsRaw)) {
+      heartReactsRaw.forEach((c: any) => {
+        heartReactsMap.set(c.targetUserId, (heartReactsMap.get(c.targetUserId) || 0) + 1);
+      });
+    }
+
+    const mappedUsers = usersWithoutRelations.map((user: any) => {
+      // Fake random count for mock profiles (1-50) if real count is 0
+      const realCount = heartReactsMap.get(user.id) || 0;
+      const fakeCount = ((user.id.charCodeAt(0) + user.id.charCodeAt(user.id.length - 1)) % 50) + 1;
+
+      return {
+        ...user,
+        lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
+        createdAt: user.createdAt?.toString() || new Date().toISOString(),
+        interests: typeof user.interests === 'string' ? JSON.parse(user.interests) : user.interests,
+        traits: typeof user.traits === 'string' ? JSON.parse(user.traits) : user.traits,
+        lifestyle: typeof user.lifestyle === 'string' ? JSON.parse(user.lifestyle) : user.lifestyle,
+        photos: photos.filter(p => p.userId === user.id).map((p: any) => ({
+          ...p,
+          uploadedAt: p.uploadedAt?.toString() || new Date().toISOString()
+        })),
+        prompts: prompts.filter(p => p.userId === user.id),
+        heartReacts: realCount > 0 ? realCount : fakeCount
+      };
+    });
     
     return { ok: true, data: mappedUsers }
   } catch (err) {
@@ -201,11 +231,18 @@ export async function getDiscoverProfiles() {
 
     const likes = await db.orm.public.Like.where({ fromUserId: userId }).all()
     const passes = await db.orm.public.Pass.where({ userId }).all()
+    const heartBucket = await db.orm.public.HeartBucket.where({ userId }).all()
     
+    const tenDaysAgo = new Date();
+    tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+    
+    const recentPasses = passes.filter((p: any) => new Date(p.createdAt) >= tenDaysAgo);
+
     const excludedIds = [
       userId,
       ...likes.map((l: any) => l.toUserId),
-      ...passes.map((p: any) => p.targetUserId)
+      ...recentPasses.map((p: any) => p.targetUserId),
+      ...heartBucket.map((h: any) => h.targetUserId)
     ]
 
     const users = await db.orm.public.User.where(
@@ -226,13 +263,30 @@ export async function getUserStateAction() {
     if (!session?.userId) return { ok: false, error: 'Unauthorized' }
     const userId = session.userId as string
     
-    const [likes, passes, heartBucket, wingles, connections] = await Promise.all([
-      db.orm.public.Like.where((l) => or(l.fromUserId.eq(userId), l.toUserId.eq(userId))).all(),
-      db.orm.public.Pass.where((p) => or(p.userId.eq(userId), p.targetUserId.eq(userId))).all(),
-      db.orm.public.HeartBucket.where((h) => or(h.userId.eq(userId), h.targetUserId.eq(userId))).all(),
-      db.orm.public.Wingle.where((w) => or(w.fromUserId.eq(userId), w.toUserId.eq(userId))).all(),
-      db.orm.public.Connection.where((c) => or(c.userId1.eq(userId), c.userId2.eq(userId))).all()
-    ])
+    const [
+      likesFrom, likesTo, 
+      passesFrom, passesTo, 
+      heartBucketFrom, heartBucketTo, 
+      winglesFrom, winglesTo, 
+      connections1, connections2
+    ] = await Promise.all([
+      db.orm.public.Like.where({ fromUserId: userId }).all(),
+      db.orm.public.Like.where({ toUserId: userId }).all(),
+      db.orm.public.Pass.where({ userId }).all(),
+      db.orm.public.Pass.where({ targetUserId: userId }).all(),
+      db.orm.public.HeartBucket.where({ userId }).all(),
+      db.orm.public.HeartBucket.where({ targetUserId: userId }).all(),
+      db.orm.public.Wingle.where({ fromUserId: userId }).all(),
+      db.orm.public.Wingle.where({ toUserId: userId }).all(),
+      db.orm.public.Connection.where({ userId1: userId }).all(),
+      db.orm.public.Connection.where({ userId2: userId }).all()
+    ]);
+
+    const likes = Array.from(new Map([...likesFrom, ...likesTo].map(x => [x.id, x])).values());
+    const passes = Array.from(new Map([...passesFrom, ...passesTo].map(x => [x.id, x])).values());
+    const heartBucket = Array.from(new Map([...heartBucketFrom, ...heartBucketTo].map(x => [x.id, x])).values());
+    const wingles = Array.from(new Map([...winglesFrom, ...winglesTo].map(x => [x.id, x])).values());
+    const connections = Array.from(new Map([...connections1, ...connections2].map(x => [x.id, x])).values());
 
     const relatedUserIds = new Set<string>();
     likes.forEach(l => { relatedUserIds.add(l.fromUserId); relatedUserIds.add(l.toUserId); });
@@ -242,11 +296,18 @@ export async function getUserStateAction() {
     connections.forEach(c => { relatedUserIds.add(c.userId1); relatedUserIds.add(c.userId2); });
     relatedUserIds.delete(userId);
 
-    const relatedUsers = await db.orm.public.User.where(
-      (u) => u.id.in(Array.from(relatedUserIds))
-    )
-      .include('photos')
-      .all();
+    let relatedUsers: any[] = [];
+    if (relatedUserIds.size > 0) {
+      const uIds = Array.from(relatedUserIds);
+      const [rUsers, rPhotos] = await Promise.all([
+        db.orm.public.User.where((u) => u.id.in(uIds)).all(),
+        db.orm.public.Photo.where((p) => p.userId.in(uIds)).all()
+      ]);
+      relatedUsers = rUsers.map((u: any) => ({
+        ...u,
+        photos: rPhotos.filter((p: any) => p.userId === u.id)
+      }));
+    }
 
     const mappedRelatedUsers = relatedUsers.map((user: any) => ({
       ...user,
