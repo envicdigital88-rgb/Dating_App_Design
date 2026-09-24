@@ -5,7 +5,7 @@ import { getSession } from '@/lib/session'
 import { Temporal } from 'temporal-polyfill'
 import { and } from '@prisma/orm-postgres/orm-client'
 
-export async function sendMingleAction(conversationId: string, body: string, imageUrl?: string, replyToId?: string | null, forwarded?: boolean, viewOnce?: boolean) {
+export async function sendMingleAction(conversationId: string, body: string, imageUrl?: string, replyToId?: string | null, forwarded?: boolean, viewOnce?: boolean, clientId?: string) {
   try {
     const session = await getSession()
     if (!session?.userId) return { ok: false, error: 'Unauthorized' }
@@ -18,7 +18,7 @@ export async function sendMingleAction(conversationId: string, body: string, ima
       return { ok: false, error: 'Conversation not found' }
     }
 
-    const mingle = await db.orm.public.Mingle.create({
+    const data: any = {
       conversationId,
       senderId,
       body,
@@ -26,7 +26,10 @@ export async function sendMingleAction(conversationId: string, body: string, ima
       replyToId: replyToId || null,
       forwarded: forwarded || false,
       viewOnce: viewOnce || false
-    })
+    }
+    if (clientId) data.id = clientId;
+
+    const mingle = await db.orm.public.Mingle.create(data)
 
     await db.orm.public.Conversation.where({ id: conversationId }).update({
       lastMingleAt: Temporal.Now.instant()

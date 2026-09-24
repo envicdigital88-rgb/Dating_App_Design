@@ -432,16 +432,21 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                 const updatedConvs = chatRes.data.conversations as unknown as Conversation[];
                 const updatedMingles = chatRes.data.mingles as unknown as Mingle[];
                 
-                const serverMinglesLocal = d.mingles.filter(m => m.id.length >= 20);
-                const optimisticMingles = d.mingles.filter(m => m.id.length < 20);
+                const now = new Date().getTime();
+                const localMingles = d.mingles.filter(m => 
+                  !updatedMingles.some(um => um.id === m.id) &&
+                  (now - new Date(m.createdAt).getTime() < 10000)
+                );
+                
+                const mergedMingles = [...updatedMingles, ...localMingles].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
                 
                 const isDifferent = 
-                  serverMinglesLocal.length !== updatedMingles.length ||
+                  d.mingles.length !== mergedMingles.length ||
                   d.conversations.length !== updatedConvs.length ||
-                  JSON.stringify(serverMinglesLocal) !== JSON.stringify(updatedMingles);
+                  JSON.stringify(d.mingles) !== JSON.stringify(mergedMingles);
 
                 if (isDifferent) {
-                  const newMingles = updatedMingles.filter(m => m.senderId !== sessionIdRef.current && !serverMinglesLocal.find(dm => dm.id === m.id));
+                  const newMingles = updatedMingles.filter(m => m.senderId !== sessionIdRef.current && !d.mingles.find(dm => dm.id === m.id));
                   if (newMingles.length > 0 && typeof document !== 'undefined' && document.hidden) {
                     const latest = newMingles[newMingles.length - 1];
                     const sender = d.users?.find((u: any) => u.id === latest.senderId);
@@ -449,7 +454,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                     showNotification(`New message from ${sender?.name || 'someone'}`, latest.body || '📷 Photo', senderPhoto);
                   }
                   nextDb.conversations = updatedConvs;
-                  nextDb.mingles = [...updatedMingles, ...optimisticMingles].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+                  nextDb.mingles = mergedMingles;
                   changed = true;
                 }
               }
@@ -1518,8 +1523,9 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       if (entitlements.chatRemaining !== null && entitlements.chatRemaining <= 0)
       return { ok: false, error: 'Your chat limit has been reached.', reason: 'chat_limit' };
 
+      const mingleId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : makeId('ms');
       const mingle: Mingle = {
-        id: makeId('ms'),
+        id: mingleId,
         conversationId,
         senderId: currentUser.id,
         body: body.trim(),
@@ -1544,11 +1550,11 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         u.userId === currentUser.id ? { ...u, chatUsed: u.chatUsed + 1 } : u
         )
       }));
-      sendMingleAction(conversationId, body.trim(), imageUrl, replyToId, forwarded, viewOnce).then((res) => {
+      sendMingleAction(conversationId, body.trim(), imageUrl, replyToId, forwarded, viewOnce, mingleId).then((res) => {
         if (res.ok && res.data) {
           setDb((d) => ({
             ...d,
-            mingles: d.mingles.map((m) => m.id === mingle.id ? (res.data as unknown as Mingle) : m)
+            mingles: d.mingles.map((m) => m.id === mingleId ? (res.data as unknown as Mingle) : m)
           }));
         }
       }).catch(console.error);
