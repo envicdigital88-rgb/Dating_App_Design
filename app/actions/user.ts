@@ -270,11 +270,11 @@ export async function getUserStateAction() {
       wingles, 
       connections
     ] = await Promise.all([
-      db.orm.public.Like.where(l => or(l.fromUserId.equals(userId), l.toUserId.equals(userId))).all(),
-      db.orm.public.Pass.where(p => or(p.userId.equals(userId), p.targetUserId.equals(userId))).all(),
-      db.orm.public.HeartBucket.where(h => or(h.userId.equals(userId), h.targetUserId.equals(userId))).all(),
-      db.orm.public.Wingle.where(w => or(w.fromUserId.equals(userId), w.toUserId.equals(userId))).all(),
-      db.orm.public.Connection.where(c => or(c.userId1.equals(userId), c.userId2.equals(userId))).all()
+      db.orm.public.Like.where(l => or(l.fromUserId.eq(userId), l.toUserId.eq(userId))).all(),
+      db.orm.public.Pass.where(p => or(p.userId.eq(userId), p.targetUserId.eq(userId))).all(),
+      db.orm.public.HeartBucket.where(h => or(h.userId.eq(userId), h.targetUserId.eq(userId))).all(),
+      db.orm.public.Wingle.where(w => or(w.fromUserId.eq(userId), w.toUserId.eq(userId))).all(),
+      db.orm.public.Connection.where(c => or(c.userId1.eq(userId), c.userId2.eq(userId))).all()
     ]);
 
     const relatedUserIds = new Set<string>();

@@ -146,7 +146,7 @@ export async function getConversationsAction() {
     const userId = session.userId as string
 
     // Get all conversations where userId1 or userId2 is the current user
-    const convs = await db.orm.public.Conversation.where(c => or(c.userId1.equals(userId), c.userId2.equals(userId))).all();
+    const convs = await db.orm.public.Conversation.where(c => or(c.userId1.eq(userId), c.userId2.eq(userId))).all();
     const convIds = convs.map(c => c.id);
     
     let allMingles: any[] = [];
