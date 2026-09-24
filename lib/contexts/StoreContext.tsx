@@ -319,9 +319,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
             setSessionId(null);
           }
           
-          setIsHydrated(true);
-
-          // Now fetch secondary data in the background
+          // If logged in, fetch ALL secondary data before marking hydrated
           if (user) {
             import('@/app/actions/chat').then(({ getConversationsAction }) => {
               import('@/app/actions/wingle').then(({ getReceivedSecretWinglesAction }) => {
@@ -396,9 +394,17 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                       secretWingles: newSecretWingles
                     };
                   });
+                  // Mark hydrated AFTER all data is loaded — polling starts here
+                  setIsHydrated(true);
+                }).catch((e) => {
+                  console.error('Secondary hydration error:', e);
+                  setIsHydrated(true);
                 });
               });
             });
+          } else {
+            // Not logged in — hydration is done immediately
+            setIsHydrated(true);
           }
         }).catch((e) => {
           console.error("Hydration error:", e);
