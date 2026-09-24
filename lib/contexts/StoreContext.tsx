@@ -436,7 +436,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                 const now = new Date().getTime();
                 const localMingles = d.mingles.filter(m => 
                   !updatedMingles.some(um => um.id === m.id) &&
-                  (now - new Date(m.createdAt).getTime() < 10000)
+                  (now - new Date(m.createdAt).getTime() < 60000)
                 );
                 
                 const mergedMingles = [...updatedMingles, ...localMingles].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
@@ -461,28 +461,37 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
               }
 
               if (stateRes?.ok && stateRes.data) {
-                const newWingles = stateRes.data.wingles as any[];
+                const now = new Date().getTime();
+                const mergeItems = (local: any[], remote: any[]) => {
+                  const recentLocal = local.filter(m => 
+                    !remote.some(um => um.id === m.id) &&
+                    (now - new Date(m.createdAt || now).getTime() < 60000)
+                  );
+                  return [...remote, ...recentLocal];
+                };
+
+                const newWingles = mergeItems(d.wingles, stateRes.data.wingles as any[]);
                 if (d.wingles.length !== newWingles.length || JSON.stringify(d.wingles) !== JSON.stringify(newWingles)) {
                   nextDb.wingles = newWingles;
                   changed = true;
                 }
-                const newConnections = stateRes.data.connections as any[];
-                if (d.connections.length !== newConnections.length) {
+                const newConnections = mergeItems(d.connections, stateRes.data.connections as any[]);
+                if (d.connections.length !== newConnections.length || JSON.stringify(d.connections) !== JSON.stringify(newConnections)) {
                   nextDb.connections = newConnections;
                   changed = true;
                 }
-                const newLikes = stateRes.data.likes as any[];
-                if (d.likes.length !== newLikes.length) {
+                const newLikes = mergeItems(d.likes, stateRes.data.likes as any[]);
+                if (d.likes.length !== newLikes.length || JSON.stringify(d.likes) !== JSON.stringify(newLikes)) {
                   nextDb.likes = newLikes;
                   changed = true;
                 }
-                const newPasses = stateRes.data.passes as any[];
-                if (d.passes.length !== newPasses.length) {
+                const newPasses = mergeItems(d.passes, stateRes.data.passes as any[]);
+                if (d.passes.length !== newPasses.length || JSON.stringify(d.passes) !== JSON.stringify(newPasses)) {
                   nextDb.passes = newPasses;
                   changed = true;
                 }
-                const newHeartBucket = stateRes.data.heartBucket as any[];
-                if (d.heartBucket.length !== newHeartBucket.length) {
+                const newHeartBucket = mergeItems(d.heartBucket, stateRes.data.heartBucket as any[]);
+                if (d.heartBucket.length !== newHeartBucket.length || JSON.stringify(d.heartBucket) !== JSON.stringify(newHeartBucket)) {
                   nextDb.heartBucket = newHeartBucket;
                   changed = true;
                 }
@@ -517,7 +526,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
           }).catch(console.error);
         });
       });
-    }, 1000); // Poll every 1 second
+    }, 5000); // Poll every 5 seconds
 
     return () => clearInterval(interval);
   }, [sessionId, isHydrated]);

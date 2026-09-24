@@ -2,7 +2,7 @@
 
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
-import { not } from '@prisma/orm-postgres/orm-client'
+import { not, or } from '@prisma/orm-postgres/orm-client'
 
 export async function getCurrentUser() {
   try {
@@ -264,29 +264,18 @@ export async function getUserStateAction() {
     const userId = session.userId as string
     
     const [
-      likesFrom, likesTo, 
-      passesFrom, passesTo, 
-      heartBucketFrom, heartBucketTo, 
-      winglesFrom, winglesTo, 
-      connections1, connections2
+      likes, 
+      passes, 
+      heartBucket, 
+      wingles, 
+      connections
     ] = await Promise.all([
-      db.orm.public.Like.where({ fromUserId: userId }).all(),
-      db.orm.public.Like.where({ toUserId: userId }).all(),
-      db.orm.public.Pass.where({ userId }).all(),
-      db.orm.public.Pass.where({ targetUserId: userId }).all(),
-      db.orm.public.HeartBucket.where({ userId }).all(),
-      db.orm.public.HeartBucket.where({ targetUserId: userId }).all(),
-      db.orm.public.Wingle.where({ fromUserId: userId }).all(),
-      db.orm.public.Wingle.where({ toUserId: userId }).all(),
-      db.orm.public.Connection.where({ userId1: userId }).all(),
-      db.orm.public.Connection.where({ userId2: userId }).all()
+      db.orm.public.Like.where(l => or(l.fromUserId.equals(userId), l.toUserId.equals(userId))).all(),
+      db.orm.public.Pass.where(p => or(p.userId.equals(userId), p.targetUserId.equals(userId))).all(),
+      db.orm.public.HeartBucket.where(h => or(h.userId.equals(userId), h.targetUserId.equals(userId))).all(),
+      db.orm.public.Wingle.where(w => or(w.fromUserId.equals(userId), w.toUserId.equals(userId))).all(),
+      db.orm.public.Connection.where(c => or(c.userId1.equals(userId), c.userId2.equals(userId))).all()
     ]);
-
-    const likes = Array.from(new Map([...likesFrom, ...likesTo].map(x => [x.id, x])).values());
-    const passes = Array.from(new Map([...passesFrom, ...passesTo].map(x => [x.id, x])).values());
-    const heartBucket = Array.from(new Map([...heartBucketFrom, ...heartBucketTo].map(x => [x.id, x])).values());
-    const wingles = Array.from(new Map([...winglesFrom, ...winglesTo].map(x => [x.id, x])).values());
-    const connections = Array.from(new Map([...connections1, ...connections2].map(x => [x.id, x])).values());
 
     const relatedUserIds = new Set<string>();
     likes.forEach(l => { relatedUserIds.add(l.fromUserId); relatedUserIds.add(l.toUserId); });

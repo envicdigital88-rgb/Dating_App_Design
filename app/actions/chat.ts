@@ -3,7 +3,7 @@
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { Temporal } from 'temporal-polyfill'
-import { and } from '@prisma/orm-postgres/orm-client'
+import { and, or } from '@prisma/orm-postgres/orm-client'
 
 export async function sendMingleAction(conversationId: string, body: string, imageUrl?: string, replyToId?: string | null, forwarded?: boolean, viewOnce?: boolean, clientId?: string) {
   try {
@@ -146,11 +146,7 @@ export async function getConversationsAction() {
     const userId = session.userId as string
 
     // Get all conversations where userId1 or userId2 is the current user
-    const [convs1, convs2] = await Promise.all([
-      db.orm.public.Conversation.where({ userId1: userId }).all(),
-      db.orm.public.Conversation.where({ userId2: userId }).all()
-    ]);
-    const convs = Array.from(new Map([...convs1, ...convs2].map(c => [c.id, c])).values());
+    const convs = await db.orm.public.Conversation.where(c => or(c.userId1.equals(userId), c.userId2.equals(userId))).all();
     const convIds = convs.map(c => c.id);
     
     let allMingles: any[] = [];
