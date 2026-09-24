@@ -226,6 +226,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   const sessionIdRef = useRef<string | null>(null);
   sessionIdRef.current = sessionId;
   const peerRef = useRef<any>(null);
+  const connsRef = useRef<{ [userId: string]: any }>({});
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -516,7 +517,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
           }).catch(console.error);
         });
       });
-    }, 3000); // Poll every 3 seconds
+    }, 1000); // Poll every 1 second
 
     return () => clearInterval(interval);
   }, [sessionId, isHydrated]);
@@ -581,15 +582,22 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
             }));
 
             try {
-              const replyConn = peer.connect(mingle.senderId, { reliable: true });
-              if (replyConn) {
-                replyConn.on('open', () => {
-                  replyConn.send({ type: 'delivery_receipt', mingleIds: [mingle.id], deliveredAt: now });
-                  
-                });
+              if (connsRef.current[mingle.senderId] && connsRef.current[mingle.senderId].open) {
+                connsRef.current[mingle.senderId].send({ type: 'delivery_receipt', mingleIds: [mingle.id], deliveredAt: now });
+              } else {
+                const replyConn = peer.connect(mingle.senderId, { reliable: true });
+                if (replyConn) {
+                  connsRef.current[mingle.senderId] = replyConn;
+                  replyConn.on('open', () => {
+                    replyConn.send({ type: 'delivery_receipt', mingleIds: [mingle.id], deliveredAt: now });
+                  });
+                  replyConn.on('close', () => delete connsRef.current[mingle.senderId]);
+                  replyConn.on('error', () => delete connsRef.current[mingle.senderId]);
+                }
               }
             } catch (err) {
               console.error("PeerJS delivery receipt error", err);
+              delete connsRef.current[mingle.senderId];
             }
 
           } else if (data.type === 'delivery_receipt') {
@@ -1585,15 +1593,26 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       
       if (otherId && peerRef.current) {
         try {
-          const conn = peerRef.current.connect(otherId, { reliable: true });
-          if (conn) {
-            conn.on('open', () => {
-              conn.send({ type: 'mingle', mingle });
-              
-            });
+          if (connsRef.current[otherId] && connsRef.current[otherId].open) {
+            connsRef.current[otherId].send({ type: 'mingle', mingle });
+          } else {
+            const conn = peerRef.current.connect(otherId, { reliable: true });
+            if (conn) {
+              connsRef.current[otherId] = conn;
+              conn.on('open', () => {
+                conn.send({ type: 'mingle', mingle });
+              });
+              conn.on('close', () => {
+                delete connsRef.current[otherId];
+              });
+              conn.on('error', () => {
+                delete connsRef.current[otherId];
+              });
+            }
           }
         } catch (err) {
           console.error("PeerJS connect error", err);
+          delete connsRef.current[otherId];
         }
       }
       return { ok: true, data: mingle };
@@ -1620,15 +1639,26 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
           const otherId = conversation?.userIds.find((uid) => uid !== sessionIdRef.current);
           if (otherId && peerRef.current) {
             try {
-              const conn = peerRef.current.connect(otherId, { reliable: true });
-              if (conn) {
-                conn.on('open', () => {
-                  conn.send({ type: 'read_receipt', conversationId, readAt: now });
-                  
-                });
+              if (connsRef.current[otherId] && connsRef.current[otherId].open) {
+                connsRef.current[otherId].send({ type: 'read_receipt', conversationId, readAt: now });
+              } else {
+                const conn = peerRef.current.connect(otherId, { reliable: true });
+                if (conn) {
+                  connsRef.current[otherId] = conn;
+                  conn.on('open', () => {
+                    conn.send({ type: 'read_receipt', conversationId, readAt: now });
+                  });
+                  conn.on('close', () => {
+                    delete connsRef.current[otherId];
+                  });
+                  conn.on('error', () => {
+                    delete connsRef.current[otherId];
+                  });
+                }
               }
             } catch (err) {
               console.error("PeerJS read receipt error", err);
+              delete connsRef.current[otherId];
             }
           }
         }, 0);
