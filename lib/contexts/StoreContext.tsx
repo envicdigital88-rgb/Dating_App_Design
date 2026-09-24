@@ -432,13 +432,16 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                 const updatedConvs = chatRes.data.conversations as unknown as Conversation[];
                 const updatedMingles = chatRes.data.mingles as unknown as Mingle[];
                 
+                const serverMinglesLocal = d.mingles.filter(m => m.id.length >= 20);
+                const optimisticMingles = d.mingles.filter(m => m.id.length < 20);
+                
                 const isDifferent = 
-                  d.mingles.length !== updatedMingles.length ||
+                  serverMinglesLocal.length !== updatedMingles.length ||
                   d.conversations.length !== updatedConvs.length ||
-                  JSON.stringify(d.mingles) !== JSON.stringify(updatedMingles);
+                  JSON.stringify(serverMinglesLocal) !== JSON.stringify(updatedMingles);
 
                 if (isDifferent) {
-                  const newMingles = updatedMingles.filter(m => m.senderId !== sessionIdRef.current && !d.mingles.find(dm => dm.id === m.id));
+                  const newMingles = updatedMingles.filter(m => m.senderId !== sessionIdRef.current && !serverMinglesLocal.find(dm => dm.id === m.id));
                   if (newMingles.length > 0 && typeof document !== 'undefined' && document.hidden) {
                     const latest = newMingles[newMingles.length - 1];
                     const sender = d.users?.find((u: any) => u.id === latest.senderId);
@@ -446,7 +449,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                     showNotification(`New message from ${sender?.name || 'someone'}`, latest.body || '📷 Photo', senderPhoto);
                   }
                   nextDb.conversations = updatedConvs;
-                  nextDb.mingles = updatedMingles;
+                  nextDb.mingles = [...updatedMingles, ...optimisticMingles].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
                   changed = true;
                 }
               }
