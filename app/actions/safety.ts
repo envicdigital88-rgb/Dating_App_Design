@@ -22,8 +22,10 @@ export async function reportUserAction(targetUserId: string, reason: string, det
     })
 
     // Check if user has 5 or more reports and suspend them if so
-    const reportCount = await db.orm.public.Report.where({ targetUserId }).count()
-    if (Number(reportCount) >= 5) {
+    const totals = await db.orm.public.Report.where({ targetUserId }).aggregate((a) => ({
+      count: a.count()
+    }))
+    if (totals.count >= 5) {
       await db.orm.public.User.where({ id: targetUserId }).update({ suspended: true })
     }
 
