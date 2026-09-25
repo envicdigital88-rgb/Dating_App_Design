@@ -3,6 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { sendMingleAction, markConversationReadAction } from '@/app/actions/chat';
+import { reportUserAction, blockUserAction, unblockUserAction } from '@/app/actions/safety';
 import type {
   AppNotification,
   Block,
@@ -1866,9 +1867,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         createdAt: new Date().toISOString()
       }]
     }));
-    import('@/app/actions/safety').then(({ blockUserAction }) => {
-      blockUserAction(userId).catch(console.error);
-    });
+    blockUserAction(userId).catch(console.error);
   }, []);
 
   const unblockUser = useCallback<StoreValue['unblockUser']>((userId) => {
@@ -1878,9 +1877,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         (b) => !(b.blockerId === sessionIdRef.current && b.blockedUserId === userId)
       )
     }));
-    import('@/app/actions/safety').then(({ unblockUserAction }) => {
-      unblockUserAction(userId).catch(console.error);
-    });
+    unblockUserAction(userId).catch(console.error);
   }, []);
 
   const isBlocked = useCallback<StoreValue['isBlocked']>(
@@ -1904,9 +1901,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       },
       ...d.reports]
     }));
-    import('@/app/actions/safety').then(({ reportUserAction }) => {
-      reportUserAction(userId, reason, detail, context).catch(console.error);
-    });
+    reportUserAction(userId, reason, detail, context).catch(console.error);
   }, []);
 
   /* ------------------------------------------------------------ payments */
