@@ -60,6 +60,9 @@ export async function blockUserAction(targetUserId: string) {
       blockedUserId: targetUserId,
     })
 
+    const { pusherServer } = await import('@/lib/pusher');
+    await pusherServer.trigger(`private-user-${targetUserId}`, 'state-changed', {}).catch(console.error);
+
     return { ok: true }
   } catch (err) {
     console.error('blockUser error:', err)
@@ -81,6 +84,9 @@ export async function unblockUserAction(targetUserId: string) {
       
     if (existing) {
       await db.orm.public.Block.where((b) => b.id.eq(existing.id)).delete()
+      
+      const { pusherServer } = await import('@/lib/pusher');
+      await pusherServer.trigger(`private-user-${targetUserId}`, 'state-changed', {}).catch(console.error);
     }
 
     return { ok: true }

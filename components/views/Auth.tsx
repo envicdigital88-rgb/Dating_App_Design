@@ -6,7 +6,6 @@ import Image from 'next/image';
 import { toast } from 'sonner';
 import { ArrowLeftIcon, ArrowRightIcon, EyeIcon, EyeOffIcon, LockIcon, MailIcon, UserIcon, XCircleIcon, CheckCircle2Icon } from 'lucide-react';
 import { heroImage } from '@/lib/data/seed';
-import { loginUser, registerUser, googleAuthAction } from '@/app/actions/auth';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 
 export function Auth({ mode }: {mode: 'signin' | 'register';}) {
@@ -45,21 +44,25 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
     }
     
     setBusy(true);
-    const formData = new FormData();
-    formData.append('email', email);
-    formData.append('password', password);
+    let result: any;
     
     if (isRegister) {
-      formData.append('name', name);
-      formData.append('phone', '');
-      formData.append('age', '20'); // Initial defaults
-      formData.append('gender', 'woman');
-      formData.append('intention', 'Long-term relationship');
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email, password, name, phone: '', age: 20, gender: 'woman', intention: 'Long-term relationship'
+        })
+      });
+      result = await res.json();
+    } else {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      result = await res.json();
     }
-
-    const result = isRegister 
-      ? await registerUser(formData) 
-      : await loginUser(formData);
       
     setBusy(false);
     
@@ -80,7 +83,12 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
     setBusy(true);
-    const result = await googleAuthAction(credentialResponse.credential);
+    const res = await fetch('/api/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential: credentialResponse.credential })
+    });
+    const result = await res.json();
     setBusy(false);
     
     if (!result.ok) {

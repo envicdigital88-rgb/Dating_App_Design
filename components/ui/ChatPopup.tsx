@@ -22,7 +22,9 @@ export function ChatPopup() {
     userById,
     photosOf,
     typingIn,
-    entitlements
+    entitlements,
+    isBlocked,
+    unblockUser
   } = useStore();
 
   const [draft, setDraft] = useState('');
@@ -159,28 +161,40 @@ export function ChatPopup() {
         </div>
 
         <div className="border-t border-sand/60 bg-cream-deep p-3">
-          <div className="flex items-center gap-2 rounded-full border border-sand/60 bg-cream/50 px-3 py-1.5 focus-within:border-berry-500 focus-within:bg-cream-deep transition-colors">
-            <input
-              type="text"
-              placeholder="Type a mingle..."
-              className="flex-1 bg-transparent px-2 py-1.5 text-[14px] text-ink placeholder:text-ink-muted focus:outline-none"
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  submit();
-                }
-              }}
-            />
-            <button
-              onClick={submit}
-              disabled={!draft.trim()}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-berry-500 text-white disabled:opacity-50 transition-opacity"
-            >
-              <SendIcon className="h-4 w-4 text-plum-500" />
-            </button>
-          </div>
+          {isBlocked(otherId) ? (
+            <div className="flex flex-col items-center justify-center gap-2 rounded-2xl bg-sand/30 p-4 text-center text-ink">
+              <p className="text-[12px]">You blocked this contact.</p>
+              <button
+                onClick={() => unblockUser(otherId)}
+                className="rounded-full border border-sand/60 bg-cream px-4 py-1.5 text-[13px] font-medium transition-colors hover:bg-cream-deep"
+              >
+                Unblock
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 rounded-full border border-sand/60 bg-cream/50 px-3 py-1.5 focus-within:border-berry-500 focus-within:bg-cream-deep transition-colors">
+              <input
+                type="text"
+                placeholder="Type a mingle..."
+                className="flex-1 bg-transparent px-2 py-1.5 text-[14px] text-ink placeholder:text-ink-muted focus:outline-none"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submit();
+                  }
+                }}
+              />
+              <button
+                onClick={submit}
+                disabled={!draft.trim()}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-berry-500 text-white disabled:opacity-50 transition-opacity"
+              >
+                <SendIcon className="h-4 w-4 text-plum-500" />
+              </button>
+            </div>
+          )}
         </div>
           </>
         )}

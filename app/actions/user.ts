@@ -127,7 +127,7 @@ export async function getDiscoverUsers(filters?: DiscoverFilters) {
       onboarded: true,
       role: 'member',
       suspended: false
-    }).all()
+    }).limit(300).all()
     
     const excludedSet = new Set(excludedIds);
     let filteredUsers = rawUsers.filter(u => !excludedSet.has(u.id));
@@ -355,7 +355,7 @@ export async function getDiscoverProfiles() {
 
     const users = await db.orm.public.User.where(
       (u) => not(u.id.in(excludedIds))
-    ).all()
+    ).limit(300).all()
     
     // In a real app we'd map this, fetch photos, and calculate vibe match score here.
     return { ok: true, data: users }
@@ -371,12 +371,17 @@ export async function getUserStateAction() {
     if (!session?.userId) return { ok: false, error: 'Unauthorized' }
     const userId = session.userId as string
     
-    const likes = await db.orm.public.Like.where(l => or(l.fromUserId.eq(userId), l.toUserId.eq(userId))).all();
-    const passes = await db.orm.public.Pass.where(p => or(p.userId.eq(userId), p.targetUserId.eq(userId))).all();
-    const heartBucket = await db.orm.public.HeartBucket.where(h => or(h.userId.eq(userId), h.targetUserId.eq(userId))).all();
-    const wingles = await db.orm.public.Wingle.where(w => or(w.fromUserId.eq(userId), w.toUserId.eq(userId))).all();
-    const connections = await db.orm.public.Connection.where(c => or(c.userId1.eq(userId), c.userId2.eq(userId))).all();
-    const blocks = await db.orm.public.Block.where(b => or(b.blockerId.eq(userId), b.blockedUserId.eq(userId))).all();
+    const [likes, passes, heartBucket] = await Promise.all([
+      db.orm.public.Like.where(l => or(l.fromUserId.eq(userId), l.toUserId.eq(userId))).all(),
+      db.orm.public.Pass.where(p => or(p.userId.eq(userId), p.targetUserId.eq(userId))).all(),
+      db.orm.public.HeartBucket.where(h => or(h.userId.eq(userId), h.targetUserId.eq(userId))).all()
+    ]);
+
+    const [wingles, connections, blocks] = await Promise.all([
+      db.orm.public.Wingle.where(w => or(w.fromUserId.eq(userId), w.toUserId.eq(userId))).all(),
+      db.orm.public.Connection.where(c => or(c.userId1.eq(userId), c.userId2.eq(userId))).all(),
+      db.orm.public.Block.where(b => or(b.blockerId.eq(userId), b.blockedUserId.eq(userId))).all()
+    ]);
 
     const relatedUserIds = new Set<string>();
     likes.forEach(l => { relatedUserIds.add(l.fromUserId); relatedUserIds.add(l.toUserId); });

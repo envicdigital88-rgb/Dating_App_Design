@@ -118,6 +118,7 @@ interface StoreValue {
   movePhoto: (photoId: string, direction: -1 | 1) => void;
   // discovery
   discoverFeed: () => User[];
+  isDiscoverFetching: boolean;
   fetchDiscoverUsers: (filters: any) => Promise<void>;
   userById: (userId: string) => User | undefined;
   likeUser: (userId: string) => void;
@@ -429,10 +430,11 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     }
   }, [sessionId]);
 
-  // Fallback polling mechanism to ensure real-time updates if PeerJS fails
+  // Real-time synchronization via Pusher
   useEffect(() => {
     if (!sessionId || !isHydrated) return;
-    const interval = setInterval(() => {
+
+    const fetchState = () => {
       import('@/app/actions/chat').then(({ getConversationsAction }) => {
         import('@/app/actions/user').then(({ getUserStateAction }) => {
           Promise.all([getConversationsAction(), getUserStateAction()]).then(([chatRes, stateRes]) => {
@@ -478,19 +480,16 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
 
               if (stateRes?.ok && stateRes.data) {
                 const now = new Date().getTime();
-                // Match by id if available, otherwise by userId+targetUserId (heartBucket, passes)
                 const isSameItem = (a: any, b: any) => {
                   if (a.id && b.id) return a.id === b.id;
-                  // heartBucket / passes style: userId + targetUserId
                   if (a.userId && a.targetUserId) return a.userId === b.userId && a.targetUserId === b.targetUserId;
                   return false;
                 };
                 const mergeItems = (local: any[], remote: any[]) => {
-                  // Keep local optimistic items that aren't in remote yet
                   const recentLocal = local.filter(m => {
-                    if (remote.some(um => isSameItem(um, m))) return false; // already in DB
+                    if (remote.some(um => isSameItem(um, m))) return false;
                     const age = m.createdAt ? now - new Date(m.createdAt).getTime() : 0;
-                    return age < 60000; // keep for 60 seconds
+                    return age < 60000;
                   });
                   return [...remote, ...recentLocal];
                 };
@@ -521,7 +520,6 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                   changed = true;
                 }
                 
-                // Sync blocks from DB (authoritative — not merged optimistically)
                 const remoteBlocks = (stateRes.data as any).blocks as any[] || [];
                 if (JSON.stringify(d.blocks) !== JSON.stringify(remoteBlocks)) {
                   nextDb.blocks = remoteBlocks;
@@ -558,9 +556,29 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
           }).catch(console.error);
         });
       });
-    }, 5000); // Poll every 5 seconds
+    };
 
-    return () => clearInterval(interval);
+    // Initial fetch to ensure we're synced up when component mounts
+    fetchState();
+
+    // Subscribe to Pusher channel for real-time events
+    import('@/lib/pusher-client').then(({ pusherClient }) => {
+      const channel = pusherClient.subscribe(`private-user-${sessionId}`);
+      
+      channel.bind('new-mingle', () => {
+        fetchState();
+      });
+
+      channel.bind('state-changed', () => {
+        fetchState();
+      });
+    });
+
+    return () => {
+      import('@/lib/pusher-client').then(({ pusherClient }) => {
+        pusherClient.unsubscribe(`private-user-${sessionId}`);
+      });
+    };
   }, [sessionId, isHydrated]);
 
   useEffect(() => {
@@ -1093,7 +1111,10 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
 
   /* ----------------------------------------------------------- discovery */
   
+  const [isDiscoverFetching, setIsDiscoverFetching] = useState(false);
+
   const fetchDiscoverUsers = useCallback<StoreValue['fetchDiscoverUsers']>(async (filters) => {
+    setIsDiscoverFetching(true);
     try {
       const { getDiscoverUsers } = await import('@/app/actions/user');
       const res = await getDiscoverUsers(filters);
@@ -1124,6 +1145,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       }
     } catch (err) {
       console.error('Failed to fetch filtered discover users', err);
+    } finally {
+      setIsDiscoverFetching(false);
     }
   }, []);
 
@@ -2166,6 +2189,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     setPrimaryPhoto,
     movePhoto,
     discoverFeed,
+    isDiscoverFetching,
     fetchDiscoverUsers,
     userById,
     likeUser,

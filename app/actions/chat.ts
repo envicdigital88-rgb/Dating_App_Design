@@ -48,15 +48,22 @@ export async function sendMingleAction(conversationId: string, body: string, ima
       lastMingleAt: Temporal.Now.instant()
     })
 
+    const formattedMingle = {
+      ...mingle,
+      createdAt: mingle.createdAt.toString(),
+      readAt: mingle.readAt ? mingle.readAt.toString() : null,
+      deliveredAt: mingle.deliveredAt ? mingle.deliveredAt.toString() : null,
+      reactions: mingle.reactions ? (mingle.reactions as any) : null
+    };
+
+    if (otherId) {
+      const { pusherServer } = await import('@/lib/pusher');
+      await pusherServer.trigger(`private-user-${otherId}`, 'new-mingle', formattedMingle).catch(console.error);
+    }
+
     return { 
       ok: true, 
-      data: {
-        ...mingle,
-        createdAt: mingle.createdAt.toString(),
-        readAt: mingle.readAt ? mingle.readAt.toString() : null,
-        deliveredAt: mingle.deliveredAt ? mingle.deliveredAt.toString() : null,
-        reactions: mingle.reactions ? (mingle.reactions as any) : null
-      } 
+      data: formattedMingle
     }
   } catch (err) {
     console.error('sendMingleAction error:', err)
@@ -74,6 +81,13 @@ export async function markConversationReadAction(conversationId: string) {
     await db.orm.public.Mingle.where((m) =>
       and(m.conversationId.eq(conversationId), m.senderId.neq(userId), m.readAt.isNull())
     ).update({ readAt: Temporal.Now.instant() })
+
+    const conv = await db.orm.public.Conversation.where({ id: conversationId }).first();
+    if (conv) {
+      const otherId = conv.userId1 === userId ? conv.userId2 : conv.userId1;
+      const { pusherServer } = await import('@/lib/pusher');
+      await pusherServer.trigger(`private-user-${otherId}`, 'state-changed', {}).catch(console.error);
+    }
 
     return { ok: true }
   } catch (err) {
@@ -143,6 +157,13 @@ export async function deleteMingleAction(mingleId: string, type: 'me' | 'everyon
           deletedFor: [...deletedFor, userId]
         })
       }
+    }
+
+    const conv = await db.orm.public.Conversation.where({ id: mingle.conversationId }).first();
+    if (conv) {
+      const otherId = conv.userId1 === userId ? conv.userId2 : conv.userId1;
+      const { pusherServer } = await import('@/lib/pusher');
+      await pusherServer.trigger(`private-user-${otherId}`, 'state-changed', {}).catch(console.error);
     }
 
     return { ok: true }

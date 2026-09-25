@@ -68,6 +68,9 @@ export async function likeUser(targetUserId: string) {
       }
     }
 
+    const { pusherServer } = await import('@/lib/pusher');
+    await pusherServer.trigger(`private-user-${targetUserId}`, 'state-changed', {}).catch(console.error);
+
     return { ok: true, matched: false }
   } catch (err) {
     console.error('likeUser error:', err)
@@ -88,6 +91,9 @@ export async function unlikeUserAction(targetUserId: string) {
     }
 
     await db.orm.public.Like.where({ id: existingLike.id }).delete()
+
+    const { pusherServer } = await import('@/lib/pusher');
+    await pusherServer.trigger(`private-user-${targetUserId}`, 'state-changed', {}).catch(console.error);
 
     // We keep the connections/conversations intact in case they had a match, but we could also delete them if we wanted to fully "unmatch"
     // For now, unlike just removes the like record.
@@ -129,6 +135,9 @@ export async function passUser(targetUserId: string) {
       targetUserId,
     })
 
+    const { pusherServer } = await import('@/lib/pusher');
+    await pusherServer.trigger(`private-user-${targetUserId}`, 'state-changed', {}).catch(console.error);
+
     return { ok: true }
   } catch (err) {
     console.error('passUser error:', err)
@@ -157,6 +166,9 @@ export async function addToHeartBucketAction(targetUserId: string) {
       userId,
       targetUserId,
     })
+
+    const { pusherServer } = await import('@/lib/pusher');
+    await pusherServer.trigger(`private-user-${targetUserId}`, 'state-changed', {}).catch(console.error);
 
     return { ok: true }
   } catch (err) {

@@ -135,7 +135,7 @@ function FilterPanel({ filters, onChange, onClose, activeCount }: {
 
 export function Discover() {
   const router = useRouter();
-  const { discoverFeed, fetchDiscoverUsers, entitlements, likeUser, passUser, hasLiked, photosOf, wingleStatusWith, currentUser, addToHeartBucket, heartBucketOf } = useStore();
+  const { discoverFeed, isDiscoverFetching, fetchDiscoverUsers, entitlements, likeUser, passUser, hasLiked, photosOf, wingleStatusWith, currentUser, addToHeartBucket, heartBucketOf } = useStore();
 
   const [tab, setTab] = useState<'nearby' | 'daily5'>('nearby');
   const [index, setIndex] = useState(0);
@@ -279,7 +279,24 @@ export function Discover() {
 
           {/* Card */}
           <div className="mx-auto w-full max-w-xl sm:max-w-2xl lg:max-w-none lg:mx-0">
-            {feed.length === 0 ? (
+            {isDiscoverFetching ? (
+              <div className="relative w-full overflow-hidden rounded-[32px] bg-white shadow-card ring-1 ring-sand/40 p-4 h-[700px] flex flex-col justify-end">
+                <Skeleton className="absolute inset-0 bg-sand/30" />
+                <div className="relative z-10 w-full rounded-3xl bg-white/80 p-5 backdrop-blur-md">
+                   <Skeleton className="h-8 w-3/4 rounded-full mb-3" />
+                   <Skeleton className="h-4 w-1/2 rounded-full mb-6" />
+                   <div className="flex gap-2 mb-6">
+                      <Skeleton className="h-8 w-24 rounded-full" />
+                      <Skeleton className="h-8 w-24 rounded-full" />
+                   </div>
+                   <div className="flex gap-4 items-center justify-center">
+                      <Skeleton className="h-16 w-16 rounded-full" />
+                      <Skeleton className="h-14 w-14 rounded-full" />
+                      <Skeleton className="h-16 w-16 rounded-full" />
+                   </div>
+                </div>
+              </div>
+            ) : feed.length === 0 ? (
               <EmptyState icon={<SlidersHorizontalIcon className="h-5 w-5" />}
                 title={activeFilterCount > 0 ? "No profiles match your filters" : (tab === 'nearby' ? "That is everyone for now" : "No Daily 5 available")}
                 body={activeFilterCount > 0 ? "Try adjusting your filters to see more people." : "You have been through every profile in your area."}
