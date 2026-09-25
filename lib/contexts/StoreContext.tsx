@@ -1089,7 +1089,9 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   const discoverFeed = useCallback<StoreValue['discoverFeed']>(() => {
     if (!sessionId) return [];
     const blocked = new Set(
-      db.blocks.filter((b) => b.blockerId === sessionId).map((b) => b.blockedUserId)
+      db.blocks
+        .filter((b) => b.blockerId === sessionId || b.blockedUserId === sessionId)
+        .map((b) => (b.blockerId === sessionId ? b.blockedUserId : b.blockerId))
     );
     const tenDaysAgo = new Date();
     tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);

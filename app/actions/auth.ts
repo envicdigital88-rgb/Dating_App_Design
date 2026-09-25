@@ -143,6 +143,10 @@ export async function googleAuthAction(credential: string) {
     const { email, name, picture } = payload;
     let user = await db.orm.public.User.where({ email }).first();
 
+    if (user && user.suspended) {
+      return { ok: false, error: "Your account has been suspended due to community reports." }
+    }
+
     const role = email === 'envicdigital88@gmail.com' ? 'admin' : 'member';
 
     if (!user) {

@@ -55,6 +55,8 @@ export function Chat() {
     userById,
     photosOf,
     blockUser,
+    unblockUser,
+    isBlocked,
     typingIn,
     conversationsOf
   } = useStore();
@@ -445,7 +447,16 @@ export function Chat() {
       </div>
 
       {/* Input Area */}
-      {limitReached ? (
+      {otherId && isBlocked(otherId) ? (
+        <div className="border-t border-sand/70 bg-cream-deep px-4 py-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
+          <div className="mx-auto flex max-w-2xl flex-col items-center justify-center gap-2 rounded-4xl bg-sand/30 p-5 text-ink text-center">
+            <p className="text-[14px]">You blocked this contact.</p>
+            <Button variant="outline" size="sm" onClick={() => unblockUser(otherId)}>
+              Unblock
+            </Button>
+          </div>
+        </div>
+      ) : limitReached ? (
         <div className="border-t border-sand/70 bg-cream-deep px-4 py-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
           <div className="mx-auto flex max-w-2xl flex-wrap items-center gap-4 rounded-4xl bg-plum-500 p-5 text-cream">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cream/15">

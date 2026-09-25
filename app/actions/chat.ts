@@ -18,6 +18,19 @@ export async function sendMingleAction(conversationId: string, body: string, ima
       return { ok: false, error: 'Conversation not found' }
     }
 
+    const otherId = conv.userId1 === senderId ? conv.userId2 : conv.userId1
+    if (otherId) {
+      const blocked = await db.orm.public.Block.where((b) => 
+        or(
+          and(b.blockerId.eq(senderId), b.blockedUserId.eq(otherId)),
+          and(b.blockerId.eq(otherId), b.blockedUserId.eq(senderId))
+        )
+      ).first()
+      if (blocked) {
+        return { ok: false, error: 'Cannot send message to this user' }
+      }
+    }
+
     const data: any = {
       conversationId,
       senderId,
