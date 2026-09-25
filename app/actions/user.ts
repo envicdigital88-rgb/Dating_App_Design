@@ -374,14 +374,22 @@ export async function getUserStateAction() {
       passes, 
       heartBucket, 
       wingles, 
-      connections
+      connections,
+      blocksMade,
+      blocksReceived
     ] = await Promise.all([
       db.orm.public.Like.where(l => or(l.fromUserId.eq(userId), l.toUserId.eq(userId))).all(),
       db.orm.public.Pass.where(p => or(p.userId.eq(userId), p.targetUserId.eq(userId))).all(),
       db.orm.public.HeartBucket.where(h => or(h.userId.eq(userId), h.targetUserId.eq(userId))).all(),
       db.orm.public.Wingle.where(w => or(w.fromUserId.eq(userId), w.toUserId.eq(userId))).all(),
-      db.orm.public.Connection.where(c => or(c.userId1.eq(userId), c.userId2.eq(userId))).all()
+      db.orm.public.Connection.where(c => or(c.userId1.eq(userId), c.userId2.eq(userId))).all(),
+      db.orm.public.Block.where(b => b.blockerId.eq(userId)).all(),
+      db.orm.public.Block.where(b => b.blockedUserId.eq(userId)).all()
     ]);
+    
+    const blocks = [...blocksMade, ...blocksReceived].filter(
+      (b, i, arr) => arr.findIndex(x => x.id === b.id) === i
+    );
 
     const relatedUserIds = new Set<string>();
     likes.forEach(l => { relatedUserIds.add(l.fromUserId); relatedUserIds.add(l.toUserId); });
@@ -427,6 +435,7 @@ export async function getUserStateAction() {
         userIds: [c.userId1, c.userId2],
         createdAt: c.createdAt.toString()
       })),
+      blocks: blocks.map(b => ({ ...b, createdAt: b.createdAt.toString() })),
       relatedUsers: mappedRelatedUsers
     };
 

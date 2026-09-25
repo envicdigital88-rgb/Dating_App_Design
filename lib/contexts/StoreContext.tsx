@@ -343,6 +343,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                     let newHeartBucket = d.heartBucket;
                     let newWingles = d.wingles;
                     let newConns = d.connections;
+                    let newBlocks = d.blocks;
                     let newSecretWingles = d.secretWingles;
                     const allUsers = [...d.users];
                     const allPhotos = [...d.photos];
@@ -353,6 +354,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                       newHeartBucket = stateRes.data.heartBucket as any[];
                       newWingles = stateRes.data.wingles as any[];
                       newConns = stateRes.data.connections as any[];
+                      newBlocks = (stateRes.data as any).blocks as any[] || d.blocks;
                       
                       if (stateRes.data.relatedUsers) {
                         const relatedUsers = stateRes.data.relatedUsers as any[];
@@ -393,6 +395,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                       heartBucket: newHeartBucket,
                       wingles: newWingles,
                       connections: newConns,
+                      blocks: newBlocks,
                       secretWingles: newSecretWingles
                     };
                   });
@@ -515,6 +518,13 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                 const newHeartBucket = mergeItems(d.heartBucket, stateRes.data.heartBucket as any[]);
                 if (d.heartBucket.length !== newHeartBucket.length || JSON.stringify(d.heartBucket) !== JSON.stringify(newHeartBucket)) {
                   nextDb.heartBucket = newHeartBucket;
+                  changed = true;
+                }
+                
+                // Sync blocks from DB (authoritative — not merged optimistically)
+                const remoteBlocks = (stateRes.data as any).blocks as any[] || [];
+                if (JSON.stringify(d.blocks) !== JSON.stringify(remoteBlocks)) {
+                  nextDb.blocks = remoteBlocks;
                   changed = true;
                 }
                 
