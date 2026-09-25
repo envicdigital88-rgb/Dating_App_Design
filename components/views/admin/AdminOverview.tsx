@@ -3,12 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { AdminHeader, StatTile } from './AdminShell';
 import { Badge } from '@/components/ui/Bits';
-import { useStore } from '@/lib/contexts/StoreContext';
 import { money, relativeTime } from '@/lib/utils/format';
 import { getAdminOverviewStatsAction } from '@/app/actions/admin';
 
 interface AdminStats {
   totalMembers: number;
+  womenCount: number;
+  menCount: number;
+  nonBinaryCount: number;
   newThisMonth: number;
   activeToday: number;
   revenue: number;
@@ -32,64 +34,8 @@ interface AdminStats {
     toUserName: string;
   }[];
 }
-
 export function AdminOverview() {
-  const { db } = useStore();
-
-  const [stats, setStats] = useState<AdminStats>(() => {
-    const members = db.users.filter((u) => u.role === 'member');
-    const activeToday = members.filter(
-      (u) => Date.now() - new Date(u.lastActiveAt).getTime() < 86_400_000
-    );
-    const newThisMonth = members.filter(
-      (u) => Date.now() - new Date(u.createdAt).getTime() < 30 * 86_400_000
-    );
-    const acceptedWingles = db.wingles.filter((r) => r.status === 'accepted');
-    const succeeded = db.payments.filter((p) => p.status === 'succeeded');
-    const revenue = succeeded.reduce((total, p) => total + p.amount, 0);
-    const activeSubs = db.subscriptions.filter(
-      (s) => s.status === 'active' && new Date(s.expiresAt) > new Date()
-    );
-
-    const popular = db.packages.
-    map((pkg) => ({
-      pkg,
-      count: succeeded.filter((p) => p.packageId === pkg.id).length
-    })).
-    sort((a, b) => b.count - a.count);
-
-    const latestWingles = [...db.wingles].
-    sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).
-    slice(0, 6).
-    map((wingle) => {
-      const from = db.users.find((u) => u.id === wingle.fromUserId);
-      const to = db.users.find((u) => u.id === wingle.toUserId);
-      return {
-        id: wingle.id,
-        createdAt: wingle.createdAt,
-        status: wingle.status,
-        fromUserName: from?.name ?? 'Member',
-        toUserName: to?.name ?? 'Member'
-      };
-    });
-
-    return {
-      totalMembers: members.length,
-      newThisMonth: newThisMonth.length,
-      activeToday: activeToday.length,
-      revenue,
-      succeededCount: succeeded.length,
-      activeSubs: activeSubs.length,
-      totalWingles: db.wingles.length,
-      acceptedWingles: acceptedWingles.length,
-      minglesCount: db.mingles.length,
-      connectionsCount: db.connections.length,
-      openReports: db.reports.filter((r) => r.status === 'open').length,
-      totalReports: db.reports.length,
-      popular,
-      latestWingles
-    };
-  });
+  const [stats, setStats] = useState<AdminStats | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -97,12 +43,7 @@ export function AdminOverview() {
       const res = await getAdminOverviewStatsAction();
       if (res.ok && res.data && mounted) {
         const d = res.data;
-        const activeToday = d.users.filter(
-          (u: any) => Date.now() - new Date(u.lastActiveAt).getTime() < 86_400_000
-        ).length;
-        const newThisMonth = d.users.filter(
-          (u: any) => Date.now() - new Date(u.createdAt).getTime() < 30 * 86_400_000
-        ).length;
+
         const acceptedWingles = d.wingles.filter((w: any) => w.status === 'accepted').length;
         const succeeded = d.payments.filter((p: any) => p.status === 'succeeded');
         const revenue = succeeded.reduce((t: number, p: any) => t + p.amount, 0);
@@ -116,9 +57,12 @@ export function AdminOverview() {
         })).sort((a: any, b: any) => b.count - a.count);
 
         setStats({
-          totalMembers: d.users.length,
-          newThisMonth,
-          activeToday,
+          totalMembers: d.totalMembers,
+          womenCount: d.womenCount,
+          menCount: d.menCount,
+          nonBinaryCount: d.nonBinaryCount,
+          newThisMonth: d.newThisMonth,
+          activeToday: d.activeToday,
           revenue,
           succeededCount: succeeded.length,
           activeSubs,
@@ -142,6 +86,19 @@ export function AdminOverview() {
     };
   }, []);
 
+  if (!stats) {
+    return (
+      <div>
+        <AdminHeader
+          title="Overview"
+          body="Live platform activity. Real-time updates active." />
+        <div className="flex h-64 items-center justify-center text-[14px] text-ink-soft">
+          Loading live data...
+        </div>
+      </div>
+    );
+  }
+
   const maxCount = Math.max(1, ...stats.popular.map((p: any) => p.count));
 
   return (
@@ -152,7 +109,7 @@ export function AdminOverview() {
       
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatTile label="Total members" value={stats.totalMembers} hint={`${stats.newThisMonth} new this month`} />
+        <StatTile label="Total members" value={stats.totalMembers} hint={`${stats.womenCount} women · ${stats.menCount} men${stats.nonBinaryCount > 0 ? ` · ${stats.nonBinaryCount} NB` : ''}`} />
         <StatTile label="Active in last 24h" value={stats.activeToday} />
         <StatTile
           label="Revenue"

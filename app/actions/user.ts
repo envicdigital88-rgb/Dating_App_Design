@@ -284,3 +284,54 @@ export async function getUserStateAction() {
     return { ok: false, error: 'Failed to fetch user state' }
   }
 }
+
+export async function addPhotoAction(url: string) {
+  try {
+    const session = await getSession();
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
+    const userId = session.userId as string;
+
+    const existingCount = await db.orm.public.Photo.where({ userId }).aggregate(a => ({ count: a.count() })).then(r => r.count);
+    const photo = await db.orm.public.Photo.create({
+      userId,
+      url,
+      order: existingCount,
+      isPrimary: existingCount === 0,
+      moderation: 'pending',
+    });
+
+    return { ok: true, data: { ...photo, uploadedAt: photo.uploadedAt.toString() } };
+  } catch (err) {
+    return { ok: false, error: 'Failed to add photo' };
+  }
+}
+
+export async function deletePhotoAction(photoId: string) {
+  try {
+    const session = await getSession();
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
+    
+    await db.orm.public.Photo.where({ id: photoId, userId: session.userId as string }).delete();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: 'Failed to delete photo' };
+  }
+}
+
+export async function updatePhotosOrderAction(orderedPhotoIds: string[], primaryPhotoId: string) {
+  try {
+    const session = await getSession();
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
+    
+    await Promise.all(orderedPhotoIds.map((id, index) => 
+      db.orm.public.Photo.where({ id, userId: session.userId as string }).update({
+        order: index,
+        isPrimary: id === primaryPhotoId
+      })
+    ));
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: 'Failed to update photos order' };
+  }
+}
+

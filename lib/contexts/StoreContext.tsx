@@ -809,28 +809,44 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   );
 
   const addPhoto = useCallback<StoreValue['addPhoto']>((url) => {
+    const tempId = makeId('ph');
     setDb((d) => {
       const uid = sessionIdRef.current as string;
       const mine = d.photos.filter((p) => p.userId === uid);
       return {
         ...d,
         photos: [
-        ...d.photos,
-        {
-          id: makeId('ph'),
-          userId: uid,
-          url,
-          order: mine.length,
-          isPrimary: mine.length === 0,
-          moderation: 'pending',
-          uploadedAt: new Date().toISOString()
-        }]
-
+          ...d.photos,
+          {
+            id: tempId,
+            userId: uid,
+            url,
+            order: mine.length,
+            isPrimary: mine.length === 0,
+            moderation: 'pending',
+            uploadedAt: new Date().toISOString()
+          }
+        ]
       };
+    });
+    
+    import('@/app/actions/user').then(({ addPhotoAction }) => {
+      addPhotoAction(url).then(res => {
+        if (res.ok && res.data) {
+          setDb(d => ({
+            ...d,
+            photos: d.photos.map(p => p.id === tempId ? { ...res.data, moderation: res.data!.moderation as any } : p)
+          }));
+        }
+      });
     });
   }, []);
 
   const deletePhoto = useCallback<StoreValue['deletePhoto']>((photoId) => {
+    import('@/app/actions/user').then(({ deletePhotoAction }) => {
+      deletePhotoAction(photoId).catch(console.error);
+    });
+
     setDb((d) => {
       const target = d.photos.find((p) => p.id === photoId);
       if (!target) return d;
@@ -838,6 +854,14 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       filter((p) => p.userId === target.userId && p.id !== photoId).
       sort((a, b) => a.order - b.order).
       map((p, i) => ({ ...p, order: i, isPrimary: target.isPrimary ? i === 0 : p.isPrimary }));
+      
+      const primaryId = mine.find(p => p.isPrimary)?.id;
+      if (primaryId) {
+        import('@/app/actions/user').then(({ updatePhotosOrderAction }) => {
+          updatePhotosOrderAction(mine.map(p => p.id), primaryId).catch(console.error);
+        });
+      }
+      
       return { ...d, photos: [...d.photos.filter((p) => p.userId !== target.userId), ...mine] };
     });
   }, []);
@@ -846,11 +870,18 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     setDb((d) => {
       const target = d.photos.find((p) => p.id === photoId);
       if (!target) return d;
+      const newPhotos = d.photos.map((p) =>
+        p.userId === target.userId ? { ...p, isPrimary: p.id === photoId } : p
+      );
+      
+      const mine = newPhotos.filter((p) => p.userId === target.userId).sort((a, b) => a.order - b.order);
+      import('@/app/actions/user').then(({ updatePhotosOrderAction }) => {
+        updatePhotosOrderAction(mine.map(p => p.id), photoId).catch(console.error);
+      });
+      
       return {
         ...d,
-        photos: d.photos.map((p) =>
-        p.userId === target.userId ? { ...p, isPrimary: p.id === photoId } : p
-        )
+        photos: newPhotos
       };
     });
   }, []);
@@ -868,6 +899,14 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       const reordered = [...mine];
       [reordered[index], reordered[swapWith]] = [reordered[swapWith], reordered[index]];
       const orderMap = new Map(reordered.map((p, i) => [p.id, i]));
+      
+      const primaryId = reordered.find(p => p.isPrimary)?.id;
+      if (primaryId) {
+        import('@/app/actions/user').then(({ updatePhotosOrderAction }) => {
+          updatePhotosOrderAction(reordered.map(p => p.id), primaryId).catch(console.error);
+        });
+      }
+      
       return {
         ...d,
         photos: d.photos.map((p) => orderMap.has(p.id) ? { ...p, order: orderMap.get(p.id) as number } : p)
@@ -1777,6 +1816,9 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   }, []);
 
   const moderatePhoto = useCallback<StoreValue['moderatePhoto']>((photoId, state) => {
+    import('@/app/actions/admin').then(({ moderatePhotoAction }) => {
+      moderatePhotoAction(photoId, state).catch(console.error);
+    });
     setDb((d) => ({
       ...d,
       photos: d.photos.map((p) => p.id === photoId ? { ...p, moderation: state } : p)
@@ -1784,6 +1826,9 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   }, []);
 
   const resolveReport = useCallback<StoreValue['resolveReport']>((reportId, status) => {
+    import('@/app/actions/admin').then(({ resolveReportAction }) => {
+      resolveReportAction(reportId, status).catch(console.error);
+    });
     setDb((d) => ({
       ...d,
       reports: d.reports.map((r) => r.id === reportId ? { ...r, status } : r)
