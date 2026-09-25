@@ -21,6 +21,12 @@ export async function reportUserAction(targetUserId: string, reason: string, det
       status: 'open',
     })
 
+    // Check if user has 5 or more reports and suspend them if so
+    const reportCount = await db.orm.public.Report.where({ targetUserId }).count()
+    if (Number(reportCount) >= 5) {
+      await db.orm.public.User.where({ id: targetUserId }).update({ suspended: true })
+    }
+
     return { ok: true }
   } catch (err) {
     console.error('reportUser error:', err)

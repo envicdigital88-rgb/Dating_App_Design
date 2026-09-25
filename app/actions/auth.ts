@@ -101,7 +101,7 @@ export async function loginUser(formData: FormData) {
     }
 
     if (user.suspended) {
-      return { ok: false, error: "Your account has been suspended." }
+      return { ok: false, error: "Your account has been suspended due to community reports." }
     }
 
     // Update last active

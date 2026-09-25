@@ -30,7 +30,7 @@ export function ReportDialog({
 
 
 }: {open: boolean;onClose: () => void;userId: string;userName: string;context?: Report['context'];}) {
-  const { reportUser } = useStore();
+  const { reportUser, blockUser } = useStore();
   const [reason, setReason] = useState(reasons[0]);
   const [customReason, setCustomReason] = useState('');
   const [detail, setDetail] = useState('');
@@ -49,12 +49,15 @@ export function ReportDialog({
           <Button
           variant="danger"
           onClick={() => {
-            const finalReason = reason === 'Something else' ? (customReason || 'Other') : reason;
-            reportUser(userId, finalReason, detail, context);
-            setDetail('');
-            setCustomReason('');
-            onClose();
-            toast.success('Report sent to moderation');
+            if (window.confirm("Reporting this user will also block them. Are you sure you want to proceed?")) {
+              const finalReason = reason === 'Something else' ? (customReason || 'Other') : reason;
+              reportUser(userId, finalReason, detail, context);
+              blockUser(userId);
+              setDetail('');
+              setCustomReason('');
+              onClose();
+              toast.success('User reported and blocked');
+            }
           }}>
           
             Send report
