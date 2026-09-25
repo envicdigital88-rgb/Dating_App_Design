@@ -105,14 +105,10 @@ export async function getDiscoverUsers(filters?: DiscoverFilters) {
     if (!session?.userId) return { ok: false, error: 'Unauthorized', data: [] }
     const userId = session.userId as string
     
-    // Run all exclusion queries in parallel
-    const [likes, passes, heartBucket, blocksMade, blocksReceived] = await Promise.all([
-      db.orm.public.Like.where({ fromUserId: userId }).all(),
-      db.orm.public.Pass.where({ userId }).all(),
-      db.orm.public.HeartBucket.where({ userId }).all(),
-      db.orm.public.Block.where({ blockerId: userId }).all(),
-      db.orm.public.Block.where({ blockedUserId: userId }).all(),
-    ]);
+    const likes = await db.orm.public.Like.where({ fromUserId: userId }).all();
+    const passes = await db.orm.public.Pass.where({ userId }).all();
+    const heartBucket = await db.orm.public.HeartBucket.where({ userId }).all();
+    const blocks = await db.orm.public.Block.where((b) => or(b.blockerId.eq(userId), b.blockedUserId.eq(userId))).all();
     
     const tenDaysAgo = new Date();
     tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
@@ -123,8 +119,7 @@ export async function getDiscoverUsers(filters?: DiscoverFilters) {
       ...likes.map((l: any) => l.toUserId),
       ...recentPasses.map((p: any) => p.targetUserId),
       ...heartBucket.map((h: any) => h.targetUserId),
-      ...blocksMade.map((b: any) => b.blockedUserId),
-      ...blocksReceived.map((b: any) => b.blockerId)
+      ...blocks.map((b: any) => b.blockerId === userId ? b.blockedUserId : b.blockerId)
     ]
     
     // Fetch users only (no includes) - much faster
@@ -240,16 +235,20 @@ export async function updateUserProfileAction(data: {
 
     if (photoUrls && photoUrls.length > 0) {
       await db.orm.public.Photo.where({ userId }).delete();
-      await Promise.all(photoUrls.map((url, index) => db.orm.public.Photo.create({
-        userId, url, order: index, isPrimary: index === 0, moderation: 'approved',
-      })));
+      for (let index = 0; index < photoUrls.length; index++) {
+        await db.orm.public.Photo.create({
+          userId, url: photoUrls[index], order: index, isPrimary: index === 0, moderation: 'approved',
+        });
+      }
     }
 
     if (prompts && prompts.length > 0) {
       await db.orm.public.Prompt.where({ userId }).delete();
-      await Promise.all(prompts.map(p => db.orm.public.Prompt.create({
-        userId, question: p.question, answer: p.answer,
-      })));
+      for (const p of prompts) {
+        await db.orm.public.Prompt.create({
+          userId, question: p.question, answer: p.answer,
+        });
+      }
     }
 
     const updatedUser = await db.orm.public.User.where({ id: userId }).include('photos').include('prompts').first();
@@ -303,7 +302,9 @@ export async function completeUserOnboarding(data: any) {
       }));
       // Prisma 8 array insert
       if (promptsToInsert.length > 0) {
-        await Promise.all(promptsToInsert.map((prompt: any) => db.orm.public.Prompt.create(prompt)));
+        for (const prompt of promptsToInsert) {
+          await db.orm.public.Prompt.create(prompt);
+        }
       }
     }
 
@@ -318,8 +319,9 @@ export async function completeUserOnboarding(data: any) {
         moderation: 'approved',
         // Omitting uploadedAt as the DB handles it with a default expression
       }));
-      // Use ORM to create multiple photos
-      await Promise.all(photosToInsert.map((photo: any) => db.orm.public.Photo.create(photo)));
+      for (const photo of photosToInsert) {
+        await db.orm.public.Photo.create(photo);
+      }
     }
 
     return { ok: true }
@@ -369,27 +371,12 @@ export async function getUserStateAction() {
     if (!session?.userId) return { ok: false, error: 'Unauthorized' }
     const userId = session.userId as string
     
-    const [
-      likes, 
-      passes, 
-      heartBucket, 
-      wingles, 
-      connections,
-      blocksMade,
-      blocksReceived
-    ] = await Promise.all([
-      db.orm.public.Like.where(l => or(l.fromUserId.eq(userId), l.toUserId.eq(userId))).all(),
-      db.orm.public.Pass.where(p => or(p.userId.eq(userId), p.targetUserId.eq(userId))).all(),
-      db.orm.public.HeartBucket.where(h => or(h.userId.eq(userId), h.targetUserId.eq(userId))).all(),
-      db.orm.public.Wingle.where(w => or(w.fromUserId.eq(userId), w.toUserId.eq(userId))).all(),
-      db.orm.public.Connection.where(c => or(c.userId1.eq(userId), c.userId2.eq(userId))).all(),
-      db.orm.public.Block.where(b => b.blockerId.eq(userId)).all(),
-      db.orm.public.Block.where(b => b.blockedUserId.eq(userId)).all()
-    ]);
-    
-    const blocks = [...blocksMade, ...blocksReceived].filter(
-      (b, i, arr) => arr.findIndex(x => x.id === b.id) === i
-    );
+    const likes = await db.orm.public.Like.where(l => or(l.fromUserId.eq(userId), l.toUserId.eq(userId))).all();
+    const passes = await db.orm.public.Pass.where(p => or(p.userId.eq(userId), p.targetUserId.eq(userId))).all();
+    const heartBucket = await db.orm.public.HeartBucket.where(h => or(h.userId.eq(userId), h.targetUserId.eq(userId))).all();
+    const wingles = await db.orm.public.Wingle.where(w => or(w.fromUserId.eq(userId), w.toUserId.eq(userId))).all();
+    const connections = await db.orm.public.Connection.where(c => or(c.userId1.eq(userId), c.userId2.eq(userId))).all();
+    const blocks = await db.orm.public.Block.where(b => or(b.blockerId.eq(userId), b.blockedUserId.eq(userId))).all();
 
     const relatedUserIds = new Set<string>();
     likes.forEach(l => { relatedUserIds.add(l.fromUserId); relatedUserIds.add(l.toUserId); });

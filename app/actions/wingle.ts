@@ -156,7 +156,9 @@ export async function getReceivedSecretWinglesAction() {
     }
 
     const sendersIds = Array.from(new Set(secretWingles.map(sw => sw.senderId)));
-    const senders = await Promise.all(sendersIds.map(id => db.orm.public.User.where({ id }).first()));
+    const senders = sendersIds.length > 0 
+      ? await db.orm.public.User.where(u => u.id.in(sendersIds)).all()
+      : [];
     const validSenders = senders.filter(Boolean);
 
     const populatedSecretWingles = secretWingles.map(sw => {
