@@ -16,9 +16,9 @@ import type { WinglingIntention, Lifestyle } from '@/lib/types';
 
 export function MyProfile() {
   const router = useRouter();
-  const { currentUser, photosOf, updateProfile, entitlements, likesReceived, sentWingles } =
+  const { db, currentUser, photosOf, updateProfile, entitlements, likesReceived, sentWingles, userById, unblockUser } =
   useStore();
-  const [editing, setEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'profile' | 'edit' | 'blocked'>('profile');
   const [draft, setDraft] = useState({
     name: currentUser?.name ?? '',
     location: currentUser?.location ?? '',
@@ -39,6 +39,7 @@ export function MyProfile() {
   if (!currentUser || !entitlements) return null;
 
   const photos = photosOf(currentUser.id);
+  const blocked = db.blocks.filter((b) => b.blockerId === currentUser.id);
 
   const save = () => {
     updateProfile({
@@ -49,7 +50,7 @@ export function MyProfile() {
       interests: draft.interests,
       lifestyle: draft.lifestyle
     });
-    setEditing(false);
+    setActiveTab('profile');
     toast.success('Profile updated');
   };
 
@@ -59,26 +60,44 @@ export function MyProfile() {
         title="My profile"
         body="This is what other members see. Keep it current — active, complete profiles get far more wingles."
         action={
-        <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => router.push('/photos')}>
               <ImageIcon className="h-4 w-4" />
               Photos
             </Button>
-            <Button onClick={() => setEditing((e) => !e)}>
-              {editing ?
-            <>
+            <Button variant="outline" onClick={() => setActiveTab(t => t === 'blocked' ? 'profile' : 'blocked')}>
+              {activeTab === 'blocked' ? (
+                <>
                   <EyeIcon className="h-4 w-4" />
                   Preview
-                </> :
-
-            <>
+                </>
+              ) : (
+                <>
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-sand/30">
+                    <svg className="h-2.5 w-2.5 text-ink" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                  </span>
+                  Blocked
+                </>
+              )}
+            </Button>
+            <Button onClick={() => setActiveTab(t => t === 'edit' ? 'profile' : 'edit')}>
+              {activeTab === 'edit' ? (
+                <>
+                  <EyeIcon className="h-4 w-4" />
+                  Preview
+                </>
+              ) : (
+                <>
                   <PencilIcon className="h-4 w-4" />
                   Edit profile
                 </>
-            }
+              )}
             </Button>
           </div>
-        } />
+        }
+      />
       
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:gap-12">
@@ -128,7 +147,7 @@ export function MyProfile() {
         </div>
 
         <div>
-          {editing ?
+          {activeTab === 'edit' ?
           <div className="space-y-5 rounded-4xl bg-cream-deep p-6 shadow-card">
               <div>
                 <Label htmlFor="my-name">Name</Label>
@@ -234,11 +253,35 @@ export function MyProfile() {
               )}
               </div>
               <div className="flex justify-end gap-2 pt-2">
-                <Button variant="ghost" onClick={() => setEditing(false)}>
+                <Button variant="ghost" onClick={() => setActiveTab('profile')}>
                   Cancel
                 </Button>
                 <Button onClick={save}>Save changes</Button>
               </div>
+            </div> : activeTab === 'blocked' ?
+            <div className="space-y-4">
+              <h2 className="font-display text-[24px] text-ink mb-4">Blocked members</h2>
+              {blocked.length === 0 ? (
+                <p className="text-[14px] text-ink-muted">You haven't blocked anyone.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {blocked.map((b) => {
+                    const u = userById(b.blockedUserId);
+                    if (!u) return null;
+                    return (
+                      <li key={b.id} className="flex items-center justify-between rounded-3xl bg-cream-deep p-4 shadow-sm">
+                        <div className="flex items-center gap-3">
+                          <span className="font-medium text-ink">{u.name}</span>
+                          <span className="text-[12px] text-ink-muted">{u.location}</span>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => unblockUser(u.id)}>
+                          Unblock
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div> :
 
           <div>

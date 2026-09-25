@@ -44,7 +44,11 @@ export async function blockUserAction(targetUserId: string) {
     const userId = session.userId as string
 
     // Check if already blocked
-    const existing = await db.orm.public.Block.where({ blockerId: userId, blockedUserId: targetUserId }).first()
+    const existing = await db.orm.public.Block
+      .where((b) => b.blockerId.eq(userId))
+      .where((b) => b.blockedUserId.eq(targetUserId))
+      .first()
+      
     if (existing) {
       return { ok: false, error: 'User is already blocked' }
     }
@@ -55,9 +59,6 @@ export async function blockUserAction(targetUserId: string) {
       blockerId: userId,
       blockedUserId: targetUserId,
     })
-
-    // Also remove from matches/conversations if needed
-    // The query logic handles omitting blocked users, but we could explicitly delete relationships here if we want.
 
     return { ok: true }
   } catch (err) {
@@ -73,9 +74,13 @@ export async function unblockUserAction(targetUserId: string) {
 
     const userId = session.userId as string
 
-    const existing = await db.orm.public.Block.where({ blockerId: userId, blockedUserId: targetUserId }).first()
+    const existing = await db.orm.public.Block
+      .where((b) => b.blockerId.eq(userId))
+      .where((b) => b.blockedUserId.eq(targetUserId))
+      .first()
+      
     if (existing) {
-      await db.orm.public.Block.where({ id: existing.id }).delete()
+      await db.orm.public.Block.where((b) => b.id.eq(existing.id)).delete()
     }
 
     return { ok: true }
