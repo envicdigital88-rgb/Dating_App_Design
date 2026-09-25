@@ -106,10 +106,11 @@ export async function getDiscoverUsers(filters?: DiscoverFilters) {
     const userId = session.userId as string
     
     // Run all exclusion queries in parallel
-    const [likes, passes, heartBucket] = await Promise.all([
+    const [likes, passes, heartBucket, blocks] = await Promise.all([
       db.orm.public.Like.where({ fromUserId: userId }).all(),
       db.orm.public.Pass.where({ userId }).all(),
       db.orm.public.HeartBucket.where({ userId }).all(),
+      db.orm.public.Block.where({ blockerId: userId }).all(),
     ]);
     
     const tenDaysAgo = new Date();
@@ -120,7 +121,8 @@ export async function getDiscoverUsers(filters?: DiscoverFilters) {
       userId,
       ...likes.map((l: any) => l.toUserId),
       ...recentPasses.map((p: any) => p.targetUserId),
-      ...heartBucket.map((h: any) => h.targetUserId)
+      ...heartBucket.map((h: any) => h.targetUserId),
+      ...blocks.map((b: any) => b.blockedUserId)
     ]
     
     // Fetch users only (no includes) - much faster

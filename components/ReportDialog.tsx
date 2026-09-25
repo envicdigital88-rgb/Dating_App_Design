@@ -32,6 +32,7 @@ export function ReportDialog({
 }: {open: boolean;onClose: () => void;userId: string;userName: string;context?: Report['context'];}) {
   const { reportUser } = useStore();
   const [reason, setReason] = useState(reasons[0]);
+  const [customReason, setCustomReason] = useState('');
   const [detail, setDetail] = useState('');
 
   return (
@@ -48,8 +49,10 @@ export function ReportDialog({
           <Button
           variant="danger"
           onClick={() => {
-            reportUser(userId, reason, detail, context);
+            const finalReason = reason === 'Something else' ? (customReason || 'Other') : reason;
+            reportUser(userId, finalReason, detail, context);
             setDetail('');
+            setCustomReason('');
             onClose();
             toast.success('Report sent to moderation');
           }}>
@@ -68,6 +71,19 @@ export function ReportDialog({
             )}
           </Select>
         </div>
+        {reason === 'Something else' && (
+          <div>
+            <Label htmlFor="custom-reason">Please specify</Label>
+            <input
+              id="custom-reason"
+              type="text"
+              value={customReason}
+              onChange={(e) => setCustomReason(e.target.value)}
+              placeholder="Type your reason here..."
+              className="w-full bg-slate-900 border border-slate-800 rounded-lg p-3 text-white placeholder-slate-500 focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50"
+            />
+          </div>
+        )}
         <div>
           <Label htmlFor="report-detail">What happened?</Label>
           <Textarea

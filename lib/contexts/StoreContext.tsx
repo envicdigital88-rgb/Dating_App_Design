@@ -1865,8 +1865,10 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         blockedUserId: userId,
         createdAt: new Date().toISOString()
       }]
-
     }));
+    import('@/app/actions/safety').then(({ blockUserAction }) => {
+      blockUserAction(userId).catch(console.error);
+    });
   }, []);
 
   const unblockUser = useCallback<StoreValue['unblockUser']>((userId) => {
@@ -1876,6 +1878,9 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         (b) => !(b.blockerId === sessionIdRef.current && b.blockedUserId === userId)
       )
     }));
+    import('@/app/actions/safety').then(({ unblockUserAction }) => {
+      unblockUserAction(userId).catch(console.error);
+    });
   }, []);
 
   const isBlocked = useCallback<StoreValue['isBlocked']>(
@@ -1898,8 +1903,10 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         createdAt: new Date().toISOString()
       },
       ...d.reports]
-
     }));
+    import('@/app/actions/safety').then(({ reportUserAction }) => {
+      reportUserAction(userId, reason, detail, context).catch(console.error);
+    });
   }, []);
 
   /* ------------------------------------------------------------ payments */
