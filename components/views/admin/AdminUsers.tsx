@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { Avatar, Badge } from '@/components/ui/Bits';
-import { useStore } from '@/lib/contexts/StoreContext';
 import { relativeTime, shortDate } from '@/lib/utils/format';
 import { getAdminUsersAction, deleteUserAction, setUserSuspendedAction, setUserVerifiedAction } from '@/app/actions/admin';
 import type { User, Photo } from '@/lib/types';
