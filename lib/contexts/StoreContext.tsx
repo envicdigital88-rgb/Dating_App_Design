@@ -117,6 +117,7 @@ interface StoreValue {
   movePhoto: (photoId: string, direction: -1 | 1) => void;
   // discovery
   discoverFeed: () => User[];
+  fetchDiscoverUsers: (filters: any) => Promise<void>;
   userById: (userId: string) => User | undefined;
   likeUser: (userId: string) => void;
   unlikeUser: (userId: string) => void;
@@ -1041,6 +1042,40 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   }, []);
 
   /* ----------------------------------------------------------- discovery */
+  
+  const fetchDiscoverUsers = useCallback<StoreValue['fetchDiscoverUsers']>(async (filters) => {
+    try {
+      const { getDiscoverUsers } = await import('@/app/actions/user');
+      const res = await getDiscoverUsers(filters);
+      if (res?.ok && Array.isArray(res.data)) {
+        const newUsers = res.data as User[];
+        const newPhotos = newUsers.flatMap((u: any) => u.photos || []);
+        
+        setDb(d => {
+          const allUsers = [...d.users];
+          newUsers.forEach(u => {
+            if (u.heartReacts === undefined) {
+              u.heartReacts = ((u.id.charCodeAt(0) + u.id.charCodeAt(u.id.length - 1)) % 50) + 1;
+            }
+            if (!allUsers.find(existing => existing.id === u.id)) {
+              allUsers.push(u);
+            }
+          });
+          
+          const allPhotos = [...d.photos];
+          newPhotos.forEach(p => {
+            if (!allPhotos.find(existing => existing.id === p.id)) {
+              allPhotos.push(p);
+            }
+          });
+          
+          return { ...d, users: allUsers, photos: allPhotos };
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch filtered discover users', err);
+    }
+  }, []);
 
   const userById = useCallback<StoreValue['userById']>(
     (userId) => {
@@ -2072,6 +2107,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     setPrimaryPhoto,
     movePhoto,
     discoverFeed,
+    fetchDiscoverUsers,
     userById,
     likeUser,
     unlikeUser,

@@ -91,7 +91,15 @@ export async function suspendUserAction(targetUserId: string, suspended: boolean
   }
 }
 
-export async function getDiscoverUsers() {
+export interface DiscoverFilters {
+  ageMin: number;
+  ageMax: number;
+  gender: string;
+  intention: string;
+  onlineOnly: boolean;
+}
+
+export async function getDiscoverUsers(filters?: DiscoverFilters) {
   try {
     const session = await getSession()
     if (!session?.userId) return { ok: false, error: 'Unauthorized', data: [] }
@@ -123,7 +131,24 @@ export async function getDiscoverUsers() {
     }).all()
     
     const excludedSet = new Set(excludedIds);
-    const usersWithoutRelations = rawUsers.filter(u => !excludedSet.has(u.id)).slice(0, 20);
+    let filteredUsers = rawUsers.filter(u => !excludedSet.has(u.id));
+
+    if (filters) {
+      filteredUsers = filteredUsers.filter(u => {
+        if (u.age < filters.ageMin || u.age > filters.ageMax) return false;
+        if (filters.gender !== 'any' && u.gender !== filters.gender) return false;
+        if (filters.intention !== 'any' && u.intention !== filters.intention) return false;
+        if (filters.onlineOnly) {
+          // Assume online if lastActiveAt was within last 10 minutes
+          const lastActive = u.lastActiveAt ? new Date(u.lastActiveAt).getTime() : 0;
+          const tenMinsAgo = Date.now() - 10 * 60 * 1000;
+          if (lastActive < tenMinsAgo) return false;
+        }
+        return true;
+      });
+    }
+
+    const usersWithoutRelations = filteredUsers.slice(0, 20);
     const userIds = usersWithoutRelations.map(u => u.id);
 
     if (userIds.length === 0) return { ok: true, data: [] };

@@ -135,7 +135,7 @@ function FilterPanel({ filters, onChange, onClose, activeCount }: {
 
 export function Discover() {
   const router = useRouter();
-  const { discoverFeed, entitlements, likeUser, passUser, hasLiked, photosOf, wingleStatusWith, currentUser, addToHeartBucket, heartBucketOf } = useStore();
+  const { discoverFeed, fetchDiscoverUsers, entitlements, likeUser, passUser, hasLiked, photosOf, wingleStatusWith, currentUser, addToHeartBucket, heartBucketOf } = useStore();
 
   const [tab, setTab] = useState<'nearby' | 'daily5'>('nearby');
   const [index, setIndex] = useState(0);
@@ -148,7 +148,11 @@ export function Discover() {
   const heartZoneRef = useRef<HTMLDivElement>(null);
   const recycleZoneRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { setIndex(0); }, [tab, filters]);
+  useEffect(() => { 
+    setIndex(0); 
+    // Fetch users from backend with current filters
+    fetchDiscoverUsers(filters);
+  }, [tab, filters, fetchDiscoverUsers]);
 
   const rawFeed = discoverFeed();
 
