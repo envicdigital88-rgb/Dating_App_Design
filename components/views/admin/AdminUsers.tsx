@@ -8,11 +8,13 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { Avatar, Badge } from '@/components/ui/Bits';
-import { useStore } from '@/lib/contexts/StoreContext';
 import { relativeTime, shortDate } from '@/lib/utils/format';
+import { getAdminUsersAction, deleteUserAction, setUserSuspendedAction, setUserVerifiedAction } from '@/app/actions/admin';
+import type { User, Photo } from '@/lib/types';
+
+type AdminUser = User & { photos: Photo[] };
 
 export function AdminUsers() {
-  const { db, photosOf, setUserSuspended, setUserVerified, removeUser } = useStore();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'verified' | 'unverified' | 'suspended'>('all');
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
@@ -24,8 +26,27 @@ export function AdminUsers() {
     setPage(1);
   }, [query, filter]);
 
-  const users = db.users.
-  filter((u) => u.role === 'member').
+  const [realUsers, setRealUsers] = useState<AdminUser[] | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchUsers = async () => {
+      const res = await getAdminUsersAction();
+      if (res.ok && res.data && mounted) {
+        setRealUsers(res.data as unknown as AdminUser[]);
+      }
+    };
+    fetchUsers();
+    
+    // Poll every 10 seconds to keep the list fresh
+    const interval = setInterval(fetchUsers, 10000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  const users = (realUsers || []).
   filter((u) =>
   `${u.name} ${u.email} ${u.location}`.toLowerCase().includes(query.trim().toLowerCase())
   ).
@@ -42,7 +63,20 @@ export function AdminUsers() {
   const totalPages = Math.ceil(users.length / itemsPerPage);
   const paginatedUsers = users.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
-  const detailUser = db.users.find((u) => u.id === detail);
+  const detailUser = (realUsers || []).find((u) => u.id === detail);
+
+  if (!realUsers) {
+    return (
+      <div>
+        <AdminHeader
+          title="User management"
+          body="Search, review, verify and suspend members. Suspended members cannot sign in and are hidden from Discover." />
+        <div className="flex h-64 items-center justify-center text-[14px] text-ink-soft">
+          Loading live members...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -96,7 +130,7 @@ export function AdminUsers() {
                   onClick={() => setDetail(user.id)}
                   className="flex items-center gap-3 text-left">
                   
-                    <Avatar src={photosOf(user.id)[0]?.url} name={user.name} size={38} />
+                    <Avatar src={user.photos?.[0]?.url} name={user.name} size={38} />
                     <span className="min-w-0">
                       <span className="block truncate font-medium text-ink">
                         {user.name}, {user.age}
@@ -126,7 +160,8 @@ export function AdminUsers() {
                     size="sm"
                     variant="outline"
                     onClick={() => {
-                      setUserVerified(user.id, !user.verified);
+                      setUserVerifiedAction(user.id, !user.verified).catch(console.error);
+                      setRealUsers(prev => prev ? prev.map(u => u.id === user.id ? { ...u, verified: !user.verified } : u) : null);
                       toast.success(user.verified ? 'Verification removed' : 'Member verified');
                     }}>
                     
@@ -137,7 +172,8 @@ export function AdminUsers() {
                     size="sm"
                     variant="outline"
                     onClick={() => {
-                      setUserSuspended(user.id, !user.suspended);
+                      setUserSuspendedAction(user.id, !user.suspended).catch(console.error);
+                      setRealUsers(prev => prev ? prev.map(u => u.id === user.id ? { ...u, suspended: !user.suspended } : u) : null);
                       toast.success(user.suspended ? 'Member reinstated' : 'Member suspended');
                     }}>
                     
@@ -162,7 +198,7 @@ export function AdminUsers() {
             No members match that search.
           </p>
         }
-        {totalPages > 1 && (
+        {users.length > 0 && (
           <div className="flex items-center justify-between border-t border-sand px-5 py-3">
             <p className="text-[13px] text-ink-muted">
               Showing {(page - 1) * itemsPerPage + 1} to {Math.min(page * itemsPerPage, users.length)} of {users.length}
@@ -171,7 +207,7 @@ export function AdminUsers() {
               <Button
                 variant="outline"
                 size="sm"
-                disabled={page === 1}
+                disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
               >
                 <ChevronLeftIcon className="mr-1 h-4 w-4" />
@@ -180,7 +216,7 @@ export function AdminUsers() {
               <Button
                 variant="outline"
                 size="sm"
-                disabled={page === totalPages}
+                disabled={page >= totalPages}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               >
                 Next
@@ -201,7 +237,7 @@ export function AdminUsers() {
         {detailUser &&
         <div className="space-y-4">
             <ul className="flex gap-2">
-              {photosOf(detailUser.id).map((photo) =>
+              {(detailUser.photos || []).map((photo) =>
             <li key={photo.id}>
                   <img src={photo.url} alt="" className="h-24 w-20 rounded-2xl object-cover" />
                 </li>
@@ -212,10 +248,10 @@ export function AdminUsers() {
               {[
             ['Location', detailUser.location],
             ['Intention', detailUser.intention],
-            ['Wingles sent', String(db.wingles.filter((r) => r.fromUserId === detailUser.id).length)],
-            ['Wingles received', String(db.wingles.filter((r) => r.toUserId === detailUser.id).length)],
-            ['Mingles sent', String(db.mingles.filter((m) => m.senderId === detailUser.id).length)],
-            ['Reports against', String(db.reports.filter((r) => r.targetUserId === detailUser.id).length)]].
+            ['Wingles sent', 'N/A'],
+            ['Wingles received', 'N/A'],
+            ['Mingles sent', 'N/A'],
+            ['Reports against', 'N/A']].
             map(([label, value]) =>
             <div key={label} className="flex justify-between gap-4 py-2.5">
                   <dt className="text-ink-muted">{label}</dt>
@@ -240,7 +276,8 @@ export function AdminUsers() {
             <Button
             variant="danger"
             onClick={() => {
-              removeUser(pendingDelete as string);
+              deleteUserAction(pendingDelete as string).catch(console.error);
+              setRealUsers(prev => prev ? prev.filter(u => u.id !== pendingDelete) : null);
               setPendingDelete(null);
               toast.success('Member deleted');
             }}>
