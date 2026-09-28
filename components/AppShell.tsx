@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   BellIcon,
   CompassIcon,
-  CreditCardIcon,
+  CoinsIcon,
   HeartIcon,
   HeartCrackIcon,
   GhostIcon,
@@ -107,7 +107,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const account: NavItem[] = [
   { to: '/profile', label: 'My profile', icon: <UserIcon className="h-[18px] w-[18px]" /> },
   /* { to: '/packages', label: 'Packages', icon: <SparklesIcon className="h-[18px] w-[18px]" /> }, */
-  { to: '/subscription', label: 'Subscription', icon: <CreditCardIcon className="h-[18px] w-[18px]" /> },
+  { to: '/subscription', label: 'Wingits', icon: <CoinsIcon className="h-[18px] w-[18px]" /> },
   { to: '/settings', label: 'Settings', icon: <SettingsIcon className="h-[18px] w-[18px]" /> }];
 
 

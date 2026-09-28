@@ -20,11 +20,11 @@ export function SubscriptionPage() {
   return (
     <Page>
       <PageHeader
-        title="Subscription"
+        title="Wingits"
         body="Your package, your remaining allowance, and every payment on your account."
         action={
         <Button onClick={() => router.push('/packages')}>
-            {entitlements.subscriptionStatus === 'free' ? 'Choose a package' : 'Change package'}
+            Buy Wingits
           </Button>
         } />
       

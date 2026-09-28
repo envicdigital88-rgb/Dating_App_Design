@@ -1,64 +1,111 @@
 'use client';
 
-import React from 'react';
-import { useRouter } from 'next/navigation';
-import { LockIcon, MessageCircleIcon, SendIcon, ShieldCheckIcon } from 'lucide-react';
+import React, { useState } from 'react';
+import { ShieldCheckIcon, CoinsIcon, SparklesIcon } from 'lucide-react';
 import { Page, PageHeader } from '@/components/AppShell';
-import { PackageGrid } from '@/components/PackageGrid';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Field';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { faqs } from '@/lib/data/seed';
+import { money } from '@/lib/utils/format';
 
 export function Packages() {
-  const router = useRouter();
-  const { db, entitlements } = useStore();
+  const { entitlements } = useStore();
+  const [customAmount, setCustomAmount] = useState<number | ''>('');
+
   if (!entitlements) return null;
+
+  const handleBuy = (amount: number) => {
+    if (amount < 100) return;
+    // Just mock routing or alert for now since we don't have a Wingits checkout API
+    alert(`Checkout for ${amount} Wingits at ${money(amount)}`);
+  };
+
+  const presets = [
+    { amount: 100, featured: false, label: 'Starter' },
+    { amount: 500, featured: true, label: 'Popular' },
+    { amount: 1000, featured: false, label: 'Pro' },
+  ];
 
   return (
     <Page>
       <PageHeader
-        title="Packages"
-        body="Every package holds an allowance on your account. Limits are set by our team and can change — what you see here is always live." />
+        title="Buy Wingits"
+        body="Wingits are the currency of WingleMingle. 1 Wingit = Rs. 1. Minimum purchase is 100 Wingits." />
       
+      <div className="mb-12">
+        <ul className="grid items-stretch gap-6 lg:grid-cols-3">
+          {presets.map((pkg) => (
+            <li
+              key={pkg.amount}
+              className={`relative flex flex-col rounded-[2rem] p-8 shadow-card transition-transform hover:-translate-y-1 ${
+                pkg.featured ? 'bg-gradient-to-br from-plum-500/30 to-berry-500/30 border border-white/10 backdrop-blur-3xl text-ink' : 'bg-cream-deep text-ink border border-transparent'
+              }`}>
+              <div className="flex items-center justify-between gap-3">
+                <div className={`flex h-12 w-12 items-center justify-center rounded-full ${pkg.featured ? 'bg-berry-500/20 text-berry-400' : 'bg-sand/50 text-ink-soft'}`}>
+                  <CoinsIcon className="h-6 w-6" />
+                </div>
+                {pkg.featured && (
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-white shadow-sm">
+                    <SparklesIcon className="h-5 w-5" />
+                  </span>
+                )}
+              </div>
+              <div className="mt-5">
+                <h3 className="font-display text-2xl font-semibold text-ink whitespace-nowrap">
+                  {pkg.amount} Wingits
+                </h3>
+                <p className={`mt-1.5 text-[14px] leading-relaxed ${pkg.featured ? 'text-ink/90 font-medium' : 'text-ink-soft'}`}>
+                  {pkg.label}
+                </p>
+              </div>
+              <div className="mt-8 mb-4">
+                <span className="font-display text-[48px] leading-[1.1] text-ink tracking-tight">
+                  {money(pkg.amount)}
+                </span>
+              </div>
+              <div className="mt-auto pt-6">
+                <Button onClick={() => handleBuy(pkg.amount)} variant={pkg.featured ? 'primary' : 'secondary'} className="w-full py-4 text-base font-medium rounded-2xl">
+                  Buy {pkg.amount} Wingits
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
 
-      <PackageGrid
-        packages={db.packages}
-        currentPackageId={entitlements.packageId}
-        onSelect={(pkg) => {
-          if (pkg.price === 0) {
-            router.push('/discover');
-            return;
-          }
-          router.push(`/checkout/${pkg.id}`);
-        }}
-        ctaLabel="Upgrade to" />
-      
-
-      <div className="mt-10 grid gap-5 lg:grid-cols-3">
-        {[
-        {
-          icon: <MessageCircleIcon className="h-5 w-5" />,
-          title: 'Mingles are counted, not throttled',
-          body: 'Each mingle you send uses one from your allowance. Receiving is always free, and nothing is ever deleted when you run out.'
-        },
-        {
-          icon: <LockIcon className="h-5 w-5" />,
-          title: 'Incoming wingles unlock instantly',
-          body: 'The moment a payment is verified, every wingle waiting for you is revealed — including ones sent while you were on Free.'
-        },
-        {
-          icon: <SendIcon className="h-5 w-5" />,
-          title: 'Wingles reset with each package',
-          body: 'Buying or upgrading a package starts a new allowance period for both mingles and wingling wingles.'
-        }].
-        map((item) =>
-        <div key={item.title} className="rounded-4xl bg-cream-deep p-6 shadow-card">
-            <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-berry-50 text-berry-500">
-              {item.icon}
-            </span>
-            <h2 className="font-display text-lg text-ink">{item.title}</h2>
-            <p className="mt-1.5 text-[13px] leading-relaxed text-ink-soft">{item.body}</p>
+        <div className="mt-10 rounded-[2rem] bg-cream-deep p-8 shadow-card border border-sand/50">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="max-w-md">
+              <h3 className="font-display text-2xl font-semibold text-ink mb-2">Custom Amount</h3>
+              <p className="text-[14px] text-ink-soft leading-relaxed">Need a specific number of Wingits? Enter any amount you'd like to buy (minimum 100).</p>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+              <div className="relative w-full sm:w-64">
+                <CoinsIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-muted" />
+                <Input
+                  type="number"
+                  min="100"
+                  value={customAmount}
+                  onChange={(e) => setCustomAmount(e.target.value ? parseInt(e.target.value, 10) : '')}
+                  placeholder="e.g. 250"
+                  className="pl-12 py-3 text-lg rounded-2xl"
+                />
+              </div>
+              <div className="w-full sm:w-auto">
+                <Button 
+                  disabled={!customAmount || customAmount < 100} 
+                  onClick={() => handleBuy(customAmount as number)} 
+                  variant="primary" 
+                  className="w-full sm:w-auto px-8 py-3 text-lg rounded-2xl whitespace-nowrap">
+                  {customAmount && customAmount >= 100 
+                    ? `Buy for ${money(customAmount as number)}` 
+                    : 'Enter an amount'}
+                </Button>
+              </div>
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
       <div className="mt-10 max-w-3xl">

@@ -23,7 +23,7 @@ export const listTime = (iso: string) => {
 export const money = (amount: number) =>
 amount === 0 ?
 'Free' :
-new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount);
+`Rs. ${new Intl.NumberFormat('en-US').format(amount)}`;
 
 export const presence = (online: boolean, lastActiveAt: string) =>
 online ? 'Online now' : `Last seen ${formatDistanceToNowStrict(new Date(lastActiveAt))} ago`;
