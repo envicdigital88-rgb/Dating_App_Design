@@ -66,7 +66,8 @@ export async function sendMingleAction(conversationId: string, body: string, ima
         const { sendPushNotificationAction } = await import('@/app/actions/push');
         await sendPushNotificationAction(otherId, {
           title: 'New Message',
-          body: body ? body : (imageUrl ? 'Sent an image' : 'New message')
+          body: body ? body : (imageUrl ? 'Sent an image' : 'New message'),
+          url: `https://winglemingle.com/mingles/${conversationId}`
         });
       } catch (err) {
         console.error('Push error:', err);

@@ -25,11 +25,20 @@ export async function sendWingle(toUserId: string, note: string) {
       note: note
     })
 
+    await db.orm.public.Notification.create({
+      userId: toUserId,
+      type: 'wingle_received',
+      title: 'New Wingle!',
+      body: 'Someone sent you a Wingle. Check it out!',
+      href: '/wingles'
+    })
+
     try {
       const { sendPushNotificationAction } = await import('@/app/actions/push');
       await sendPushNotificationAction(toUserId, {
         title: 'New Wingle!',
-        body: 'Someone sent you a Wingle. Check it out!'
+        body: 'Someone sent you a Wingle. Check it out!',
+        url: 'https://winglemingle.com/wingles'
       });
       const { pusherServer } = await import('@/lib/pusher');
       await pusherServer.trigger(`private-user-${toUserId}`, 'state-changed', {});
@@ -107,11 +116,20 @@ export async function respondToWingle(wingleId: string, accept: boolean) {
 
       console.log(`[respondToWingle] Created Connection ${connection.id} and Conversation ${conversation.id}`);
 
+      await db.orm.public.Notification.create({
+        userId: wingle.fromUserId,
+        type: 'wingle_accepted',
+        title: 'Wingle Accepted!',
+        body: 'Your Wingle was accepted. You can now chat!',
+        href: `/mingles/${conversation.id}`
+      });
+
       try {
         const { sendPushNotificationAction } = await import('@/app/actions/push');
         await sendPushNotificationAction(wingle.fromUserId, {
           title: 'Wingle Accepted!',
-          body: 'Your Wingle was accepted. You can now chat!'
+          body: 'Your Wingle was accepted. You can now chat!',
+          url: `https://winglemingle.com/mingles/${conversation.id}`
         });
       } catch (e) {
         console.error('Push error:', e);

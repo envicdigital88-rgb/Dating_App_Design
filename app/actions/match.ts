@@ -58,11 +58,20 @@ export async function likeUser(targetUserId: string) {
         })
       }
 
+      await db.orm.public.Notification.create({
+        userId: targetUserId,
+        type: 'connection',
+        title: 'New Match! 🔥',
+        body: 'Someone just liked you back. Start chatting now!',
+        href: `/mingles/${conversation.id}`
+      })
+
       try {
         const { sendPushNotificationAction } = await import('@/app/actions/push');
         await sendPushNotificationAction(targetUserId, {
           title: 'New Match! 🔥',
-          body: 'Someone just liked you back. Start chatting now!'
+          body: 'Someone just liked you back. Start chatting now!',
+          url: `https://winglemingle.com/mingles/${conversation.id}`
         });
         const { pusherServer } = await import('@/lib/pusher');
         await pusherServer.trigger(`private-user-${targetUserId}`, 'state-changed', {});

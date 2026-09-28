@@ -224,7 +224,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
               <button
                 onClick={() => {
                   logout();
-                  router.push('/');
                 }}
                 aria-label="Sign out"
                 className="rounded-full p-2 text-ink-muted transition-colors duration-150 ease-soft hover:bg-cream-deep hover:text-ink">
@@ -390,9 +389,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
                 )}
                 <button
                   onClick={() => {
-                    logout();
-                    router.push('/');
                     setMobileMenuOpen(false);
+                    logout();
                   }}
                   className="group flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-ink-soft transition-[background-color,color,box-shadow] duration-150 ease-soft hover:bg-white/5 hover:text-ink"
                 >

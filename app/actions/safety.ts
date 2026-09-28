@@ -10,6 +10,15 @@ export async function reportUserAction(targetUserId: string, reason: string, det
 
     const userId = session.userId as string
 
+    const existingReport = await db.orm.public.Report.where({
+      reporterId: userId,
+      targetUserId,
+    }).first()
+    
+    if (existingReport) {
+      return { ok: false, error: 'You have already reported this user' }
+    }
+
     // Create Report
     await db.orm.public.Report.create({
       id: `rp_${Math.random().toString(36).substr(2, 9)}`,

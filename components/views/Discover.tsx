@@ -138,7 +138,6 @@ export function Discover() {
   const { discoverFeed, isDiscoverFetching, fetchDiscoverUsers, entitlements, likeUser, passUser, hasLiked, photosOf, wingleStatusWith, currentUser, addToHeartBucket, heartBucketOf } = useStore();
 
   const [tab, setTab] = useState<'nearby' | 'daily5'>('nearby');
-  const [index, setIndex] = useState(0);
   const [wingleTarget, setWingleTarget] = useState<User | null>(null);
   const [upgrade, setUpgrade] = useState<UpgradeReason | null>(null);
   const [hasMore, setHasMore] = useState(true);
@@ -152,7 +151,6 @@ export function Discover() {
   const rawFeed = discoverFeed();
 
   useEffect(() => { 
-    setIndex(0); 
     setHasMore(true);
     // Fetch users from backend with current filters
     fetchDiscoverUsers(filters).then((count) => {
@@ -161,13 +159,13 @@ export function Discover() {
   }, [tab, filters, fetchDiscoverUsers]);
 
   useEffect(() => {
-    if (tab === 'nearby' && hasMore && !isDiscoverFetching && index >= rawFeed.length - 3 && rawFeed.length > 0) {
+    if (tab === 'nearby' && hasMore && !isDiscoverFetching && rawFeed.length < 3) {
       const seenIds = rawFeed.map(u => u.id);
       fetchDiscoverUsers(filters, seenIds).then((count) => {
         if (typeof count === 'number' && count < 20) setHasMore(false);
       });
     }
-  }, [index, rawFeed.length, tab, hasMore, isDiscoverFetching, filters, fetchDiscoverUsers, rawFeed]);
+  }, [rawFeed.length, tab, hasMore, isDiscoverFetching, filters, fetchDiscoverUsers, rawFeed]);
 
   const activeFilterCount = useMemo(() => {
     let c = 0;
@@ -199,9 +197,8 @@ export function Discover() {
   }, [filteredFeed, currentUser]);
 
   const feed = tab === 'nearby' ? filteredFeed : daily5Feed;
-  const current = feed[Math.min(index, Math.max(0, feed.length - 1))];
-  const upNext = useMemo(() => feed.slice(index + 1, index + 5), [feed, index]);
-  const advance = () => setIndex(i => Math.min(i + 1, feed.length));
+  const current = feed[0];
+  const upNext = useMemo(() => feed.slice(1, 5), [feed]);
   const bucketCount = heartBucketOf().length;
 
   const handleDragStart = (e: React.DragEvent, user: User) => { setDraggingUser(user); e.dataTransfer.effectAllowed = 'move'; };
@@ -259,7 +256,7 @@ export function Discover() {
           {/* Filter panel */}
           <AnimatePresence>
             {showFilters && (
-              <FilterPanel filters={filters} onChange={f => { setFilters(f); setIndex(0); }} onClose={() => setShowFilters(false)} activeCount={activeFilterCount} />
+              <FilterPanel filters={filters} onChange={f => { setFilters(f); }} onClose={() => setShowFilters(false)} activeCount={activeFilterCount} />
             )}
           </AnimatePresence>
 
@@ -316,17 +313,13 @@ export function Discover() {
                 action={activeFilterCount > 0
                   ? <Button onClick={() => setFilters(DEFAULT_FILTERS)}>Clear all filters</Button>
                   : <Button onClick={() => router.push('/likes')}>See who liked you</Button>} />
-            ) : index >= feed.length ? (
-              <EmptyState icon={<CompassIcon className="h-5 w-5" />} title="You are all caught up"
-                body="You have reviewed every profile currently available."
-                action={<Button onClick={() => setIndex(0)}>Start again</Button>} />
             ) : (
               <AnimatePresence mode="wait">
                 <ProfileCard key={current.id} user={current} liked={hasLiked(current.id)} wingleed={!!wingleStatusWith(current.id)}
-                  onLike={() => { likeUser(current.id); toast.success(`You liked ${current.name}`); advance(); }}
-                  onPass={() => { passUser(current.id); advance(); }}
-                  onHeartBucket={() => { addToHeartBucket(current.id); toast.success(`♥️ ${current.name} added to In Your Heart!`); advance(); }}
-                  onRecycleBin={() => { passUser(current.id); advance(); }}
+                  onLike={() => { likeUser(current.id); toast.success(`You liked ${current.name}`); }}
+                  onPass={() => { passUser(current.id); }}
+                  onHeartBucket={() => { addToHeartBucket(current.id); toast.success(`♥️ ${current.name} added to In Your Heart!`); }}
+                  onRecycleBin={() => { passUser(current.id); }}
                   onWingle={() => {
                     if (entitlements.winglesRemaining !== null && entitlements.winglesRemaining <= 0) { setUpgrade('wingle_limit'); return; }
                     setWingleTarget(current);
@@ -360,7 +353,7 @@ export function Discover() {
                     <li key={user.id}>
                       <div draggable onDragStart={e => handleDragStart(e, user)} onDragEnd={handleDragEnd}
                         className={`group flex items-center gap-2.5 px-3 py-2 transition-all duration-150 cursor-grab active:cursor-grabbing select-none ${isDraggingThis ? 'opacity-25 bg-white/15 scale-[0.97]' : 'hover:bg-white/15'}`}>
-                        <span className="text-[10px] font-bold text-ink-muted w-3.5 shrink-0 text-center tabular-nums">{index + i + 2}</span>
+                        <span className="text-[10px] font-bold text-ink-muted w-3.5 shrink-0 text-center tabular-nums">{i + 2}</span>
                         <div className="relative shrink-0">
                           {photo
                             ? <img src={photo.url} alt={user.name} className={`h-8 w-8 rounded-xl object-cover shadow-sm pointer-events-none transition-all duration-150 ${!isDraggingThis && 'group-hover:ring-2 group-hover:ring-berry-300 group-hover:ring-offset-1'}`} />

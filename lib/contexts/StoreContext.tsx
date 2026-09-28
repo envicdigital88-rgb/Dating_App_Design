@@ -166,6 +166,7 @@ interface StoreValue {
   blockUser: (userId: string) => void;
   unblockUser: (userId: string) => void;
   isBlocked: (userId: string) => boolean;
+  hasReported: (userId: string) => boolean;
   reportUser: (userId: string, reason: string, detail: string, context: Report['context']) => void;
   // payments
   purchasePackage: (
@@ -382,6 +383,14 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                       });
                     }
 
+                    let newNotifications = d.notifications;
+                    if (stateRes.data && stateRes.data.notifications) {
+                      const remoteNotifs = stateRes.data.notifications as any[];
+                      if (JSON.stringify(d.notifications) !== JSON.stringify(remoteNotifs)) {
+                        newNotifications = remoteNotifs;
+                      }
+                    }
+
                     return { 
                       ...d, 
                       users: allUsers, 
@@ -394,7 +403,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                       wingles: newWingles,
                       connections: newConns,
                       blocks: newBlocks,
-                      secretWingles: newSecretWingles
+                      secretWingles: newSecretWingles,
+                      notifications: newNotifications
                     };
                   });
                   // Mark hydrated AFTER all data is loaded — polling starts here
@@ -940,8 +950,13 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     timers.current.forEach(window.clearTimeout);
     timers.current = [];
     setSessionId(null);
+    setDb(initialDb); // Clear local store state
     import('@/app/actions/auth').then(({ logoutUser }) => {
-      logoutUser().catch(console.error);
+      logoutUser().then(() => {
+        if (typeof window !== 'undefined') {
+          window.location.href = '/';
+        }
+      }).catch(console.error);
     });
   }, []);
 
@@ -1224,6 +1239,9 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     const hearted = new Set(
       db.heartBucket.filter((h) => h.userId === sessionId).map((h) => h.targetUserId)
     );
+    const liked = new Set(
+      db.likes.filter((l) => l.fromUserId === sessionId).map((l) => l.toUserId)
+    );
     const premiumIds = new Set(
       db.subscriptions.
       filter((s) => s.status === 'active').
@@ -1239,7 +1257,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       !u.suspended &&
       !blocked.has(u.id) &&
       !passed.has(u.id) &&
-      !hearted.has(u.id)
+      !hearted.has(u.id) &&
+      !liked.has(u.id)
     ).
     sort((a, b) => {
       const pa = premiumIds.has(a.id) ? 1 : 0;
@@ -1629,13 +1648,27 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   );
 
   const incomingWingles = useCallback<StoreValue['incomingWingles']>(
-    () => db.wingles.filter((w) => w.toUserId === sessionId && w.status !== 'declined').sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-    [db.wingles, sessionId]
+    () => {
+      const blockedSet = new Set(
+        db.blocks
+          .filter(b => b.blockerId === sessionId || b.blockedUserId === sessionId)
+          .map(b => b.blockerId === sessionId ? b.blockedUserId : b.blockerId)
+      );
+      return db.wingles.filter((w) => w.toUserId === sessionId && w.status !== 'declined' && !blockedSet.has(w.fromUserId)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    },
+    [db.wingles, db.blocks, sessionId]
   );
 
   const unreadWinglesCount = useCallback<StoreValue['unreadWinglesCount']>(
-    () => db.wingles.filter((w) => w.toUserId === sessionId && w.status === 'pending' && !w.viewed).length,
-    [db.wingles, sessionId]
+    () => {
+      const blockedSet = new Set(
+        db.blocks
+          .filter(b => b.blockerId === sessionId || b.blockedUserId === sessionId)
+          .map(b => b.blockerId === sessionId ? b.blockedUserId : b.blockerId)
+      );
+      return db.wingles.filter((w) => w.toUserId === sessionId && w.status === 'pending' && !w.viewed && !blockedSet.has(w.fromUserId)).length;
+    },
+    [db.wingles, db.blocks, sessionId]
   );
 
   const markWinglesViewed = useCallback<StoreValue['markWinglesViewed']>(() => {
@@ -1684,11 +1717,18 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   /* ---------------------------------------------------------------- chat */
 
   const conversationsOf = useCallback<StoreValue['conversationsOf']>(
-    () =>
-    db.conversations.
-    filter((c) => c.userIds.includes(sessionId ?? '')).
-    sort((a, b) => new Date(b.lastMingleAt).getTime() - new Date(a.lastMingleAt).getTime()),
-    [db.conversations, sessionId]
+    () => {
+      const blockedSet = new Set(
+        db.blocks
+          .filter(b => b.blockerId === sessionId || b.blockedUserId === sessionId)
+          .map(b => b.blockerId === sessionId ? b.blockedUserId : b.blockerId)
+      );
+      
+      return db.conversations
+        .filter((c) => c.userIds.includes(sessionId ?? '') && !c.userIds.some(u => blockedSet.has(u)))
+        .sort((a, b) => new Date(b.lastMingleAt).getTime() - new Date(a.lastMingleAt).getTime());
+    },
+    [db.conversations, db.blocks, sessionId]
   );
 
   const conversationWith = useCallback<StoreValue['conversationWith']>(
@@ -2004,26 +2044,39 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   }, []);
 
   const isBlocked = useCallback<StoreValue['isBlocked']>(
-    (userId) => db.blocks.some((b) => b.blockerId === sessionId && b.blockedUserId === userId),
+    (userId) => db.blocks.some((b) => 
+      (b.blockerId === sessionId && b.blockedUserId === userId) ||
+      (b.blockedUserId === sessionId && b.blockerId === userId)
+    ),
     [db.blocks, sessionId]
   );
 
+  const hasReported = useCallback<StoreValue['hasReported']>(
+    (userId) => db.reports.some((r) => r.reporterId === sessionId && r.targetUserId === userId),
+    [db.reports, sessionId]
+  );
+
   const reportUser = useCallback<StoreValue['reportUser']>((userId, reason, detail, context) => {
-    setDb((d) => ({
-      ...d,
-      reports: [
-      {
-        id: makeId('rp'),
-        reporterId: sessionIdRef.current as string,
-        targetUserId: userId,
-        reason,
-        detail,
-        context,
-        status: 'open',
-        createdAt: new Date().toISOString()
-      },
-      ...d.reports]
-    }));
+    setDb((d) => {
+      if (d.reports.some(r => r.reporterId === sessionIdRef.current && r.targetUserId === userId)) {
+        return d;
+      }
+      return {
+        ...d,
+        reports: [
+        {
+          id: makeId('rp'),
+          reporterId: sessionIdRef.current as string,
+          targetUserId: userId,
+          reason,
+          detail,
+          context,
+          status: 'open',
+          createdAt: new Date().toISOString()
+        },
+        ...d.reports]
+      };
+    });
     reportUserAction(userId, reason, detail, context).catch(console.error);
   }, []);
 
@@ -2115,6 +2168,9 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       ...d,
       notifications: d.notifications.map((n) => n.id === notificationId ? { ...n, read: true } : n)
     }));
+    import('@/app/actions/user').then(({ markNotificationReadAction }) => {
+      markNotificationReadAction(notificationId).catch(console.error);
+    });
   }, []);
 
   const markAllNotificationsRead = useCallback(() => {
@@ -2124,6 +2180,9 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       n.userId === sessionIdRef.current ? { ...n, read: true } : n
       )
     }));
+    import('@/app/actions/user').then(({ markAllNotificationsReadAction }) => {
+      markAllNotificationsReadAction().catch(console.error);
+    });
   }, []);
 
   /* --------------------------------------------------------------- admin */
@@ -2282,6 +2341,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     blockUser,
     unblockUser,
     isBlocked,
+    hasReported,
     reportUser,
     purchasePackage,
     activeSubscription,

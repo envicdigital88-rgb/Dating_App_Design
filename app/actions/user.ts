@@ -378,10 +378,11 @@ export async function getUserStateAction() {
       db.orm.public.HeartBucket.where(h => or(h.userId.eq(userId), h.targetUserId.eq(userId))).all()
     ]);
 
-    const [wingles, connections, blocks] = await Promise.all([
+    const [wingles, connections, blocks, notifications] = await Promise.all([
       db.orm.public.Wingle.where(w => or(w.fromUserId.eq(userId), w.toUserId.eq(userId))).all(),
       db.orm.public.Connection.where(c => or(c.userId1.eq(userId), c.userId2.eq(userId))).all(),
-      db.orm.public.Block.where(b => or(b.blockerId.eq(userId), b.blockedUserId.eq(userId))).all()
+      db.orm.public.Block.where(b => or(b.blockerId.eq(userId), b.blockedUserId.eq(userId))).all(),
+      db.orm.public.Notification.where({ userId }).all()
     ]);
 
     const relatedUserIds = new Set<string>();
@@ -429,7 +430,8 @@ export async function getUserStateAction() {
         createdAt: c.createdAt.toString()
       })),
       blocks: blocks.map(b => ({ ...b, createdAt: b.createdAt.toString() })),
-      relatedUsers: mappedRelatedUsers
+      relatedUsers: mappedRelatedUsers,
+      notifications: notifications.map(n => ({ ...n, createdAt: n.createdAt.toString() }))
     };
 
     console.log(`[getUserStateAction] Returning state for ${userId}: ${wingles.length} wingles, ${connections.length} connections, ${relatedUsers.length} related users`);
@@ -440,6 +442,30 @@ export async function getUserStateAction() {
   } catch (err) {
     console.error('getUserStateAction error:', err)
     return { ok: false, error: 'Failed to fetch user state' }
+  }
+}
+
+export async function markNotificationReadAction(notificationId: string) {
+  try {
+    const session = await getSession();
+    if (!session?.userId) return { ok: false };
+    await db.orm.public.Notification.where({ id: notificationId, userId: session.userId as string }).update({ read: true });
+    return { ok: true };
+  } catch (err) {
+    console.error(err);
+    return { ok: false };
+  }
+}
+
+export async function markAllNotificationsReadAction() {
+  try {
+    const session = await getSession();
+    if (!session?.userId) return { ok: false };
+    await db.orm.public.Notification.where({ userId: session.userId as string }).update({ read: true });
+    return { ok: true };
+  } catch (err) {
+    console.error(err);
+    return { ok: false };
   }
 }
 

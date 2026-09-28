@@ -57,6 +57,7 @@ export function Chat() {
     blockUser,
     unblockUser,
     isBlocked,
+    hasReported,
     typingIn,
     conversationsOf
   } = useStore();
@@ -706,8 +707,8 @@ export function Chat() {
           <Button variant="outline" block onClick={() => { setMenuOpen(false); navigate(`/profile/${otherId}`); }}>
             View full profile
           </Button>
-          <Button variant="outline" block onClick={() => { setMenuOpen(false); setReporting(true); }}>
-            <FlagIcon className="h-4 w-4" /> Report {other?.name}
+          <Button variant="outline" block disabled={hasReported(otherId)} onClick={() => { setMenuOpen(false); setReporting(true); }}>
+            <FlagIcon className="h-4 w-4" /> {hasReported(otherId) ? 'Reported' : `Report ${other?.name}`}
           </Button>
           <Button variant="danger" block onClick={() => { setMenuOpen(false); setBlocking(true); }}>
             <BanIcon className="h-4 w-4" /> Block {other?.name}

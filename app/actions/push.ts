@@ -29,7 +29,7 @@ export async function savePushSubscriptionAction(subscription: any) {
   }
 }
 
-export async function sendPushNotificationAction(userId: string, payload: { title: string; body: string; icon?: string }) {
+export async function sendPushNotificationAction(userId: string, payload: { title: string; body: string; icon?: string; url?: string }) {
   try {
     const user = await db.orm.public.User.where({ id: userId }).first();
     if (!user || !user.pushSubscription) return { ok: false, error: 'User or subscription not found' };

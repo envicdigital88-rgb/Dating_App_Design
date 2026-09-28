@@ -43,6 +43,7 @@ export function ProfileDetail() {
     conversationWith,
     ensureConversation,
     blockUser,
+    hasReported,
     openChatPopup,
     entitlements,
     currentUser
@@ -289,9 +290,9 @@ export function ProfileDetail() {
               anonymous and reviewed by our moderation team.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={() => setReporting(true)}>
+              <Button variant="outline" size="sm" onClick={() => setReporting(true)} disabled={hasReported(user.id)}>
                 <FlagIcon className="h-3.5 w-3.5" />
-                Report
+                {hasReported(user.id) ? 'Reported' : 'Report'}
               </Button>
               <Button variant="danger" size="sm" onClick={() => setBlocking(true)}>
                 <BanIcon className="h-3.5 w-3.5" />
