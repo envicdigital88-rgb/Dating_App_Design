@@ -58,7 +58,9 @@ export async function sendMingleAction(conversationId: string, body: string, ima
 
     if (otherId) {
       const { pusherServer } = await import('@/lib/pusher');
-      await pusherServer.trigger(`private-user-${otherId}`, 'new-mingle', formattedMingle).catch(console.error);
+      // Omit imageUrl from pusher payload to avoid exceeding the 10KB limit
+      const { imageUrl: _discard, ...pusherPayload } = formattedMingle;
+      await pusherServer.trigger(`private-user-${otherId}`, 'new-mingle', pusherPayload).catch(console.error);
     }
 
     return { 
