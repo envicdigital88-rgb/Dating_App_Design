@@ -574,6 +574,35 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       });
     });
 
+    // Register service worker for PWA and push notifications
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then((reg) => {
+        console.log('Service Worker registered with scope:', reg.scope);
+        
+        // Request push subscription
+        reg.pushManager.getSubscription().then((sub) => {
+          if (sub) {
+            // Already subscribed, maybe update backend
+            import('@/app/actions/push').then(({ savePushSubscriptionAction }) => {
+              savePushSubscriptionAction(sub);
+            });
+          } else {
+            // Subscribe
+            reg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+            }).then((newSub) => {
+              import('@/app/actions/push').then(({ savePushSubscriptionAction }) => {
+                savePushSubscriptionAction(newSub);
+              });
+            }).catch(console.error);
+          }
+        });
+      }).catch((err) => {
+        console.error('Service Worker registration failed:', err);
+      });
+    }
+
     return () => {
       import('@/lib/pusher-client').then(({ pusherClient }) => {
         pusherClient.unsubscribe(`private-user-${sessionId}`);

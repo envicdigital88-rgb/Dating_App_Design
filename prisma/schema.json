@@ -1790,6 +1790,13 @@
                   "kind": "scalar"
                 }
               },
+              "pushSubscription": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/json@1",
+                  "kind": "scalar"
+                }
+              },
               "role": {
                 "nullable": false,
                 "type": {
@@ -2177,6 +2184,9 @@
                 },
                 "phone": {
                   "column": "phone"
+                },
+                "pushSubscription": {
+                  "column": "pushSubscription"
                 },
                 "role": {
                   "column": "role"
@@ -3929,6 +3939,11 @@
                   "nativeType": "text",
                   "nullable": false
                 },
+                "pushSubscription": {
+                  "codecId": "pg/json@1",
+                  "nativeType": "json",
+                  "nullable": true
+                },
                 "role": {
                   "codecId": "pg/text@1",
                   "default": {
@@ -4167,7 +4182,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "efde04d1f16db8db4fb2e04087470bc9b59e001c0c52276cbc7ac0d91763129a"
+    "storageHash": "a3111c5084f6df728c30b1c40bbc01f67a45df17840953796c7ceb9485f6e1a9"
   },
   "execution": {
     "executionHash": "a5adc5541b3fd7927038173e2e24d5bc916f2e5380bc626e3fd73f8506f47aee",

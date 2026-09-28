@@ -61,6 +61,16 @@ export async function sendMingleAction(conversationId: string, body: string, ima
       // Omit imageUrl from pusher payload to avoid exceeding the 10KB limit
       const { imageUrl: _discard, ...pusherPayload } = formattedMingle;
       await pusherServer.trigger(`private-user-${otherId}`, 'new-mingle', pusherPayload).catch(console.error);
+      
+      try {
+        const { sendPushNotificationAction } = await import('@/app/actions/push');
+        await sendPushNotificationAction(otherId, {
+          title: 'New Message',
+          body: body ? body : (imageUrl ? 'Sent an image' : 'New message')
+        });
+      } catch (err) {
+        console.error('Push error:', err);
+      }
     }
 
     return { 

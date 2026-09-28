@@ -25,6 +25,7 @@ model User {
   createdAt      DateTime       @default(now())
   isAnonymous    Boolean        @default(false)
   anonymousName  String?
+  pushSubscription Json?
   
   photos               Photo[]
   prompts              Prompt[]

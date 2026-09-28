@@ -25,6 +25,18 @@ export async function sendWingle(toUserId: string, note: string) {
       note: note
     })
 
+    try {
+      const { sendPushNotificationAction } = await import('@/app/actions/push');
+      await sendPushNotificationAction(toUserId, {
+        title: 'New Wingle!',
+        body: 'Someone sent you a Wingle. Check it out!'
+      });
+      const { pusherServer } = await import('@/lib/pusher');
+      await pusherServer.trigger(`private-user-${toUserId}`, 'state-changed', {});
+    } catch (e) {
+      console.error('Push error:', e);
+    }
+
     return { ok: true, wingleId: newWingle.id }
   } catch (err) {
     console.error('Send Wingle error:', err)
@@ -94,6 +106,17 @@ export async function respondToWingle(wingleId: string, accept: boolean) {
       }
 
       console.log(`[respondToWingle] Created Connection ${connection.id} and Conversation ${conversation.id}`);
+
+      try {
+        const { sendPushNotificationAction } = await import('@/app/actions/push');
+        await sendPushNotificationAction(wingle.fromUserId, {
+          title: 'Wingle Accepted!',
+          body: 'Your Wingle was accepted. You can now chat!'
+        });
+      } catch (e) {
+        console.error('Push error:', e);
+      }
+
       return { ok: true, connectionId: connection.id, conversationId: conversation.id }
     }
 

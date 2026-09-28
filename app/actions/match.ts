@@ -58,7 +58,17 @@ export async function likeUser(targetUserId: string) {
         })
       }
 
-      // In the future, create Notification for mutual match here
+      try {
+        const { sendPushNotificationAction } = await import('@/app/actions/push');
+        await sendPushNotificationAction(targetUserId, {
+          title: 'New Match! 🔥',
+          body: 'Someone just liked you back. Start chatting now!'
+        });
+        const { pusherServer } = await import('@/lib/pusher');
+        await pusherServer.trigger(`private-user-${targetUserId}`, 'state-changed', {});
+      } catch (e) {
+        console.error('Push error:', e);
+      }
 
       return { 
         ok: true, 
