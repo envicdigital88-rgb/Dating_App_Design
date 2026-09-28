@@ -576,6 +576,17 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
 
     // Register service worker for PWA and push notifications
     if ('serviceWorker' in navigator) {
+      const urlBase64ToUint8Array = (base64String: string) => {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+          outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+      };
+
       navigator.serviceWorker.register('/sw.js').then((reg) => {
         console.log('Service Worker registered with scope:', reg.scope);
         
@@ -587,15 +598,24 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
               savePushSubscriptionAction(sub);
             });
           } else {
-            // Subscribe
-            reg.pushManager.subscribe({
-              userVisibleOnly: true,
-              applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-            }).then((newSub) => {
-              import('@/app/actions/push').then(({ savePushSubscriptionAction }) => {
-                savePushSubscriptionAction(newSub);
-              });
-            }).catch(console.error);
+            // Check permissions first, some browsers block direct subscribe calls
+            Notification.requestPermission().then(permission => {
+              if (permission === 'granted') {
+                const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+                if (!publicKey) {
+                  console.error('VAPID public key not found in env');
+                  return;
+                }
+                reg.pushManager.subscribe({
+                  userVisibleOnly: true,
+                  applicationServerKey: urlBase64ToUint8Array(publicKey)
+                }).then((newSub) => {
+                  import('@/app/actions/push').then(({ savePushSubscriptionAction }) => {
+                    savePushSubscriptionAction(newSub);
+                  });
+                }).catch(console.error);
+              }
+            });
           }
         });
       }).catch((err) => {
