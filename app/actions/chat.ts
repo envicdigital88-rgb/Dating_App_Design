@@ -120,8 +120,19 @@ export async function reactToMingleAction(mingleId: string, reactions: any) {
   try {
     const session = await getSession()
     if (!session?.userId) return { ok: false, error: 'Unauthorized' }
+    const userId = session.userId as string
+
+    const mingle = await db.orm.public.Mingle.where({ id: mingleId }).first()
+    if (!mingle) return { ok: false, error: 'Mingle not found' }
 
     await db.orm.public.Mingle.where({ id: mingleId }).update({ reactions })
+
+    const conv = await db.orm.public.Conversation.where({ id: mingle.conversationId }).first()
+    if (conv) {
+      const otherId = conv.userId1 === userId ? conv.userId2 : conv.userId1;
+      const { pusherServer } = await import('@/lib/pusher');
+      await pusherServer.trigger(`private-user-${otherId}`, 'state-changed', {}).catch(console.error);
+    }
 
     return { ok: true }
   } catch (err) {
