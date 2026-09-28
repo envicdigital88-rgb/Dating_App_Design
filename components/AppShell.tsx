@@ -34,6 +34,7 @@ import { ChatPopup } from './ui/ChatPopup';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { usePwa } from './PwaProvider';
 import { cn } from '@/lib/utils/format';
+import { NotificationPrompt } from './NotificationPrompt';
 
 interface NavItem {
   to: string;
@@ -403,8 +404,8 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           </motion.div>
         )}
       </AnimatePresence>
+      <NotificationPrompt />
     </div>);
-
 }
 
 export function PageHeader({

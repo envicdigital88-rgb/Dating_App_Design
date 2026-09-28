@@ -232,11 +232,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   const connsRef = useRef<{ [userId: string]: any }>({});
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      if (Notification.permission === 'default') {
-        Notification.requestPermission().catch(console.error);
-      }
-    }
+    // We will no longer request permission immediately on mount.
+    // Instead, we will show a UI prompt when needed.
   }, []);
 
   const showNotification = useCallback((title: string, body: string, icon?: string) => {
