@@ -141,6 +141,7 @@ export function Discover() {
   const [index, setIndex] = useState(0);
   const [wingleTarget, setWingleTarget] = useState<User | null>(null);
   const [upgrade, setUpgrade] = useState<UpgradeReason | null>(null);
+  const [hasMore, setHasMore] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<DiscoverFilters>(DEFAULT_FILTERS);
   const [draggingUser, setDraggingUser] = useState<User | null>(null);
@@ -148,13 +149,25 @@ export function Discover() {
   const heartZoneRef = useRef<HTMLDivElement>(null);
   const recycleZoneRef = useRef<HTMLDivElement>(null);
 
+  const rawFeed = discoverFeed();
+
   useEffect(() => { 
     setIndex(0); 
+    setHasMore(true);
     // Fetch users from backend with current filters
-    fetchDiscoverUsers(filters);
+    fetchDiscoverUsers(filters).then((count) => {
+      if (typeof count === 'number' && count < 20) setHasMore(false);
+    });
   }, [tab, filters, fetchDiscoverUsers]);
 
-  const rawFeed = discoverFeed();
+  useEffect(() => {
+    if (tab === 'nearby' && hasMore && !isDiscoverFetching && index >= rawFeed.length - 3 && rawFeed.length > 0) {
+      const seenIds = rawFeed.map(u => u.id);
+      fetchDiscoverUsers(filters, seenIds).then((count) => {
+        if (typeof count === 'number' && count < 20) setHasMore(false);
+      });
+    }
+  }, [index, rawFeed.length, tab, hasMore, isDiscoverFetching, filters, fetchDiscoverUsers, rawFeed]);
 
   const activeFilterCount = useMemo(() => {
     let c = 0;

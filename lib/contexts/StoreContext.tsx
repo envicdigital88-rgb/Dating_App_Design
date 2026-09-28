@@ -119,7 +119,7 @@ interface StoreValue {
   // discovery
   discoverFeed: () => User[];
   isDiscoverFetching: boolean;
-  fetchDiscoverUsers: (filters: any) => Promise<void>;
+  fetchDiscoverUsers: (filters: any, seenIds?: string[]) => Promise<number | void>;
   userById: (userId: string) => User | undefined;
   likeUser: (userId: string) => void;
   unlikeUser: (userId: string) => void;
@@ -1113,11 +1113,11 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   
   const [isDiscoverFetching, setIsDiscoverFetching] = useState(false);
 
-  const fetchDiscoverUsers = useCallback<StoreValue['fetchDiscoverUsers']>(async (filters) => {
+  const fetchDiscoverUsers = useCallback<StoreValue['fetchDiscoverUsers']>(async (filters, seenIds = []) => {
     setIsDiscoverFetching(true);
     try {
       const { getDiscoverUsers } = await import('@/app/actions/user');
-      const res = await getDiscoverUsers(filters);
+      const res = await getDiscoverUsers(filters, seenIds);
       if (res?.ok && Array.isArray(res.data)) {
         const newUsers = res.data as User[];
         const newPhotos = newUsers.flatMap((u: any) => u.photos || []);
@@ -1142,7 +1142,10 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
           
           return { ...d, users: allUsers, photos: allPhotos };
         });
+
+        return newUsers.length;
       }
+      return 0;
     } catch (err) {
       console.error('Failed to fetch filtered discover users', err);
     } finally {

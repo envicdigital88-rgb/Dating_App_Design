@@ -99,7 +99,7 @@ export interface DiscoverFilters {
   onlineOnly: boolean;
 }
 
-export async function getDiscoverUsers(filters?: DiscoverFilters) {
+export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: string[] = []) {
   try {
     const session = await getSession()
     if (!session?.userId) return { ok: false, error: 'Unauthorized', data: [] }
@@ -119,7 +119,8 @@ export async function getDiscoverUsers(filters?: DiscoverFilters) {
       ...likes.map((l: any) => l.toUserId),
       ...recentPasses.map((p: any) => p.targetUserId),
       ...heartBucket.map((h: any) => h.targetUserId),
-      ...blocks.map((b: any) => b.blockerId === userId ? b.blockedUserId : b.blockerId)
+      ...blocks.map((b: any) => b.blockerId === userId ? b.blockedUserId : b.blockerId),
+      ...seenIds
     ]
     
     // Fetch users only (no includes) - much faster
