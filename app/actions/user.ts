@@ -177,7 +177,7 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
         interests: typeof user.interests === 'string' ? JSON.parse(user.interests) : (user.interests || []),
         traits: typeof user.traits === 'string' ? JSON.parse(user.traits) : (user.traits || []),
         lifestyle: typeof user.lifestyle === 'string' ? JSON.parse(user.lifestyle) : (user.lifestyle || {}),
-        photos: photos.filter(p => p.userId === user.id).map((p: any) => ({
+        photos: photos.filter(p => p.userId === user.id && p.moderation === 'approved').map((p: any) => ({
           ...p,
           uploadedAt: p.uploadedAt?.toString() || new Date().toISOString()
         })),
@@ -402,7 +402,7 @@ export async function getUserStateAction() {
       ]);
       relatedUsers = rUsers.map((u: any) => ({
         ...u,
-        photos: rPhotos.filter((p: any) => p.userId === u.id)
+        photos: rPhotos.filter((p: any) => p.userId === u.id && p.moderation === 'approved')
       }));
     }
 

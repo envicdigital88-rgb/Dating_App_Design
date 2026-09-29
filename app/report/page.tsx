@@ -1,12 +1,67 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { ArrowLeftIcon, AlertOctagonIcon } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeftIcon, AlertOctagonIcon, ChevronDownIcon, Loader2Icon } from 'lucide-react';
 import { BrandMark } from '@/components/BrandMark';
+import { submitReportAction } from '@/app/actions/safety';
+import { toast } from 'sonner';
+
+const REASONS = [
+  { value: 'spam', label: 'Spam or Fake Profile' },
+  { value: 'harassment', label: 'Harassment or Abuse' },
+  { value: 'inappropriate', label: 'Inappropriate Content' },
+  { value: 'other', label: 'Other' },
+];
 
 export default function ReportPage() {
+  const [url, setUrl] = useState('');
+  const [reason, setReason] = useState('');
+  const [details, setDetails] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!url.trim()) {
+      toast.error('Please enter a Profile URL or Username.');
+      return;
+    }
+    if (!reason) {
+      toast.error('Please select a reason for reporting.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await submitReportAction(url, reason, details);
+      if (res.ok) {
+        toast.success('Report submitted successfully. Thank you.');
+        setUrl('');
+        setReason('');
+        setDetails('');
+      } else {
+        toast.error(res.error || 'Failed to submit report. Please try again.');
+      }
+    } catch (err) {
+      toast.error('An unexpected error occurred.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#07061a] text-ink selection:bg-berry-500/30 relative overflow-hidden font-sans">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -54,27 +109,87 @@ export default function ReportPage() {
                 
                 <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
                   <h3 className="font-display font-semibold text-lg text-ink mb-4">Submit a report</h3>
-                  <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+                  <form className="space-y-4" onSubmit={handleSubmit}>
                     <div>
                       <label htmlFor="url" className="sr-only">Profile URL or Username</label>
-                      <input type="text" id="url" placeholder="Profile URL or Username" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-ink placeholder:text-ink-muted focus:border-berry-500/50 focus:outline-none focus:ring-1 focus:ring-berry-500/50" />
+                      <input 
+                        type="text" 
+                        id="url" 
+                        value={url}
+                        onChange={(e) => setUrl(e.target.value)}
+                        placeholder="Profile URL or Username" 
+                        className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-ink placeholder:text-ink-muted focus:border-berry-500/50 focus:outline-none focus:ring-1 focus:ring-berry-500/50" 
+                      />
                     </div>
-                    <div>
-                      <label htmlFor="reason" className="sr-only">Reason</label>
-                      <select id="reason" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-ink-muted focus:border-berry-500/50 focus:outline-none focus:ring-1 focus:ring-berry-500/50 appearance-none">
-                        <option value="">Select a reason</option>
-                        <option value="spam">Spam or Fake Profile</option>
-                        <option value="harassment">Harassment or Abuse</option>
-                        <option value="inappropriate">Inappropriate Content</option>
-                        <option value="other">Other</option>
-                      </select>
+                    
+                    {/* Custom Dropdown */}
+                    <div className="relative" ref={dropdownRef}>
+                      <button
+                        type="button"
+                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                        className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm focus:border-berry-500/50 focus:outline-none focus:ring-1 focus:ring-berry-500/50 flex justify-between items-center transition-colors hover:bg-black/40"
+                      >
+                        <span className={reason ? "text-ink" : "text-ink-muted"}>
+                          {reason ? REASONS.find(r => r.value === reason)?.label : 'Select a reason'}
+                        </span>
+                        <ChevronDownIcon className={`h-4 w-4 text-ink-muted transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      <AnimatePresence>
+                        {isDropdownOpen && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.15 }}
+                            className="absolute z-20 mt-2 w-full rounded-xl border border-white/10 bg-[#16132b] shadow-xl overflow-hidden backdrop-blur-xl"
+                          >
+                            <div className="py-1">
+                              {REASONS.map((r) => (
+                                <button
+                                  key={r.value}
+                                  type="button"
+                                  onClick={() => {
+                                    setReason(r.value);
+                                    setIsDropdownOpen(false);
+                                  }}
+                                  className={`w-full text-left px-4 py-3 text-sm transition-colors hover:bg-white/10 ${
+                                    reason === r.value ? 'bg-berry-500/20 text-berry-300' : 'text-ink-soft'
+                                  }`}
+                                >
+                                  {r.label}
+                                </button>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
+
                     <div>
                       <label htmlFor="details" className="sr-only">Details</label>
-                      <textarea id="details" rows={4} placeholder="Additional details..." className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-ink placeholder:text-ink-muted focus:border-berry-500/50 focus:outline-none focus:ring-1 focus:ring-berry-500/50 resize-none"></textarea>
+                      <textarea 
+                        id="details" 
+                        rows={4} 
+                        value={details}
+                        onChange={(e) => setDetails(e.target.value)}
+                        placeholder="Additional details..." 
+                        className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-ink placeholder:text-ink-muted focus:border-berry-500/50 focus:outline-none focus:ring-1 focus:ring-berry-500/50 resize-none"
+                      ></textarea>
                     </div>
-                    <button type="submit" className="w-full rounded-xl bg-red-500/80 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:ring-offset-2 focus:ring-offset-[#141414]">
-                      Submit Report
+                    <button 
+                      type="submit" 
+                      disabled={isSubmitting}
+                      className="w-full rounded-xl bg-red-500/80 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:ring-offset-2 focus:ring-offset-[#141414] disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2Icon className="h-4 w-4 animate-spin" />
+                          Submitting...
+                        </>
+                      ) : (
+                        'Submit Report'
+                      )}
                     </button>
                   </form>
                 </div>

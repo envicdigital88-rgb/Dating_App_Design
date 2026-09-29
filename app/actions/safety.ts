@@ -3,6 +3,57 @@
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
 
+export async function submitReportAction(urlOrUsername: string, reason: string, detail: string) {
+  try {
+    const session = await getSession()
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' }
+    const userId = session.userId as string
+
+    // Extract ID if it's a URL like /profile/:id
+    let targetId = urlOrUsername.trim()
+    const match = urlOrUsername.match(/\/profile\/([a-zA-Z0-9-]+)/)
+    if (match && match[1]) {
+      targetId = match[1]
+    }
+
+    // Find target user
+    let targetUser = await db.orm.public.User.where((u) => u.id.eq(targetId)).first()
+    
+    // If not found by ID, try searching by name (since the input placeholder says URL or Username)
+    if (!targetUser) {
+      targetUser = await db.orm.public.User.where((u) => u.name.eq(targetId)).first()
+    }
+
+    if (!targetUser) {
+      return { ok: false, error: 'Could not find a user matching that URL or username. Please check and try again.' }
+    }
+
+    // Create Report
+    await db.orm.public.Report.create({
+      id: `rp_${Math.random().toString(36).substr(2, 9)}`,
+      reporterId: userId,
+      targetUserId: targetUser.id,
+      reason,
+      detail,
+      context: 'manual_report_page',
+      status: 'open',
+    })
+
+    // Check if user has 5 or more reports and suspend them if so
+    const totals = await db.orm.public.Report.where((r) => r.targetUserId.eq(targetUser!.id)).aggregate((a) => ({
+      count: a.count()
+    }))
+    if (totals.count >= 5) {
+      await db.orm.public.User.where((u) => u.id.eq(targetUser!.id)).update({ suspended: true })
+    }
+
+    return { ok: true }
+  } catch (err) {
+    console.error('submitReportAction error:', err)
+    return { ok: false, error: 'An unexpected error occurred while submitting the report.' }
+  }
+}
+
 export async function reportUserAction(targetUserId: string, reason: string, detail: string, context: string) {
   try {
     const session = await getSession()
@@ -31,11 +82,11 @@ export async function reportUserAction(targetUserId: string, reason: string, det
     })
 
     // Check if user has 5 or more reports and suspend them if so
-    const totals = await db.orm.public.Report.where({ targetUserId }).aggregate((a) => ({
+    const totals = await db.orm.public.Report.where((r) => r.targetUserId.eq(targetUserId)).aggregate((a) => ({
       count: a.count()
     }))
     if (totals.count >= 5) {
-      await db.orm.public.User.where({ id: targetUserId }).update({ suspended: true })
+      await db.orm.public.User.where((u) => u.id.eq(targetUserId)).update({ suspended: true })
     }
 
     return { ok: true }

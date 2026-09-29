@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { CheckIcon, FlagIcon, XIcon } from 'lucide-react';
 import { AdminHeader } from './AdminShell';
@@ -8,13 +8,35 @@ import { Button } from '@/components/ui/Button';
 import { Badge, EmptyState } from '@/components/ui/Bits';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { relativeTime } from '@/lib/utils/format';
+import { getAdminModerationDataAction } from '@/app/actions/admin';
+import type { Report, Photo } from '@/lib/types';
 
 export function AdminModeration() {
   const { db, moderatePhoto, resolveReport, setUserSuspended } = useStore();
   const [tab, setTab] = useState<'photos' | 'reports'>('photos');
+  const [realReports, setRealReports] = useState<Report[]>([]);
+  const [realPhotos, setRealPhotos] = useState<Photo[]>([]);
 
-  const queue = db.photos.filter((p) => p.moderation === 'pending');
-  const reports = db.reports;
+  useEffect(() => {
+    let mounted = true;
+    const fetchData = async () => {
+      const res = await getAdminModerationDataAction();
+      if (res.ok && mounted) {
+        setRealReports(res.reports as unknown as Report[]);
+        setRealPhotos(res.photos as unknown as Photo[]);
+      }
+    };
+    fetchData();
+    
+    const interval = setInterval(fetchData, 10000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  const queue = realPhotos;
+  const reports = realReports;
 
   return (
     <div>
@@ -36,7 +58,7 @@ export function AdminModeration() {
           aria-selected={tab === key}
           onClick={() => setTab(key)}
           className={`rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors duration-150 ease-soft ${
-          tab === key ? 'bg-cream-deep text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`
+          tab === key ? 'bg-sand text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`
           }>
           
             {label}
@@ -54,12 +76,12 @@ export function AdminModeration() {
 
       <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {queue.map((photo) => {
-          const owner = db.users.find((u) => u.id === photo.userId);
+          const ownerName = (photo as any).ownerName || 'Member';
           return (
             <li key={photo.id} className="overflow-hidden rounded-4xl bg-cream-deep shadow-card">
                   <img src={photo.url} alt="" className="aspect-[4/3] w-full object-cover" />
                   <div className="p-4">
-                    <p className="font-medium text-ink">{owner?.name ?? 'Member'}</p>
+                    <p className="font-medium text-ink">{ownerName}</p>
                     <p className="mt-0.5 text-[12px] text-ink-muted">
                       Uploaded {relativeTime(photo.uploadedAt)} · position {photo.order + 1}
                     </p>
@@ -69,6 +91,7 @@ export function AdminModeration() {
                     block
                     onClick={() => {
                       moderatePhoto(photo.id, 'approved');
+                      setRealPhotos(prev => prev.filter(p => p.id !== photo.id));
                       toast.success('Photo approved');
                     }}>
                     
@@ -81,6 +104,7 @@ export function AdminModeration() {
                     variant="danger"
                     onClick={() => {
                       moderatePhoto(photo.id, 'rejected');
+                      setRealPhotos(prev => prev.filter(p => p.id !== photo.id));
                       toast.success('Photo removed');
                     }}>
                     
@@ -105,7 +129,7 @@ export function AdminModeration() {
 
       <ul className="space-y-3">
             {reports.map((report) => {
-          const target = db.users.find((u) => u.id === report.targetUserId);
+          const targetName = (report as any).targetName || db.users.find((u) => u.id === report.targetUserId)?.name || 'member';
           return (
             <li
               key={report.id}
@@ -128,7 +152,7 @@ export function AdminModeration() {
                       </Badge>
                     </div>
                     <p className="mt-1.5 text-[13px] text-ink-soft">
-                      Against <span className="font-medium text-ink">{target?.name ?? 'member'}</span>{' '}
+                      Against <span className="font-medium text-ink">{targetName}</span>{' '}
                       · {relativeTime(report.createdAt)}
                     </p>
                     {report.detail &&
@@ -144,6 +168,7 @@ export function AdminModeration() {
                   variant="outline"
                   onClick={() => {
                     resolveReport(report.id, 'dismissed');
+                    setRealReports(prev => prev.map(r => r.id === report.id ? { ...r, status: 'dismissed' } : r));
                     toast.success('Report dismissed');
                   }}>
                   
@@ -155,6 +180,7 @@ export function AdminModeration() {
                   onClick={() => {
                     setUserSuspended(report.targetUserId, true);
                     resolveReport(report.id, 'resolved');
+                    setRealReports(prev => prev.map(r => r.id === report.id ? { ...r, status: 'resolved' } : r));
                     toast.success('Member suspended and report resolved');
                   }}>
                   
@@ -164,6 +190,7 @@ export function AdminModeration() {
                   size="sm"
                   onClick={() => {
                     resolveReport(report.id, 'resolved');
+                    setRealReports(prev => prev.map(r => r.id === report.id ? { ...r, status: 'resolved' } : r));
                     toast.success('Report resolved');
                   }}>
                   

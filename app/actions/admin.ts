@@ -131,7 +131,11 @@ export async function moderatePhotoAction(photoId: string, state: string) {
     const user = await db.orm.public.User.where({ id: session.userId as string }).first();
     if (user?.role !== 'admin') return { ok: false, error: 'Forbidden' };
 
-    await db.orm.public.Photo.where({ id: photoId }).update({ moderation: state });
+    if (state === 'rejected') {
+      await db.orm.public.Photo.where({ id: photoId }).delete();
+    } else {
+      await db.orm.public.Photo.where({ id: photoId }).update({ moderation: state });
+    }
     return { ok: true };
   } catch (err) {
     console.error('moderatePhotoAction error:', err);
@@ -209,6 +213,40 @@ export async function setUserVerifiedAction(userId: string, verified: boolean) {
   } catch (err) {
     console.error('setUserVerifiedAction error:', err);
     return { ok: false, error: 'Failed to verify user' };
+  }
+}
+
+export async function getAdminModerationDataAction() {
+  try {
+    const session = await getSession();
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
+    const admin = await db.orm.public.User.where({ id: session.userId as string }).first();
+    if (admin?.role !== 'admin') return { ok: false, error: 'Forbidden' };
+
+    const reports = await db.orm.public.Report.all();
+    const userIds = new Set(reports.map(r => r.targetUserId));
+    
+    const photos = await db.orm.public.Photo.where({ moderation: 'pending' }).all();
+    photos.forEach(p => userIds.add(p.userId));
+
+    const users = await db.orm.public.User.where((u) => u.id.in(Array.from(userIds))).all();
+    
+    return { 
+      ok: true, 
+      reports: reports.map(r => ({
+        ...r,
+        createdAt: r.createdAt.toString(),
+        targetName: users.find(u => u.id === r.targetUserId)?.name || 'Member'
+      })),
+      photos: photos.map(p => ({
+        ...p,
+        uploadedAt: p.uploadedAt.toString(),
+        ownerName: users.find(u => u.id === p.userId)?.name || 'Member'
+      }))
+    };
+  } catch (err) {
+    console.error('getAdminModerationDataAction error:', err);
+    return { ok: false, error: 'Failed to fetch admin moderation data' };
   }
 }
 

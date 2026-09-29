@@ -124,7 +124,7 @@ export function SiteNav() {
             href="/sign-up"
             className="flex items-center gap-2 rounded-full px-5 py-2.5 text-[14px] font-semibold text-white shadow-lg transition-all duration-200 hover:scale-105 hover:shadow-[0_0_24px] hover:shadow-[#ec4899]/40"
             style={{ background: 'linear-gradient(135deg, #ec4899 0%, #8b2fc9 60%, #0ea5e9 100%)' }}>
-            Start wingling
+            Finder wingle
             <ArrowRightIcon className="h-3.5 w-3.5" />
           </Link>
         </div>
@@ -182,7 +182,7 @@ export function SiteNav() {
               <button
                 className="w-full rounded-full py-3 text-[15px] font-semibold text-white transition hover:opacity-90"
                 style={{ background: 'linear-gradient(135deg, #ec4899, #8b2fc9, #0ea5e9)' }}>
-                Start wingling
+                Finder wingle
               </button>
             </Link>
           </div>

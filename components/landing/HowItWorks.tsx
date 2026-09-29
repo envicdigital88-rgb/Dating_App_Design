@@ -25,7 +25,7 @@ const steps = [
 },
 {
   icon: <MessageCircleIcon className="h-5 w-5" />,
-  title: 'Mingling',
+  title: 'Start to wingle',
   body: 'Chat, then date. Share photos, agree on a plan, and get off the app. That is the whole point.'
 }];
 

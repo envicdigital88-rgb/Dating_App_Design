@@ -102,7 +102,7 @@ export function AdminUsers() {
             key={key}
             onClick={() => setFilter(key)}
             className={`rounded-full px-3.5 py-1.5 text-[13px] capitalize transition-colors duration-150 ease-soft ${
-            filter === key ? 'bg-cream-deep text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`
+            filter === key ? 'bg-sand text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`
             }>
             
               {key}

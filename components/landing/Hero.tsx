@@ -71,7 +71,7 @@ export function Hero() {
               <button
                 className="flex w-full items-center justify-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-semibold text-white shadow-xl transition-all duration-200 hover:scale-105 hover:shadow-[0_0_40px_rgba(236,72,153,0.45)]"
                 style={{ background: 'linear-gradient(135deg, #ec4899 0%, #a855f7 50%, #0ea5e9 100%)' }}>
-                Start wingling
+                Finder wingle
                 <ArrowRightIcon className="h-4 w-4" />
               </button>
             </Link>
