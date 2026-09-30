@@ -846,17 +846,17 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     { userId: currentUser.id, chatUsed: 0, winglesUsed: 0 } as Usage;
     return {
       packageId: pkg.id,
-      packageName: 'Unlimited (Beta)',
-      chatLimit: null,
+      packageName: pkg.name,
+      chatLimit: pkg.chatLimit,
       chatUsed: usage.chatUsed,
-      chatRemaining: null,
-      wingleLimit: null,
+      chatRemaining: pkg.chatLimit === null ? null : Math.max(0, pkg.chatLimit - usage.chatUsed),
+      wingleLimit: pkg.wingleLimit,
       winglesUsed: usage.winglesUsed,
-      winglesRemaining: null,
-      incomingWinglesUnlocked: true,
-      priorityVisibility: true,
-      subscriptionStatus: 'active',
-      subscriptionExpiry: null
+      winglesRemaining: pkg.wingleLimit === null ? null : Math.max(0, pkg.wingleLimit - usage.winglesUsed),
+      incomingWinglesUnlocked: pkg.incomingWinglesUnlocked,
+      priorityVisibility: pkg.priorityVisibility,
+      subscriptionStatus: sub ? 'active' : 'free',
+      subscriptionExpiry: sub ? sub.expiresAt : null
     };
   }, [currentUser, db.packages, db.subscriptions, db.usage, freePackage]);
 
@@ -937,7 +937,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         online: true,
         lastActiveAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
-        wingitsBalance: 0,
+        wingitsBalance: 20,
         freeWinglesSent: 0,
         freeWinglesAccepted: 0,
         isUnlimited: false
