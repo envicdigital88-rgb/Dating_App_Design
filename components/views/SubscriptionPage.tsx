@@ -2,17 +2,43 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { CreditCardIcon } from 'lucide-react';
+import { CreditCardIcon, CoinsIcon } from 'lucide-react';
 import { Page, PageHeader } from '@/components/AppShell';
 import { Button } from '@/components/ui/Button';
 import { Badge, EmptyState } from '@/components/ui/Bits';
 import { UsageMeter } from '@/components/UsageMeter';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { money, shortDate } from '@/lib/utils/format';
+import { checkWelcomeBonusAction, claimWelcomeBonusAction } from '@/app/actions/wingits';
+import { toast } from 'sonner';
 
 export function SubscriptionPage() {
   const router = useRouter();
   const { currentUser, entitlements, paymentsOf, db } = useStore();
+  const [hasClaimedBonus, setHasClaimedBonus] = React.useState(true);
+  const [claiming, setClaiming] = React.useState(false);
+
+  React.useEffect(() => {
+    if (currentUser) {
+      checkWelcomeBonusAction().then(claimed => setHasClaimedBonus(claimed));
+    }
+  }, [currentUser]);
+
+  const handleClaimBonus = async () => {
+    setClaiming(true);
+    const result = await claimWelcomeBonusAction();
+    setClaiming(false);
+    if (result.ok) {
+      toast.success('You have successfully claimed 20 Free Wingits!');
+      setHasClaimedBonus(true);
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } else {
+      toast.error(result.error || 'Failed to claim wingits');
+    }
+  };
+
   if (!currentUser || !entitlements) return null;
 
   const payments = paymentsOf(currentUser.id);
@@ -30,6 +56,24 @@ export function SubscriptionPage() {
       
 
       <div className="grid max-w-4xl gap-5 lg:grid-cols-2">
+        <div className="rounded-4xl bg-cream-deep p-6 shadow-card flex flex-col items-center justify-center lg:col-span-2 relative overflow-hidden">
+          <div className="absolute -top-24 -right-24 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+          <p className="text-[14px] font-semibold uppercase tracking-[0.08em] text-ink-muted mb-2 relative z-10">
+            Current Wingits Balance
+          </p>
+          <div className="flex items-center gap-3 text-5xl font-display font-bold text-amber-500 relative z-10">
+             <CoinsIcon className="h-10 w-10" />
+             {currentUser.wingitsBalance} Wingits
+          </div>
+          {!hasClaimedBonus && (
+            <div className="mt-6 relative z-10">
+              <Button onClick={handleClaimBonus} loading={claiming} className="bg-amber-500 hover:bg-amber-600 text-white font-bold h-12 px-6">
+                Claim 20 Free Wingits
+              </Button>
+            </div>
+          )}
+        </div>
+
         <div className="rounded-4xl bg-cream-deep p-6 shadow-card">
           <div className="flex items-start justify-between gap-4">
             <div>

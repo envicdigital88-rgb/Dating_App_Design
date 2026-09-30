@@ -34,8 +34,7 @@ export async function spendWingitsAction(amount: number, description: string): P
         userId: session.userId as string,
         amount: -amount,
         type: 'spend',
-        description,
-        createdAt: new Date().toISOString()
+        description
       });
 
       return { ok: true };
@@ -67,8 +66,7 @@ export async function addWingitsAction(amount: number, description: string, paym
         userId: session.userId as string,
         amount: amount,
         type: 'purchase',
-        description: `${description} (Ref: ${paymentRef})`,
-        createdAt: new Date().toISOString()
+        description: `${description} (Ref: ${paymentRef})`
       });
 
       return { ok: true };
@@ -77,5 +75,58 @@ export async function addWingitsAction(amount: number, description: string, paym
     return result;
   } catch (error: any) {
     return { ok: false, error: error.message || 'Transaction failed' };
+  }
+}
+
+export async function checkWelcomeBonusAction(): Promise<boolean> {
+  try {
+    const session = await getSession();
+    if (!session?.userId) return true; // prevent popup if not logged in
+
+    const transaction = await db.orm.public.WingitsTransaction
+      .where({ userId: session.userId as string, description: 'Welcome Bonus' })
+      .first();
+
+    return !!transaction;
+  } catch (error) {
+    console.error('checkWelcomeBonusAction error:', error);
+    return true; // hide popup on error
+  }
+}
+
+export async function claimWelcomeBonusAction(): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const session = await getSession();
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
+
+    await db.transaction(async (tx) => {
+      const existing = await tx.orm.public.WingitsTransaction
+        .where({ userId: session.userId as string, description: 'Welcome Bonus' })
+        .first();
+
+      if (existing) {
+        throw new Error('Welcome bonus already claimed');
+      }
+
+      const user = await tx.orm.public.User.select('wingitsBalance').first({ id: session.userId as string });
+      const currentBalance = user?.wingitsBalance || 0;
+
+      await tx.orm.public.User
+        .where({ id: session.userId as string })
+        .update({ wingitsBalance: currentBalance + 20 });
+
+      await tx.orm.public.WingitsTransaction.create({
+        id: crypto.randomUUID(),
+        userId: session.userId as string,
+        amount: 20,
+        type: 'bonus',
+        description: 'Welcome Bonus'
+      });
+    });
+
+    return { ok: true };
+  } catch (error: any) {
+    console.error('claimWelcomeBonusAction error:', error);
+    return { ok: false, error: error?.message || 'Failed to claim bonus' };
   }
 }

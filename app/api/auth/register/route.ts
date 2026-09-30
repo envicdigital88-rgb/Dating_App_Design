@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
         age,
         gender,
         intention,
-        wingitsBalance: 20,
+        wingitsBalance: 0,
         interests: '[]',
         traits: '[]',
         lifestyle: JSON.stringify({
@@ -53,13 +53,6 @@ export async function POST(req: NextRequest) {
           education: '',
           work: ''
         }),
-      });
-
-      await tx.orm.public.WingitsTransaction.create({
-        userId: newUser.id,
-        amount: 20,
-        type: 'bonus',
-        description: 'Welcome Bonus'
       });
 
       return newUser;

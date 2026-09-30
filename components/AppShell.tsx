@@ -35,6 +35,7 @@ import { useStore } from '@/lib/contexts/StoreContext';
 import { usePwa } from './PwaProvider';
 import { cn } from '@/lib/utils/format';
 import { NotificationPrompt } from './NotificationPrompt';
+import { WelcomeBonusPrompt } from './WelcomeBonusPrompt';
 
 interface NavItem {
   to: string;
@@ -44,6 +45,8 @@ interface NavItem {
 }
 
 export function AppShell({ children }: { children?: React.ReactNode }) {
+// ... omitting unchanged code below
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
@@ -403,6 +406,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         )}
       </AnimatePresence>
       <NotificationPrompt />
+      <WelcomeBonusPrompt />
     </div>);
 }
 
