@@ -34,7 +34,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'1d1301ae7f679a954442e7ffb2d14949a3965644f942cffc6c161ce3fc1c9cce'>;
+  StorageHashBase<'513a5f19f4d46e54fb34840ed9ba0a10e83bbeee6a2fab78ece1b1314447c5d8'>;
 export type ExecutionHash =
   ExecutionHashBase<'798d36864cb0d19157cc44ccae8a080a9418954c07e4759d0f8b3313df67446c'>;
 export type ProfileHash =
@@ -402,10 +402,6 @@ export type FieldOutputTypes = {
       readonly anonymousName: CodecTypes['pg/text@1']['output'] | null;
       readonly pushSubscription: CodecTypes['pg/json@1']['output'] | null;
       readonly wingitsBalance: CodecTypes['pg/int4@1']['output'];
-      readonly freeWinglesSent: CodecTypes['pg/int4@1']['output'];
-      readonly freeWinglesAccepted: CodecTypes['pg/int4@1']['output'];
-      readonly lastDailyBonusAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
-      readonly isUnlimited: CodecTypes['pg/bool@1']['output'];
     };
     readonly UserStatus: {
       readonly id: CodecTypes['pg/text@1']['output'];
@@ -596,10 +592,6 @@ export type FieldInputTypes = {
       readonly anonymousName: CodecTypes['pg/text@1']['input'] | null;
       readonly pushSubscription: CodecTypes['pg/json@1']['input'] | null;
       readonly wingitsBalance: CodecTypes['pg/int4@1']['input'];
-      readonly freeWinglesSent: CodecTypes['pg/int4@1']['input'];
-      readonly freeWinglesAccepted: CodecTypes['pg/int4@1']['input'];
-      readonly lastDailyBonusAt: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
-      readonly isUnlimited: CodecTypes['pg/bool@1']['input'];
     };
     readonly UserStatus: {
       readonly id: CodecTypes['pg/text@1']['input'];
@@ -771,16 +763,12 @@ export type StorageColumnTypes = {
       readonly bio: CodecTypes['pg/text@1']['output'];
       readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
       readonly email: CodecTypes['pg/text@1']['output'];
-      readonly freeWinglesAccepted: CodecTypes['pg/int4@1']['output'];
-      readonly freeWinglesSent: CodecTypes['pg/int4@1']['output'];
       readonly gender: CodecTypes['pg/text@1']['output'];
       readonly id: CodecTypes['pg/text@1']['output'];
       readonly intention: CodecTypes['pg/text@1']['output'];
       readonly interests: CodecTypes['pg/text@1']['output'];
       readonly isAnonymous: CodecTypes['pg/bool@1']['output'];
-      readonly isUnlimited: CodecTypes['pg/bool@1']['output'];
       readonly lastActiveAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
-      readonly lastDailyBonusAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
       readonly lifestyle: CodecTypes['pg/text@1']['output'];
       readonly location: CodecTypes['pg/text@1']['output'];
       readonly name: CodecTypes['pg/text@1']['output'];
@@ -965,16 +953,12 @@ export type StorageColumnInputTypes = {
       readonly bio: CodecTypes['pg/text@1']['input'];
       readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
       readonly email: CodecTypes['pg/text@1']['input'];
-      readonly freeWinglesAccepted: CodecTypes['pg/int4@1']['input'];
-      readonly freeWinglesSent: CodecTypes['pg/int4@1']['input'];
       readonly gender: CodecTypes['pg/text@1']['input'];
       readonly id: CodecTypes['pg/text@1']['input'];
       readonly intention: CodecTypes['pg/text@1']['input'];
       readonly interests: CodecTypes['pg/text@1']['input'];
       readonly isAnonymous: CodecTypes['pg/bool@1']['input'];
-      readonly isUnlimited: CodecTypes['pg/bool@1']['input'];
       readonly lastActiveAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
-      readonly lastDailyBonusAt: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
       readonly lifestyle: CodecTypes['pg/text@1']['input'];
       readonly location: CodecTypes['pg/text@1']['input'];
       readonly name: CodecTypes['pg/text@1']['input'];
@@ -1043,10 +1027,6 @@ export namespace Models {
     anonymousName: CodecTypes['pg/text@1']['output'] | null;
     pushSubscription: CodecTypes['pg/json@1']['output'] | null;
     wingitsBalance: CodecTypes['pg/int4@1']['output'];
-    freeWinglesSent: CodecTypes['pg/int4@1']['output'];
-    freeWinglesAccepted: CodecTypes['pg/int4@1']['output'];
-    lastDailyBonusAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
-    isUnlimited: CodecTypes['pg/bool@1']['output'];
     blocksMade: public_Block[];
     blocksReceived: public_Block[];
     heartBucketMade: public_HeartBucket[];
@@ -2620,38 +2600,6 @@ type ContractBase = Omit<
                     readonly value: DefaultLiteralValue<'pg/int4@1', 20>;
                   };
                 };
-                readonly freeWinglesSent: {
-                  readonly nativeType: 'int4';
-                  readonly codecId: 'pg/int4@1';
-                  readonly nullable: false;
-                  readonly default: {
-                    readonly kind: 'literal';
-                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
-                  };
-                };
-                readonly freeWinglesAccepted: {
-                  readonly nativeType: 'int4';
-                  readonly codecId: 'pg/int4@1';
-                  readonly nullable: false;
-                  readonly default: {
-                    readonly kind: 'literal';
-                    readonly value: DefaultLiteralValue<'pg/int4@1', 0>;
-                  };
-                };
-                readonly lastDailyBonusAt: {
-                  readonly nativeType: 'timestamptz';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                  readonly nullable: true;
-                };
-                readonly isUnlimited: {
-                  readonly nativeType: 'bool';
-                  readonly codecId: 'pg/bool@1';
-                  readonly nullable: false;
-                  readonly default: {
-                    readonly kind: 'literal';
-                    readonly value: DefaultLiteralValue<'pg/bool@1', false>;
-                  };
-                };
               };
               primaryKey: { readonly columns: readonly ['id'] };
               uniques: readonly [{ readonly columns: readonly ['email'] }];
@@ -4004,25 +3952,6 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
               };
-              readonly freeWinglesSent: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
-              };
-              readonly freeWinglesAccepted: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
-              };
-              readonly lastDailyBonusAt: {
-                readonly nullable: true;
-                readonly type: {
-                  readonly kind: 'scalar';
-                  readonly codecId: 'pg/timestamptz-temporal@1';
-                };
-              };
-              readonly isUnlimited: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
-              };
             };
             readonly relations: {
               readonly blocksMade: {
@@ -4274,10 +4203,6 @@ type ContractBase = Omit<
                 readonly anonymousName: { readonly column: 'anonymousName' };
                 readonly pushSubscription: { readonly column: 'pushSubscription' };
                 readonly wingitsBalance: { readonly column: 'wingitsBalance' };
-                readonly freeWinglesSent: { readonly column: 'freeWinglesSent' };
-                readonly freeWinglesAccepted: { readonly column: 'freeWinglesAccepted' };
-                readonly lastDailyBonusAt: { readonly column: 'lastDailyBonusAt' };
-                readonly isUnlimited: { readonly column: 'isUnlimited' };
               };
             };
           };

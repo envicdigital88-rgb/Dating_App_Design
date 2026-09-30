@@ -32,6 +32,7 @@ import { Avatar, Badge } from '@/components/ui/Bits';
 import { Modal } from '@/components/ui/Modal';
 import { ReportDialog } from '@/components/ReportDialog';
 import { UpgradeDialog } from '@/components/UpgradeDialog';
+import { InsufficientWingitsModal } from '@/components/InsufficientWingitsModal';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { dayLabel, mingleTime, presence } from '@/lib/utils/format';
 import { processPhoto, screenPhoto, getCroppedImg } from '@/lib/utils/image';
@@ -59,7 +60,8 @@ export function Chat() {
     isBlocked,
     hasReported,
     typingIn,
-    conversationsOf
+    conversationsOf,
+    viewImage
   } = useStore();
 
   const [draft, setDraft] = useState('');
@@ -68,6 +70,7 @@ export function Chat() {
   const [reporting, setReporting] = useState(false);
   const [blocking, setBlocking] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [showTopup, setShowTopup] = useState(false);
   
   // New WhatsApp Features State
   const [selectedMingles, setSelectedMingles] = useState<string[]>([]);
@@ -163,6 +166,12 @@ export function Chat() {
 
   const submitPreview = async () => {
     if (imagePreviews.length === 0 || !conversation) return;
+    
+    const imageCost = currentUser?.isUnlimited ? 0 : imagePreviews.length * 3;
+    if ((currentUser?.wingitsBalance ?? 0) < imageCost) {
+      setShowTopup(true);
+      return;
+    }
     
     for (let i = 0; i < imagePreviews.length; i++) {
       const preview = imagePreviews[i];
@@ -331,22 +340,47 @@ export function Chat() {
 
                         {mingle.imageUrl && (
                           <div className="relative">
-                            {mingle.viewOnce ? (
+                            {mingle.viewOnce || (!mine && mingle.imageViewCount > 0) || !mine ? (
                               <div
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  if (!mine && !mingle.deletedFor?.includes(currentUser.id)) {
-                                    setLightboxMingleId(mingle.id);
-                                    if (mingle.viewOnce) {
-                                      deleteMingle(mingle.id, 'me');
+                                  if (!mine) {
+                                    if (mingle.deletedFor?.includes(currentUser.id)) return;
+                                    
+                                    if (mingle.viewOnce && mingle.imageViewCount > 0) {
+                                      toast.error("Image Expired");
+                                      return;
                                     }
+                                    
+                                    if (!mingle.viewOnce && mingle.imageViewCount >= 1) {
+                                      if (confirm('Spend 4 Wingits to view this image again?')) {
+                                        viewImage(mingle.id).then(res => {
+                                          if (res.ok) setLightboxMingleId(mingle.id);
+                                          else toast.error(res.error);
+                                        });
+                                      }
+                                      return;
+                                    }
+                                    
+                                    viewImage(mingle.id).then(res => {
+                                      if (res.ok) {
+                                        setLightboxMingleId(mingle.id);
+                                        if (mingle.viewOnce) {
+                                          deleteMingle(mingle.id, 'me');
+                                        }
+                                      }
+                                    });
+                                  } else {
+                                    setLightboxMingleId(mingle.id);
                                   }
                                 }}
                                 className={`flex items-center gap-2 p-3 bg-black/20 rounded-xl cursor-pointer ${mingle.body ? 'mb-2' : ''}`}
                               >
                                 {mine || mingle.deletedFor?.includes(currentUser.id) ? <EyeOffIcon className="h-5 w-5 opacity-50" /> : <EyeIcon className="h-5 w-5" />}
                                 <span className="font-semibold italic opacity-90 text-[14px]">
-                                  {(mine && mingle.deletedFor?.length) || (!mine && mingle.deletedFor?.includes(currentUser.id)) ? 'Opened' : 'Photo'}
+                                  {(mine && mingle.deletedFor?.length) || (!mine && mingle.deletedFor?.includes(currentUser.id)) ? 'Opened' : 
+                                   (mingle.viewOnce && mingle.imageViewCount > 0 ? 'Image Expired' : 
+                                   (!mingle.viewOnce && mingle.imageViewCount >= 1 ? 'Tap to View (4 Wingits)' : 'Tap to View (Free)'))}
                                 </span>
                               </div>
                             ) : (
@@ -355,10 +389,7 @@ export function Chat() {
                                 alt="Shared photo"
                                 onClick={(e) => { 
                                   e.stopPropagation(); 
-                                  setLightboxMingleId(mingle.id); 
-                                  if (mingle.viewOnce) {
-                                    deleteMingle(mingle.id, 'me');
-                                  }
+                                  setLightboxMingleId(mingle.id);
                                 }}
                                 className={`max-h-72 max-w-full object-contain rounded-2xl cursor-zoom-in ${mingle.body ? 'mb-2' : ''}`} 
                               />
@@ -854,6 +885,7 @@ export function Chat() {
           </div>
         </div>
       )}
+      <InsufficientWingitsModal open={showTopup} onClose={() => setShowTopup(false)} currentBalance={currentUser?.wingitsBalance ?? 0} requiredAmount={imagePreviews.length * 3} />
     </div>
   );
 }

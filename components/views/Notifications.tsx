@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
+
+import Link from 'next/link';
 import {
   BellIcon,
   CreditCardIcon,
@@ -34,7 +35,6 @@ const icons: Record<NotificationType, React.ReactNode> = {
 };
 
 export function Notifications() {
-  const router = useRouter();
   const { notificationsOf, markNotificationRead, markAllNotificationsRead } = useStore();
   const { notificationsEnabled, enableNotifications } = usePwa();
   const notifications = notificationsOf();
@@ -83,40 +83,70 @@ export function Notifications() {
           <ul className="flex flex-col gap-2">
               {notifications.slice(0, limit).map((notification) =>
             <li key={notification.id} className="overflow-hidden rounded-3xl bg-white/15 backdrop-blur-md ring-1 ring-white/10 shadow-sm">
-                  <button
-                onClick={() => {
-                  markNotificationRead(notification.id);
-                  if (notification.href) router.push(notification.href);
-                }}
-                className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors duration-150 ease-soft hover:bg-white/15">
-                
-                    <span
-                  className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                  notification.read ? 'bg-cream-deep text-ink-muted' : 'bg-berry-500/20 text-berry-400'}`
-                  }>
-                  
-                      {icons[notification.type] || <BellIcon className="h-4 w-4" />}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center gap-2">
-                        <span
-                      className={`truncate text-[14px] ${
-                      notification.read ? 'text-ink-soft' : 'font-semibold text-ink'}`
-                      }>
-                          {notification.title}
+                  {notification.href ? (
+                    <Link
+                      href={notification.href}
+                      onClick={() => markNotificationRead(notification.id)}
+                      className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors duration-150 ease-soft hover:bg-white/15"
+                    >
+                      <span
+                        className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                        notification.read ? 'bg-cream-deep text-ink-muted' : 'bg-berry-500/20 text-berry-400'}`
+                        }>
+                        {icons[notification.type] || <BellIcon className="h-4 w-4" />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-2">
+                          <span
+                            className={`truncate text-[14px] ${
+                            notification.read ? 'text-ink-soft' : 'font-semibold text-ink'}`
+                            }>
+                            {notification.title}
+                          </span>
+                          {!notification.read &&
+                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-berry-500" />
+                          }
                         </span>
-                        {!notification.read &&
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-berry-500" />
-                    }
+                        <span className="block text-[12px] leading-relaxed text-ink-soft">
+                          {notification.body}
+                        </span>
+                        <span className="block text-[11px] text-ink-muted">
+                          {relativeTime(notification.createdAt)}
+                        </span>
                       </span>
-                      <span className="block text-[12px] leading-relaxed text-ink-soft">
-                        {notification.body}
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={() => markNotificationRead(notification.id)}
+                      className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors duration-150 ease-soft hover:bg-white/15"
+                    >
+                      <span
+                        className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                        notification.read ? 'bg-cream-deep text-ink-muted' : 'bg-berry-500/20 text-berry-400'}`
+                        }>
+                        {icons[notification.type] || <BellIcon className="h-4 w-4" />}
                       </span>
-                      <span className="block text-[11px] text-ink-muted">
-                        {relativeTime(notification.createdAt)}
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-2">
+                          <span
+                            className={`truncate text-[14px] ${
+                            notification.read ? 'text-ink-soft' : 'font-semibold text-ink'}`
+                            }>
+                            {notification.title}
+                          </span>
+                          {!notification.read &&
+                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-berry-500" />
+                          }
+                        </span>
+                        <span className="block text-[12px] leading-relaxed text-ink-soft">
+                          {notification.body}
+                        </span>
+                        <span className="block text-[11px] text-ink-muted">
+                          {relativeTime(notification.createdAt)}
+                        </span>
                       </span>
-                    </span>
-                  </button>
+                    </button>
+                  )}
                 </li>
             )}
             </ul>

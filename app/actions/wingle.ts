@@ -19,11 +19,42 @@ export async function sendWingle(toUserId: string, note: string) {
       return { ok: false, error: 'Wingle already sent' }
     }
 
-    const newWingle = await db.orm.public.Wingle.create({
-      fromUserId: session.userId as string,
-      toUserId: toUserId,
-      note: note
-    })
+    const newWingle = await db.transaction(async (tx) => {
+      const user = await tx.orm.public.User.where({ id: session.userId as string }).first();
+      if (!user) throw new Error('User not found');
+      
+      let wingitsCost = 8;
+      if (user.isUnlimited) {
+        wingitsCost = 0;
+      } else if (user.freeWinglesSent < 5) {
+        wingitsCost = 0;
+      }
+
+      if (user.wingitsBalance < wingitsCost) {
+        throw new Error('Not enough Wingits to send Wingle.');
+      }
+
+      const updates: any = {};
+      if (wingitsCost > 0) updates.wingitsBalance = user.wingitsBalance - wingitsCost;
+      if (wingitsCost === 0) updates.freeWinglesSent = user.freeWinglesSent + 1;
+      
+      await tx.orm.public.User.where({ id: user.id }).update(updates);
+      
+      if (wingitsCost > 0) {
+        await tx.orm.public.WingitsTransaction.create({
+          userId: user.id,
+          amount: -wingitsCost,
+          type: 'spend',
+          description: 'Sent a Wingle'
+        });
+      }
+
+      return await tx.orm.public.Wingle.create({
+        fromUserId: user.id,
+        toUserId: toUserId,
+        note: note
+      });
+    });
 
     await db.orm.public.Notification.create({
       userId: toUserId,
@@ -84,36 +115,86 @@ export async function respondToWingle(wingleId: string, accept: boolean) {
 
     const logMsg = `[respondToWingle] wingleId: ${wingleId}, accept: ${accept}, session: ${session.userId}, toUserId: ${wingle.toUserId}\n`;
     console.log(logMsg);
-    try { require('fs').appendFileSync('d:/Dating_App_Design/logs.txt', logMsg); } catch(e) {}
 
-    // Update Wingle
-    await db.orm.public.Wingle.where({ id: wingleId }).update({
-      status: newStatus,
-      respondedAt: Temporal.Now.instant()
-    })
+    const { connection, conversation } = await db.transaction(async (tx) => {
+      let acceptCost = 4;
+      if (accept) {
+        const receiver = await tx.orm.public.User.where({ id: session.userId as string }).first();
+        if (!receiver) throw new Error('Receiver not found');
+        if (receiver.isUnlimited) {
+          acceptCost = 0;
+        } else if (receiver.freeWinglesAccepted < 2) {
+          acceptCost = 0;
+        }
+
+        if (receiver.wingitsBalance < acceptCost) {
+          throw new Error('Not enough Wingits to accept.');
+        }
+
+        const updates: any = {};
+        if (acceptCost > 0) updates.wingitsBalance = receiver.wingitsBalance - acceptCost;
+        if (acceptCost === 0) updates.freeWinglesAccepted = receiver.freeWinglesAccepted + 1;
+        
+        await tx.orm.public.User.where({ id: receiver.id }).update(updates);
+        if (acceptCost > 0) {
+          await tx.orm.public.WingitsTransaction.create({
+            userId: receiver.id,
+            amount: -acceptCost,
+            type: 'spend',
+            description: 'Accepted a Wingle'
+          });
+        }
+      } else {
+        // Refund 3 Wingits to the sender
+        const sender = await tx.orm.public.User.where({ id: wingle.fromUserId }).first();
+        if (sender) {
+          await tx.orm.public.User.where({ id: sender.id }).update({
+            wingitsBalance: sender.wingitsBalance + 3
+          });
+          await tx.orm.public.WingitsTransaction.create({
+            userId: sender.id,
+            amount: 3,
+            type: 'refund',
+            description: 'Wingle was declined'
+          });
+        }
+      }
+
+      // Update Wingle
+      await tx.orm.public.Wingle.where({ id: wingleId }).update({
+        status: newStatus,
+        respondedAt: Temporal.Now.instant()
+      });
+
+      let conn = null;
+      let conv = null;
+
+      // If accepted, create a Connection and Conversation
+      if (accept) {
+        const u1 = wingle.fromUserId < wingle.toUserId ? wingle.fromUserId : wingle.toUserId
+        const u2 = wingle.fromUserId < wingle.toUserId ? wingle.toUserId : wingle.fromUserId
+
+        conn = await tx.orm.public.Connection.where({ userId1: u1, userId2: u2 }).first()
+        if (!conn) {
+          conn = await tx.orm.public.Connection.create({
+            userId1: u1,
+            userId2: u2
+          })
+        }
+
+        conv = await tx.orm.public.Conversation.where({ userId1: u1, userId2: u2 }).first()
+        if (!conv) {
+          conv = await tx.orm.public.Conversation.create({
+            userId1: u1,
+            userId2: u2
+          })
+        }
+      }
+      return { connection: conn, conversation: conv };
+    });
+
     console.log(`[respondToWingle] Wingle status updated to ${newStatus}`);
-
-    // If accepted, create a Connection and Conversation
-    if (accept) {
-      const u1 = wingle.fromUserId < wingle.toUserId ? wingle.fromUserId : wingle.toUserId
-      const u2 = wingle.fromUserId < wingle.toUserId ? wingle.toUserId : wingle.fromUserId
-
-      let connection = await db.orm.public.Connection.where({ userId1: u1, userId2: u2 }).first()
-      if (!connection) {
-        connection = await db.orm.public.Connection.create({
-          userId1: u1,
-          userId2: u2
-        })
-      }
-
-      let conversation = await db.orm.public.Conversation.where({ userId1: u1, userId2: u2 }).first()
-      if (!conversation) {
-        conversation = await db.orm.public.Conversation.create({
-          userId1: u1,
-          userId2: u2
-        })
-      }
-
+    if (accept && connection && conversation) {
       console.log(`[respondToWingle] Created Connection ${connection.id} and Conversation ${conversation.id}`);
 
       await db.orm.public.Notification.create({

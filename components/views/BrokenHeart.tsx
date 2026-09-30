@@ -3,6 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { HeartCrackIcon, ShoppingCartIcon, XIcon } from 'lucide-react';
+import { toast } from 'sonner';
 import { Page, PageHeader } from '@/components/AppShell';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/Bits';
@@ -69,8 +70,10 @@ export function BrokenHeart() {
                     </button>
                     <button
                       onClick={() => {
-                        removeFromPasses(user.id);
-                        addToHeartBucket(user.id);
+                        if (addToHeartBucket(user.id)) {
+                          removeFromPasses(user.id);
+                          toast.success(`${user.name} moved to In Your Heart`);
+                        }
                       }}
                       className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-berry-500 text-sm font-semibold text-white transition-colors hover:bg-berry-600"
                     >

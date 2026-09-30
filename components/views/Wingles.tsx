@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { CheckIcon, LockIcon, SendIcon, SparklesIcon, XIcon } from 'lucide-react';
+import { CheckIcon, LockIcon, SendIcon, XIcon } from 'lucide-react';
 import { Page, PageHeader } from '@/components/AppShell';
 import { Button } from '@/components/ui/Button';
 import { Badge, EmptyState } from '@/components/ui/Bits';
@@ -11,6 +11,7 @@ import { UpgradeDialog } from '@/components/UpgradeDialog';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { relativeTime, shortDate } from '@/lib/utils/format';
 import type { WinglingWingle } from '@/lib/types';
+import { InsufficientWingitsModal } from '@/components/InsufficientWingitsModal';
 
 export function Wingles() {
   const router = useRouter();
@@ -21,10 +22,12 @@ export function Wingles() {
     userById,
     photosOf,
     respondToWingle,
-    markWinglesViewed
+    markWinglesViewed,
+    currentUser
   } = useStore();
   const [tab, setTab] = useState<'incoming' | 'sent'>('incoming');
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [showTopup, setShowTopup] = useState(false);
 
   React.useEffect(() => {
     markWinglesViewed();
@@ -35,7 +38,6 @@ export function Wingles() {
   const sent = sentWingles();
   const incoming = incomingWingles();
   const pendingIncoming = incoming.filter((r) => r.status === 'pending');
-  const unlocked = entitlements.incomingWinglesUnlocked;
 
   const statusTone = (status: WinglingWingle['status']) =>
   status === 'accepted' ? 'moss' : status === 'declined' ? 'red' : 'amber';
@@ -45,14 +47,7 @@ export function Wingles() {
       <PageHeader
         title="Wingling wingles"
         body="Everything you have sent, and everyone who has asked to meet you."
-        action={
-        !unlocked ?
-        <Button onClick={() => setUpgradeOpen(true)}>
-              <SparklesIcon className="h-4 w-4" />
-              Unlock incoming wingles
-            </Button> :
-        undefined
-        } />
+        action={undefined} />
       
 
       <div className="mb-6 flex w-full justify-center">
@@ -98,7 +93,8 @@ export function Wingles() {
             const photo = sender ? photosOf(sender.id)[0] : undefined;
             if (!sender) return null;
 
-            if (!unlocked) {
+            const isPending = wingle.status === 'pending';
+            if (isPending) {
               return (
                 <li
                   key={wingle.id}
@@ -122,18 +118,44 @@ export function Wingles() {
                         Someone wants to connect with you ❤
                       </p>
                       <p className="mt-1 text-[13px] text-ink-soft">
-                        Sent {relativeTime(wingle.createdAt)} · upgrade your package to see who
-                        sent this wingle.
+                        Sent {relativeTime(wingle.createdAt)}
                       </p>
                       <p className="mt-2 rounded-2xl bg-cream px-3.5 py-2 text-[13px] text-ink-muted">
-                        “{wingle.note.slice(0, 14)}
-                        {wingle.note.length > 14 ? ' ▒▒▒▒▒▒▒▒▒▒' : ''}”
+                        “{wingle.note.split(' ').slice(0, 2).join(' ')}
+                        {wingle.note.split(' ').length > 2 ? '...' : ''}”
                       </p>
                     </div>
                   </div>
-                  <Button size="sm" className="w-full sm:w-auto" onClick={() => setUpgradeOpen(true)}>
-                    Reveal
-                  </Button>
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 sm:flex-none"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        respondToWingle(wingle.id, 'declined');
+                        toast.success('Wingle declined');
+                      }}>
+                      <XIcon className="h-3.5 w-3.5" />
+                      Decline
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="flex-1 sm:flex-none"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        const acceptCost = currentUser?.isUnlimited ? 0 : ((currentUser?.freeWinglesAccepted ?? 0) < 2 ? 0 : 4);
+                        if ((currentUser?.wingitsBalance ?? 0) < acceptCost) {
+                          setShowTopup(true);
+                          return;
+                        }
+                        await respondToWingle(wingle.id, 'accepted');
+                        toast.success(`You are connected with the sender!`);
+                      }}>
+                      <CheckIcon className="h-3.5 w-3.5" />
+                      Accept {currentUser?.isUnlimited ? '' : (((currentUser?.freeWinglesAccepted ?? 0) < 2) ? '(Free)' : '(4 Wingits)')}
+                    </Button>
+                  </div>
                 </li>
               );
             }
@@ -168,39 +190,13 @@ export function Wingles() {
                     )}
                   </div>
                 </div>
-                {wingle.status === 'pending' ? (
-                  <div className="flex gap-2 w-full sm:w-auto">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-1 sm:flex-none"
-                      onClick={() => {
-                        respondToWingle(wingle.id, 'declined');
-                        toast.success('Wingle declined');
-                      }}>
-                      <XIcon className="h-3.5 w-3.5" />
-                      Decline
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="flex-1 sm:flex-none"
-                      onClick={() => {
-                        respondToWingle(wingle.id, 'accepted');
-                        toast.success(`You are connected with ${sender.name}`);
-                      }}>
-                      <CheckIcon className="h-3.5 w-3.5" />
-                      Accept
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full sm:w-auto"
-                    onClick={() => router.push(`/profile/${sender.id}`)}>
-                    View profile
-                  </Button>
-                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={(e) => { e.stopPropagation(); router.push(`/profile/${sender.id}`); }}>
+                  View profile
+                </Button>
               </li>
             );
 
@@ -208,25 +204,7 @@ export function Wingles() {
             </ul>
         }
 
-          {!unlocked && incoming.length > 0 &&
-        <div className="mt-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-4xl bg-plum-500 p-5 text-cream">
-              <div>
-                <p className="font-display text-xl">
-                  {pendingIncoming.length} {pendingIncoming.length === 1 ? 'person' : 'people'} asked
-                  to meet you
-                </p>
-                <p className="mt-1 text-[14px] text-cream/75">
-                  Upgrade to Basic or Premium to see who they are and reply.
-                </p>
-              </div>
-              <Button
-            variant="inverse"
-            onClick={() => router.push('/packages')}>
-            
-                See packages
-              </Button>
-            </div>
-        }
+
         </div>
       }
 
@@ -283,7 +261,13 @@ export function Wingles() {
         open={upgradeOpen}
         reason="incoming_locked"
         onClose={() => setUpgradeOpen(false)} />
-      
+      <InsufficientWingitsModal
+        open={showTopup}
+        onClose={() => setShowTopup(false)}
+        requiredAmount={4}
+        currentBalance={currentUser?.wingitsBalance ?? 0}
+        actionName="accept this Wingle"
+      />
     </Page>);
 
 }

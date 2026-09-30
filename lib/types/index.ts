@@ -59,6 +59,20 @@ export interface User {
   isAnonymous?: boolean;
   anonymousName?: string;
   heartReacts?: number;
+  wingitsBalance: number;
+  freeWinglesSent: number;
+  freeWinglesAccepted: number;
+  lastDailyBonusAt?: string;
+  isUnlimited: boolean;
+}
+
+export interface WingitsTransaction {
+  id: string;
+  userId: string;
+  amount: number;
+  type: 'purchase' | 'spend' | 'refund' | 'bonus';
+  description: string;
+  createdAt: string;
 }
 
 export interface UserStatus {
@@ -150,6 +164,7 @@ export interface Mingle {
   reactions?: Record<string, any> | null;
   deletedFor?: string[];
   viewOnce: boolean;
+  imageViewCount: number;
 }
 
 export interface SecretWingle {

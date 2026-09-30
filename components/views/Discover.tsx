@@ -208,7 +208,12 @@ export function Discover() {
   const handleDragLeave = (e: React.DragEvent) => { if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) setActiveZone(null); };
   const handleDropHeart = (e: React.DragEvent) => {
     e.preventDefault();
-    if (draggingUser) { addToHeartBucket(draggingUser.id); toast.success(`💜 ${draggingUser.name} added to In Your Heart!`); }
+    if (draggingUser) { 
+      const added = addToHeartBucket(draggingUser.id); 
+      if (added) {
+        toast.success(`💜 ${draggingUser.name} added to In Your Heart!`); 
+      }
+    }
     setDraggingUser(null); setActiveZone(null);
   };
   const handleDropRecycle = (e: React.DragEvent) => {
@@ -318,7 +323,11 @@ export function Discover() {
                 <ProfileCard key={current.id} user={current} liked={hasLiked(current.id)} wingleed={!!wingleStatusWith(current.id)}
                   onLike={() => { likeUser(current.id); toast.success(`You liked ${current.name}`); }}
                   onPass={() => { passUser(current.id); }}
-                  onHeartBucket={() => { addToHeartBucket(current.id); toast.success(`♥️ ${current.name} added to In Your Heart!`); }}
+                  onHeartBucket={() => { 
+                    if (addToHeartBucket(current.id)) {
+                      toast.success(`♥️ ${current.name} added to In Your Heart!`); 
+                    }
+                  }}
                   onRecycleBin={() => { passUser(current.id); }}
                   onWingle={() => {
                     if (entitlements.winglesRemaining !== null && entitlements.winglesRemaining <= 0) { setUpgrade('wingle_limit'); return; }
@@ -371,7 +380,12 @@ export function Discover() {
                           <span className="block truncate text-[10px] text-ink-muted">{user.age} · {user.location}</span>
                         </button>
                         <div className="flex gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={e => { e.stopPropagation(); addToHeartBucket(user.id); toast.success(`💜 ${user.name} saved!`); }}
+                          <button onClick={e => { 
+                            e.stopPropagation(); 
+                            if (addToHeartBucket(user.id)) {
+                              toast.success(`💜 ${user.name} saved!`); 
+                            }
+                          }}
                             className="flex h-6 w-6 items-center justify-center rounded-lg text-berry-400 hover:bg-berry-50 hover:text-berry-600 transition-colors" title="In Your Heart">
                             <HeartIcon className="h-3 w-3" />
                           </button>

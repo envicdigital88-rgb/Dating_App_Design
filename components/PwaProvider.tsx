@@ -34,24 +34,8 @@ const MANIFEST = {
     type: 'image/svg+xml',
     purpose: 'any maskable'
   }]
-
 };
 
-const SERVICE_WORKER = `
-const CACHE = 'winglemingle-v1';
-self.addEventListener('install', (e) => self.skipWaiting());
-self.addEventListener('activate', (e) => self.clients.claim());
-self.addEventListener('fetch', (event) => {
-  if (event.wingle.method !== 'GET') return;
-  event.respondWith(
-    caches.open(CACHE).then((cache) =>
-      fetch(event.wingle)
-        .then((res) => { cache.put(event.wingle, res.clone()); return res; })
-        .catch(() => cache.match(event.wingle))
-    )
-  );
-});
-`;
 
 export function PwaProvider({ children }: {children: React.ReactNode;}) {
   const [installable, setInstallable] = useState(true);
@@ -73,19 +57,6 @@ export function PwaProvider({ children }: {children: React.ReactNode;}) {
     meta.name = 'theme-color';
     meta.content = '#0EA5E9';
     document.head.appendChild(meta);
-
-    // Service worker for offline fallback and asset caching.
-    let cleanupSw: (() => void) | undefined;
-    if ('serviceWorker' in navigator) {
-      try {
-        const swBlob = new Blob([SERVICE_WORKER], { type: 'text/javascript' });
-        const swUrl = URL.createObjectURL(swBlob);
-        navigator.serviceWorker.register(swUrl).catch(() => undefined);
-        cleanupSw = () => URL.revokeObjectURL(swUrl);
-      } catch {
-
-        /* registration blocked in this environment */}
-    }
 
     const onPrompt = (e: Event) => {
       e.preventDefault();
@@ -116,7 +87,6 @@ export function PwaProvider({ children }: {children: React.ReactNode;}) {
       link.remove();
       meta.remove();
       URL.revokeObjectURL(url);
-      cleanupSw?.();
     };
   }, []);
 
@@ -138,7 +108,27 @@ export function PwaProvider({ children }: {children: React.ReactNode;}) {
         try {
           const permission = await window.Notification.requestPermission();
           setNotificationsEnabled(permission === 'granted');
-        } catch {
+          if (permission === 'granted' && 'serviceWorker' in navigator) {
+            const reg = await navigator.serviceWorker.ready;
+            const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+            if (publicKey) {
+              const padding = '='.repeat((4 - publicKey.length % 4) % 4);
+              const base64 = (publicKey + padding).replace(/\-/g, '+').replace(/_/g, '/');
+              const rawData = window.atob(base64);
+              const outputArray = new Uint8Array(rawData.length);
+              for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+              }
+              const newSub = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: outputArray
+              });
+              const { savePushSubscriptionAction } = await import('@/app/actions/push');
+              savePushSubscriptionAction(newSub.toJSON());
+            }
+          }
+        } catch (e) {
+          console.error(e);
           setNotificationsEnabled(true);
         }
       }

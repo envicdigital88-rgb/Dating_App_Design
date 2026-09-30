@@ -1,19 +1,26 @@
 'use client';
 
 import React, { useState } from 'react';
-import { SendIcon } from 'lucide-react';
+import { SendIcon, Coins } from 'lucide-react';
 import { Page, PageHeader } from '@/components/AppShell';
 import { Button } from '@/components/ui/Button';
 import { toast } from 'sonner';
 import { useStore } from '@/lib/contexts/StoreContext';
+import { useRouter } from 'next/navigation';
 
 export function SecretWingleTab() {
-  const { sendSecretWingle, secretWinglesReceived } = useStore();
+  const { sendSecretWingle, secretWinglesReceived, currentUser, spendWingits } = useStore();
+  const router = useRouter();
   const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  const [showModal, setShowModal] = useState(false);
 
-  const handleSend = async () => {
+  const SECRET_WINGLE_COST = 20;
+  const balance = currentUser?.wingitsBalance || 0;
+
+  const handleInitialClick = () => {
     if (!phone.trim()) {
       toast.error('Please enter a phone number');
       return;
@@ -22,9 +29,24 @@ export function SecretWingleTab() {
       toast.error('Please enter a message');
       return;
     }
+    setShowModal(true);
+  };
+
+  const confirmSend = async () => {
+    if (balance < SECRET_WINGLE_COST) {
+      router.push('/store');
+      return;
+    }
 
     setLoading(true);
+    setShowModal(false);
     try {
+      const paymentRes = await spendWingits(SECRET_WINGLE_COST, 'Sent a Secret Wingle');
+      if (!paymentRes.ok) {
+        setLoading(false);
+        return; // error handled inside spendWingits
+      }
+
       const res = await sendSecretWingle(phone, message);
       if (res.ok) {
         toast.success('Secret Wingle sent!');
@@ -100,7 +122,7 @@ export function SecretWingleTab() {
 
             <Button
               className="w-full py-4 text-lg font-semibold flex items-center justify-center gap-2"
-              onClick={handleSend}
+              onClick={handleInitialClick}
               loading={loading}
               disabled={loading || !phone.trim() || !message.trim()}
             >
@@ -111,6 +133,52 @@ export function SecretWingleTab() {
           
         </div>
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card w-full max-w-sm rounded-3xl p-6 shadow-xl border relative">
+            <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-amber-100 dark:bg-amber-900/30 text-amber-500 p-3 rounded-full border border-amber-200 dark:border-amber-700/50">
+              <Coins className="w-8 h-8" />
+            </div>
+            
+            <div className="mt-6 text-center space-y-3">
+              <h2 className="text-2xl font-bold">Secret Wingle</h2>
+              
+              {balance >= SECRET_WINGLE_COST ? (
+                <>
+                  <p className="text-muted-foreground">
+                    This costs <strong className="text-foreground">{SECRET_WINGLE_COST} Wingits</strong>.
+                  </p>
+                  <div className="bg-secondary/50 p-3 rounded-xl">
+                    <p className="text-sm">Your balance: <strong className="text-amber-500">{balance} Wingits</strong></p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-muted-foreground">
+                    You need <strong className="text-foreground">{SECRET_WINGLE_COST} Wingits</strong>, but you only have <strong className="text-amber-500">{balance}</strong>.
+                  </p>
+                </>
+              )}
+            </div>
+
+            <div className="mt-8 flex flex-col gap-3">
+              {balance >= SECRET_WINGLE_COST ? (
+                <Button onClick={confirmSend} className="w-full">
+                  Confirm & Send
+                </Button>
+              ) : (
+                <Button onClick={confirmSend} className="w-full bg-amber-500 hover:bg-amber-600 text-white">
+                  Buy Wingits
+                </Button>
+              )}
+              <Button variant="ghost" onClick={() => setShowModal(false)} className="w-full">
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </Page>
   );
 }

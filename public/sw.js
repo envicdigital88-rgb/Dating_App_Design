@@ -41,3 +41,53 @@ self.addEventListener('notificationclick', function(event) {
     })
   );
 });
+const CACHE = 'winglemingle-v2';
+
+self.addEventListener('install', (e) => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (e) => {
+  e.waitUntil(self.clients.claim());
+});
+
+self.addEventListener('fetch', (event) => {
+  // Only handle GET requests for PWA cache
+  if (event.request.method !== 'GET') return;
+  
+  // Exclude API routes and Pusher requests from cache
+  if (event.request.url.includes('/api/') || event.request.url.includes('pusher.com')) return;
+
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      // Return cached response if found
+      if (cachedResponse) {
+        // Fetch new version in background (Stale-While-Revalidate)
+        event.waitUntil(
+          fetch(event.request).then((response) => {
+            if (response && response.status === 200) {
+              caches.open(CACHE).then((cache) => {
+                cache.put(event.request, response);
+              });
+            }
+          }).catch(() => {})
+        );
+        return cachedResponse;
+      }
+      
+      // Fallback to network if not in cache
+      return fetch(event.request).then((response) => {
+        if (!response || response.status !== 200 || response.type !== 'basic') {
+          return response;
+        }
+        
+        const responseToCache = response.clone();
+        caches.open(CACHE).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
+        
+        return response;
+      });
+    })
+  );
+});

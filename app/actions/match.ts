@@ -87,8 +87,27 @@ export async function likeUser(targetUserId: string) {
       }
     }
 
+    await db.orm.public.Notification.create({
+      userId: targetUserId,
+      type: 'like',
+      title: 'Someone liked you!',
+      body: 'Someone just liked your profile. Check who it is!',
+      href: '/likes'
+    });
+
     const { pusherServer } = await import('@/lib/pusher');
     await pusherServer.trigger(`private-user-${targetUserId}`, 'state-changed', {}).catch(console.error);
+
+    try {
+      const { sendPushNotificationAction } = await import('@/app/actions/push');
+      await sendPushNotificationAction(targetUserId, {
+        title: 'Someone liked you!',
+        body: 'Someone just liked your profile. Check who it is!',
+        url: 'https://winglemingle.com/likes'
+      });
+    } catch (e) {
+      console.error('Push error for like:', e);
+    }
 
     return { ok: true, matched: false }
   } catch (err) {
@@ -175,7 +194,12 @@ export async function addToHeartBucketAction(targetUserId: string) {
       return { ok: false, error: 'Cannot add yourself' }
     }
 
-    const existing = await db.orm.public.HeartBucket.where({ userId, targetUserId }).first()
+    const currentBucket = await db.orm.public.HeartBucket.where({ userId }).all();
+    if (currentBucket.length >= 15) {
+      return { ok: false, error: 'Your Heart Bucket is full (max 15). Remove someone before adding more.' }
+    }
+
+    const existing = currentBucket.find(h => h.targetUserId === targetUserId)
     if (existing) {
       return { ok: false, error: 'Already in Heart Bucket' }
     }

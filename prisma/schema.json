@@ -76,6 +76,10 @@
       "model": "UserStatus",
       "namespace": "public"
     },
+    "wingitsTransaction": {
+      "model": "WingitsTransaction",
+      "namespace": "public"
+    },
     "wingle": {
       "model": "Wingle",
       "namespace": "public"
@@ -541,6 +545,13 @@
                   "kind": "scalar"
                 }
               },
+              "imageViewCount": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
               "reactions": {
                 "nullable": true,
                 "type": {
@@ -623,6 +634,9 @@
                 },
                 "imageUrl": {
                   "column": "imageUrl"
+                },
+                "imageViewCount": {
+                  "column": "imageViewCount"
                 },
                 "reactions": {
                   "column": "reactions"
@@ -1699,6 +1713,20 @@
                   "kind": "scalar"
                 }
               },
+              "freeWinglesAccepted": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "freeWinglesSent": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
               "gender": {
                 "nullable": false,
                 "type": {
@@ -1734,8 +1762,22 @@
                   "kind": "scalar"
                 }
               },
+              "isUnlimited": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
               "lastActiveAt": {
                 "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "lastDailyBonusAt": {
+                "nullable": true,
                 "type": {
                   "codecId": "pg/timestamptz-temporal@1",
                   "kind": "scalar"
@@ -1822,6 +1864,13 @@
                 "nullable": false,
                 "type": {
                   "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "wingitsBalance": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
                   "kind": "scalar"
                 }
               }
@@ -2098,6 +2147,21 @@
                   "namespace": "public"
                 }
               },
+              "wingitsTransactions": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "userId"
+                  ]
+                },
+                "to": {
+                  "model": "WingitsTransaction",
+                  "namespace": "public"
+                }
+              },
               "winglesReceived": {
                 "cardinality": "1:N",
                 "on": {
@@ -2146,6 +2210,12 @@
                 "email": {
                   "column": "email"
                 },
+                "freeWinglesAccepted": {
+                  "column": "freeWinglesAccepted"
+                },
+                "freeWinglesSent": {
+                  "column": "freeWinglesSent"
+                },
                 "gender": {
                   "column": "gender"
                 },
@@ -2161,8 +2231,14 @@
                 "isAnonymous": {
                   "column": "isAnonymous"
                 },
+                "isUnlimited": {
+                  "column": "isUnlimited"
+                },
                 "lastActiveAt": {
                   "column": "lastActiveAt"
+                },
+                "lastDailyBonusAt": {
+                  "column": "lastDailyBonusAt"
                 },
                 "lifestyle": {
                   "column": "lifestyle"
@@ -2199,6 +2275,9 @@
                 },
                 "verified": {
                   "column": "verified"
+                },
+                "wingitsBalance": {
+                  "column": "wingitsBalance"
                 }
               },
               "namespaceId": "public",
@@ -2281,6 +2360,94 @@
               },
               "namespaceId": "public",
               "table": "userStatus"
+            }
+          },
+          "WingitsTransaction": {
+            "fields": {
+              "amount": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "description": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "type": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "userId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "user": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "userId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "amount": {
+                  "column": "amount"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "description": {
+                  "column": "description"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "type": {
+                  "column": "type"
+                },
+                "userId": {
+                  "column": "userId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "wingitsTransaction"
             }
           },
           "Wingle": {
@@ -2875,6 +3042,15 @@
                   "codecId": "pg/text@1",
                   "nativeType": "text",
                   "nullable": true
+                },
+                "imageViewCount": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
                 },
                 "reactions": {
                   "codecId": "pg/json@1",
@@ -3846,6 +4022,24 @@
                   "nativeType": "text",
                   "nullable": false
                 },
+                "freeWinglesAccepted": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "freeWinglesSent": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 0
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
                 "gender": {
                   "codecId": "pg/text@1",
                   "default": {
@@ -3883,6 +4077,15 @@
                   "nativeType": "bool",
                   "nullable": false
                 },
+                "isUnlimited": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": false
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
                 "lastActiveAt": {
                   "codecId": "pg/timestamptz-temporal@1",
                   "default": {
@@ -3891,6 +4094,11 @@
                   },
                   "nativeType": "timestamptz",
                   "nullable": false
+                },
+                "lastDailyBonusAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true
                 },
                 "lifestyle": {
                   "codecId": "pg/text@1",
@@ -3975,6 +4183,15 @@
                   },
                   "nativeType": "bool",
                   "nullable": false
+                },
+                "wingitsBalance": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 20
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
                 }
               },
               "foreignKeys": [],
@@ -4050,6 +4267,79 @@
                   ],
                   "name": "userStatus_userId_idx_a489d58a",
                   "prefix": "userStatus_userId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
+            "wingitsTransaction": {
+              "columns": {
+                "amount": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "description": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "type": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "userId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "userId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "wingitsTransaction"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "user"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "userId"
+                  ],
+                  "name": "wingitsTransaction_userId_idx_a489d58a",
+                  "prefix": "wingitsTransaction_userId_idx",
                   "unique": false
                 }
               ],
@@ -4182,10 +4472,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "a3111c5084f6df728c30b1c40bbc01f67a45df17840953796c7ceb9485f6e1a9"
+    "storageHash": "1d1301ae7f679a954442e7ffb2d14949a3965644f942cffc6c161ce3fc1c9cce"
   },
   "execution": {
-    "executionHash": "a5adc5541b3fd7927038173e2e24d5bc916f2e5380bc626e3fd73f8506f47aee",
+    "executionHash": "798d36864cb0d19157cc44ccae8a080a9418954c07e4759d0f8b3313df67446c",
     "mutations": {
       "defaults": [
         {
@@ -4384,6 +4674,17 @@
             "column": "id",
             "namespace": "public",
             "table": "userStatus"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "wingitsTransaction"
           }
         },
         {

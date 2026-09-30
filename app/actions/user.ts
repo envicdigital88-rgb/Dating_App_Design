@@ -10,18 +10,39 @@ export async function getCurrentUser() {
     console.log('getCurrentUser session:', session)
     if (!session?.userId) return null
 
-    const user = await db.orm.public.User.where({ id: session.userId as string })
+    let user = await db.orm.public.User.where({ id: session.userId as string })
       .include('prompts')
       .include('photos')
       .first()
     console.log('getCurrentUser user found:', !!user)
     if (!user) return null
 
+    const now = new Date();
+    const lastBonus = user.lastDailyBonusAt ? new Date(user.lastDailyBonusAt.toString()) : null;
+    if (!lastBonus || lastBonus.toDateString() !== now.toDateString()) {
+      await db.transaction(async (tx) => {
+        const { Temporal } = await import('temporal-polyfill');
+        await tx.orm.public.User.where({ id: user.id }).update({
+          wingitsBalance: user.wingitsBalance + 1,
+          lastDailyBonusAt: Temporal.Instant.from(now.toISOString())
+        });
+        await tx.orm.public.WingitsTransaction.create({
+          userId: user.id,
+          amount: 1,
+          type: 'bonus',
+          description: 'Daily Login Bonus'
+        });
+      });
+      user.wingitsBalance += 1;
+      user.lastDailyBonusAt = now.toISOString() as any;
+    }
+
     // Ensure plain object for Next.js Client Components (Prisma 8 Temporal serialization)
     return {
       ...user,
       lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
       createdAt: user.createdAt?.toString() || new Date().toISOString(),
+      lastDailyBonusAt: user.lastDailyBonusAt?.toString() || null,
       interests: typeof user.interests === 'string' ? JSON.parse(user.interests) : user.interests,
       traits: typeof user.traits === 'string' ? JSON.parse(user.traits) : user.traits,
       lifestyle: typeof user.lifestyle === 'string' ? JSON.parse(user.lifestyle) : user.lifestyle,
@@ -38,7 +59,13 @@ export async function getCurrentUser() {
 
 export async function getUserProfile(userId: string) {
   const user = await db.orm.public.User.where({ id: userId }).first()
-  return user
+  if (!user) return null;
+  return {
+    ...user,
+    lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
+    createdAt: user.createdAt?.toString() || new Date().toISOString(),
+    lastDailyBonusAt: user.lastDailyBonusAt?.toString() || null,
+  };
 }
 
 export async function updateUserProfile(data: any) {
@@ -174,6 +201,7 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
         ...user,
         lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
         createdAt: user.createdAt?.toString() || new Date().toISOString(),
+        lastDailyBonusAt: user.lastDailyBonusAt?.toString() || null,
         interests: typeof user.interests === 'string' ? JSON.parse(user.interests) : (user.interests || []),
         traits: typeof user.traits === 'string' ? JSON.parse(user.traits) : (user.traits || []),
         lifestyle: typeof user.lifestyle === 'string' ? JSON.parse(user.lifestyle) : (user.lifestyle || {}),

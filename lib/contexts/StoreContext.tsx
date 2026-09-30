@@ -129,7 +129,7 @@ interface StoreValue {
   unreadLikesCount: () => number;
   markLikesViewed: () => void;
   heartBucketOf: () => User[];
-  addToHeartBucket: (userId: string) => void;
+  addToHeartBucket: (userId: string) => boolean;
   removeFromHeartBucket: (userId: string) => void;
   unreadHeartBucketCount: () => number;
   markHeartBucketViewed: () => void;
@@ -156,6 +156,7 @@ interface StoreValue {
   sendMingle: (conversationId: string, body: string, imageUrl?: string, replyToId?: string | null, forwarded?: boolean, viewOnce?: boolean) => ServerResult<Mingle>;
   markConversationRead: (conversationId: string) => void;
   deleteMingle: (mingleId: string, type: 'me' | 'everyone') => void;
+  viewImage: (mingleId: string) => Promise<{ok: boolean, error?: string, data?: { imageViewCount: number }}>;
   reactToMingle: (mingleId: string, emoji: string) => void;
   forwardMingles: (mingleIds: string[], conversationIds: string[]) => void;
   typingIn: string | null;
@@ -194,6 +195,7 @@ interface StoreValue {
   addStatus: (photoUrl: string) => void;
   deleteStatus: (statusId: string) => void;
   isHydrated: boolean;
+  spendWingits: (amount: number, reason: string) => Promise<{ ok: boolean, error?: string }>;
 }
 
 export const maskUser = (user: User, sessionId: string | null): User => {
@@ -278,8 +280,9 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
             const mappedUser = {
               ...user,
               lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
-              createdAt: user.createdAt?.toString() || new Date().toISOString()
-            } as User;
+              createdAt: user.createdAt?.toString() || new Date().toISOString(),
+              isUnlimited: (user as any).isUnlimited ?? false
+            } as unknown as User;
             
             setDb(d => {
               const allUsers = [...realUsers];
@@ -602,7 +605,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
           if (sub) {
             // Already subscribed, maybe update backend
             import('@/app/actions/push').then(({ savePushSubscriptionAction }) => {
-              savePushSubscriptionAction(sub);
+              savePushSubscriptionAction(sub.toJSON());
             });
           } else {
             // Check permissions first, some browsers block direct subscribe calls
@@ -618,7 +621,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                   applicationServerKey: urlBase64ToUint8Array(publicKey)
                 }).then((newSub) => {
                   import('@/app/actions/push').then(({ savePushSubscriptionAction }) => {
-                    savePushSubscriptionAction(newSub);
+                    savePushSubscriptionAction(newSub.toJSON());
                   });
                 }).catch(console.error);
               }
@@ -933,7 +936,11 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         onboarded: false,
         online: true,
         lastActiveAt: new Date().toISOString(),
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        wingitsBalance: 0,
+        freeWinglesSent: 0,
+        freeWinglesAccepted: 0,
+        isUnlimited: false
       };
       setDb((d) => ({
         ...d,
@@ -1406,9 +1413,19 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   }, [db.heartBucket, db.users, sessionId]);
 
   const addToHeartBucket = useCallback<StoreValue['addToHeartBucket']>((userId) => {
+    let limitReached = false;
+    let alreadyIn = false;
     setDb((d) => {
       const uid = sessionIdRef.current as string;
-      if (d.heartBucket.some((h) => h.userId === uid && h.targetUserId === userId)) return d;
+      const currentCount = d.heartBucket.filter(h => h.userId === uid).length;
+      if (currentCount >= 15) {
+        limitReached = true;
+        return d;
+      }
+      if (d.heartBucket.some((h) => h.userId === uid && h.targetUserId === userId)) {
+        alreadyIn = true;
+        return d;
+      }
       return {
         ...d,
         heartBucket: [...d.heartBucket, { id: `hb_${uid}_${userId}`, userId: uid, targetUserId: userId, createdAt: new Date().toISOString() }],
@@ -1416,9 +1433,18 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       };
     });
 
+    if (limitReached) {
+      toast.error('You can only have up to 15 profiles in your Heart Bucket!');
+      return false;
+    }
+    if (alreadyIn) {
+      return false;
+    }
+
     import('@/app/actions/match').then(({ addToHeartBucketAction }) => {
       addToHeartBucketAction(userId).catch(console.error);
     });
+    return true;
   }, []);
 
   const removeFromHeartBucket = useCallback<StoreValue['removeFromHeartBucket']>((userId) => {
@@ -1510,7 +1536,17 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         wingles: [wingle, ...d.wingles],
         usage: d.usage.map((u) =>
         u.userId === currentUser.id ? { ...u, winglesUsed: u.winglesUsed + 1 } : u
-        )
+        ),
+        users: d.users.map((u) => {
+          if (u.id === currentUser.id && !u.isUnlimited) {
+            if (u.freeWinglesSent >= 5) {
+              return { ...u, wingitsBalance: Math.max(0, u.wingitsBalance - 8) };
+            } else {
+              return { ...u, freeWinglesSent: u.freeWinglesSent + 1 };
+            }
+          }
+          return u;
+        })
       }));
 
       import('@/app/actions/wingle').then(({ sendWingle: serverSendWingle }) => {
@@ -1540,7 +1576,19 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
           ...d,
           wingles: d.wingles.map((r) =>
           r.id === wingleId ? { ...r, status, respondedAt: new Date().toISOString() } : r
-          )
+          ),
+          users: d.users.map((u) => {
+            if (status === 'accepted' && u.id === currentUser?.id && !u.isUnlimited) {
+              if (u.freeWinglesAccepted >= 2) {
+                return { ...u, wingitsBalance: Math.max(0, u.wingitsBalance - 4) };
+              } else {
+                return { ...u, freeWinglesAccepted: u.freeWinglesAccepted + 1 };
+              }
+            } else if (status === 'declined' && u.id === wingle.fromUserId && !u.isUnlimited) {
+              return { ...u, wingitsBalance: u.wingitsBalance + 3 };
+            }
+            return u;
+          })
         };
         if (status === 'accepted') {
           const pair: [string, string] = [wingle.fromUserId, wingle.toUserId];
@@ -1785,7 +1833,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         forwarded: forwarded || false,
         reactions: null,
         deletedFor: [],
-        viewOnce: viewOnce || false
+        viewOnce: viewOnce || false,
+        imageViewCount: 0
       };
       setDb((d) => ({
         ...d,
@@ -1795,7 +1844,13 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         ),
         usage: d.usage.map((u) =>
         u.userId === currentUser.id ? { ...u, chatUsed: u.chatUsed + 1 } : u
-        )
+        ),
+        users: d.users.map((u) => {
+          if (u.id === currentUser.id && imageUrl && !u.isUnlimited) {
+            return { ...u, wingitsBalance: Math.max(0, u.wingitsBalance - 3) };
+          }
+          return u;
+        })
       }));
       sendMingleAction(conversationId, body.trim(), imageUrl, replyToId, forwarded, viewOnce, mingleId).then((res) => {
         if (res.ok && res.data) {
@@ -1949,6 +2004,28 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       }
     }
   }, [db.mingles, db.conversations]);
+
+  const viewImage = useCallback<StoreValue['viewImage']>(async (mingleId) => {
+    const { viewImageAction } = await import('@/app/actions/chat');
+    const res = await viewImageAction(mingleId);
+    
+    if (res.ok && res.data) {
+      setDb((d) => ({
+        ...d,
+        mingles: d.mingles.map((m) =>
+          m.id === mingleId ? { ...m, imageViewCount: res.data!.imageViewCount } : m
+        ),
+        users: d.users.map((u) => {
+          if (u.id === currentUser?.id && !u.isUnlimited && res.data!.imageViewCount > 1) {
+            return { ...u, wingitsBalance: Math.max(0, u.wingitsBalance - 4) };
+          }
+          return u;
+        })
+      }));
+      return { ok: true, data: { imageViewCount: res.data.imageViewCount } };
+    }
+    return { ok: false, error: res.error || 'Failed to view image' };
+  }, [currentUser]);
 
   const reactToMingle = useCallback<StoreValue['reactToMingle']>((mingleId, emoji) => {
     if (!sessionIdRef.current) return;
@@ -2280,6 +2357,57 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     setDb((d) => ({ ...d, statuses: d.statuses.filter((s) => s.id !== statusId) }));
   }, []);
 
+  const spendWingits = useCallback<StoreValue['spendWingits']>(async (amount, reason) => {
+    if (!sessionId) return { ok: false, error: 'Unauthorized' };
+    
+    // Check local state first
+    const user = db.users.find(u => u.id === sessionId);
+    if (!user || user.wingitsBalance < amount) {
+      toast.error('Not enough Wingits!');
+      return { ok: false, error: 'Insufficient funds' };
+    }
+
+    // Optimistically deduct
+    setDb(d => ({
+      ...d,
+      users: d.users.map(u => 
+        u.id === sessionId 
+          ? { ...u, wingitsBalance: u.wingitsBalance - amount } 
+          : u
+      )
+    }));
+
+    try {
+      const { spendWingitsAction } = await import('@/app/actions/wingits');
+      const res = await spendWingitsAction(amount, reason);
+      if (!res.ok) {
+        // Rollback
+        setDb(d => ({
+          ...d,
+          users: d.users.map(u => 
+            u.id === sessionId 
+              ? { ...u, wingitsBalance: u.wingitsBalance + amount } 
+              : u
+          )
+        }));
+        toast.error(res.error || 'Transaction failed');
+      }
+      return res;
+    } catch (err: any) {
+      // Rollback
+      setDb(d => ({
+        ...d,
+        users: d.users.map(u => 
+          u.id === sessionId 
+            ? { ...u, wingitsBalance: u.wingitsBalance + amount } 
+            : u
+        )
+      }));
+      toast.error('Network error');
+      return { ok: false, error: 'Network error' };
+    }
+  }, [sessionId, db.users]);
+
   const value: StoreValue = {
     db,
     currentUser,
@@ -2332,6 +2460,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     sendMingle,
     markConversationRead,
     deleteMingle,
+    viewImage,
     reactToMingle,
     forwardMingles,
     typingIn,
@@ -2361,7 +2490,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     myStatuses,
     addStatus,
     deleteStatus,
-    isHydrated
+    isHydrated,
+    spendWingits
   };
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

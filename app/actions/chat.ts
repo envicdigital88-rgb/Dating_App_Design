@@ -42,7 +42,26 @@ export async function sendMingleAction(conversationId: string, body: string, ima
     }
     if (clientId) data.id = clientId;
 
-    const mingle = await db.orm.public.Mingle.create(data)
+    const mingle = await db.transaction(async (tx) => {
+      if (imageUrl) {
+        const sender = await tx.orm.public.User.where({ id: senderId }).first();
+        if (sender && !sender.isUnlimited) {
+          if (sender.wingitsBalance < 3) {
+            throw new Error('Not enough Wingits to send image');
+          }
+          await tx.orm.public.User.where({ id: senderId }).update({
+            wingitsBalance: sender.wingitsBalance - 3
+          });
+          await tx.orm.public.WingitsTransaction.create({
+            userId: senderId,
+            amount: -3,
+            type: 'spend',
+            description: 'Sent an image in chat'
+          });
+        }
+      }
+      return await tx.orm.public.Mingle.create(data);
+    });
 
     await db.orm.public.Conversation.where({ id: conversationId }).update({
       lastMingleAt: Temporal.Now.instant()
@@ -232,7 +251,8 @@ export async function getConversationsAction() {
         deliveredAt: m.deliveredAt ? m.deliveredAt.toString() : null,
         reactions: m.reactions ? (m.reactions as any) : null,
         deletedFor: m.deletedFor ? (m.deletedFor as string[]) : [],
-        viewOnce: m.viewOnce
+        viewOnce: m.viewOnce,
+        imageViewCount: m.imageViewCount
       }))
 
     return { ok: true, data: { conversations: formattedConvs, mingles: formattedMingles } }
@@ -241,3 +261,68 @@ export async function getConversationsAction() {
     return { ok: false, error: 'Failed to fetch conversations' }
   }
 }
+
+export async function viewImageAction(mingleId: string) {
+  try {
+    const session = await getSession()
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' }
+    const userId = session.userId as string
+
+    const mingle = await db.orm.public.Mingle.where({ id: mingleId }).first()
+    if (!mingle) return { ok: false, error: 'Message not found' }
+
+    if (mingle.senderId === userId) {
+      return { ok: true, data: { imageViewCount: mingle.imageViewCount } }
+    }
+
+    if (mingle.viewOnce && mingle.imageViewCount > 0) {
+      return { ok: false, error: 'Image has expired' }
+    }
+
+    const { newCount } = await db.transaction(async (tx) => {
+      const isFirstView = mingle.imageViewCount === 0;
+      let cost = 0;
+
+      if (!isFirstView) {
+        cost = 4;
+        const user = await tx.orm.public.User.where({ id: userId }).first();
+        if (user && !user.isUnlimited) {
+          if (user.wingitsBalance < cost) {
+            throw new Error('INSUFFICIENT_FUNDS');
+          }
+          await tx.orm.public.User.where({ id: userId }).update({
+            wingitsBalance: user.wingitsBalance - cost
+          });
+          await tx.orm.public.WingitsTransaction.create({
+            userId: userId,
+            amount: -cost,
+            type: 'spend',
+            description: 'Viewed image again'
+          });
+        }
+      }
+
+      const updated = await tx.orm.public.Mingle.where({ id: mingleId }).update({
+        imageViewCount: mingle.imageViewCount + 1
+      });
+
+      return { newCount: updated ? updated.imageViewCount : mingle.imageViewCount + 1 };
+    });
+
+    const conv = await db.orm.public.Conversation.where({ id: mingle.conversationId }).first()
+    if (conv) {
+      const otherId = conv.userId1 === userId ? conv.userId2 : conv.userId1;
+      const { pusherServer } = await import('@/lib/pusher');
+      await pusherServer.trigger(`private-user-${otherId}`, 'state-changed', {}).catch(console.error);
+    }
+
+    return { ok: true, data: { imageViewCount: newCount } }
+  } catch (err: any) {
+    console.error('viewImageAction error:', err)
+    if (err.message === 'INSUFFICIENT_FUNDS') {
+      return { ok: false, error: 'Not enough Wingits to view image' }
+    }
+    return { ok: false, error: 'Failed to view image' }
+  }
+}
+

@@ -34,7 +34,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'1d1301ae7f679a954442e7ffb2d14949a3965644f942cffc6c161ce3fc1c9cce'>;
+  StorageHashBase<'c3ffa49ea45b53066ed4bc96d114e5e548347f205a84d3c0fab9a2f6b2e25744'>;
 export type ExecutionHash =
   ExecutionHashBase<'798d36864cb0d19157cc44ccae8a080a9418954c07e4759d0f8b3313df67446c'>;
 export type ProfileHash =
@@ -405,7 +405,6 @@ export type FieldOutputTypes = {
       readonly freeWinglesSent: CodecTypes['pg/int4@1']['output'];
       readonly freeWinglesAccepted: CodecTypes['pg/int4@1']['output'];
       readonly lastDailyBonusAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
-      readonly isUnlimited: CodecTypes['pg/bool@1']['output'];
     };
     readonly UserStatus: {
       readonly id: CodecTypes['pg/text@1']['output'];
@@ -599,7 +598,6 @@ export type FieldInputTypes = {
       readonly freeWinglesSent: CodecTypes['pg/int4@1']['input'];
       readonly freeWinglesAccepted: CodecTypes['pg/int4@1']['input'];
       readonly lastDailyBonusAt: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
-      readonly isUnlimited: CodecTypes['pg/bool@1']['input'];
     };
     readonly UserStatus: {
       readonly id: CodecTypes['pg/text@1']['input'];
@@ -778,7 +776,6 @@ export type StorageColumnTypes = {
       readonly intention: CodecTypes['pg/text@1']['output'];
       readonly interests: CodecTypes['pg/text@1']['output'];
       readonly isAnonymous: CodecTypes['pg/bool@1']['output'];
-      readonly isUnlimited: CodecTypes['pg/bool@1']['output'];
       readonly lastActiveAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
       readonly lastDailyBonusAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
       readonly lifestyle: CodecTypes['pg/text@1']['output'];
@@ -972,7 +969,6 @@ export type StorageColumnInputTypes = {
       readonly intention: CodecTypes['pg/text@1']['input'];
       readonly interests: CodecTypes['pg/text@1']['input'];
       readonly isAnonymous: CodecTypes['pg/bool@1']['input'];
-      readonly isUnlimited: CodecTypes['pg/bool@1']['input'];
       readonly lastActiveAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
       readonly lastDailyBonusAt: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
       readonly lifestyle: CodecTypes['pg/text@1']['input'];
@@ -1046,7 +1042,6 @@ export namespace Models {
     freeWinglesSent: CodecTypes['pg/int4@1']['output'];
     freeWinglesAccepted: CodecTypes['pg/int4@1']['output'];
     lastDailyBonusAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
-    isUnlimited: CodecTypes['pg/bool@1']['output'];
     blocksMade: public_Block[];
     blocksReceived: public_Block[];
     heartBucketMade: public_HeartBucket[];
@@ -2643,15 +2638,6 @@ type ContractBase = Omit<
                   readonly codecId: 'pg/timestamptz-temporal@1';
                   readonly nullable: true;
                 };
-                readonly isUnlimited: {
-                  readonly nativeType: 'bool';
-                  readonly codecId: 'pg/bool@1';
-                  readonly nullable: false;
-                  readonly default: {
-                    readonly kind: 'literal';
-                    readonly value: DefaultLiteralValue<'pg/bool@1', false>;
-                  };
-                };
               };
               primaryKey: { readonly columns: readonly ['id'] };
               uniques: readonly [{ readonly columns: readonly ['email'] }];
@@ -4019,10 +4005,6 @@ type ContractBase = Omit<
                   readonly codecId: 'pg/timestamptz-temporal@1';
                 };
               };
-              readonly isUnlimited: {
-                readonly nullable: false;
-                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
-              };
             };
             readonly relations: {
               readonly blocksMade: {
@@ -4277,7 +4259,6 @@ type ContractBase = Omit<
                 readonly freeWinglesSent: { readonly column: 'freeWinglesSent' };
                 readonly freeWinglesAccepted: { readonly column: 'freeWinglesAccepted' };
                 readonly lastDailyBonusAt: { readonly column: 'lastDailyBonusAt' };
-                readonly isUnlimited: { readonly column: 'isUnlimited' };
               };
             };
           };

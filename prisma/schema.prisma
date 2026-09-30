@@ -26,6 +26,11 @@ model User {
   isAnonymous    Boolean        @default(false)
   anonymousName  String?
   pushSubscription Json?
+  wingitsBalance Int            @default(20)
+  freeWinglesSent Int           @default(0)
+  freeWinglesAccepted Int       @default(0)
+  lastDailyBonusAt DateTime?
+  isUnlimited Boolean           @default(false)
   
   photos               Photo[]
   prompts              Prompt[]
@@ -55,6 +60,18 @@ model User {
   blocksReceived       Block[]          @relation("BlocksReceived")
   
   secretWinglesSent    SecretWingle[]   @relation("SecretWinglesSent")
+  
+  wingitsTransactions  WingitsTransaction[]
+}
+
+model WingitsTransaction {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount      Int
+  type        String   // "purchase", "spend", "refund", "bonus"
+  description String
+  createdAt   DateTime @default(now())
 }
 
 model Photo {
@@ -228,6 +245,7 @@ model Mingle {
   reactions      Json?
   deletedFor     String[]     @default([])
   viewOnce       Boolean      @default(false)
+  imageViewCount Int          @default(0)
 }
 
 model Notification {

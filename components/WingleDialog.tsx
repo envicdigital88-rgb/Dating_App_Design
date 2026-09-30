@@ -7,6 +7,7 @@ import { Button } from './ui/Button';
 import { Label, Textarea } from './ui/Field';
 import { useStore } from '@/lib/contexts/StoreContext';
 import type { User } from '@/lib/types';
+import { InsufficientWingitsModal } from './InsufficientWingitsModal';
 
 export function WingleDialog({
   open,
@@ -19,15 +20,23 @@ export function WingleDialog({
 
 
 }: {open: boolean;onClose: () => void;target: User | null;onLimitReached: () => void;}) {
-  const { sendWingle, entitlements } = useStore();
+  const { sendWingle, currentUser } = useStore();
   const [note, setNote] = useState('');
   const [sending, setSending] = useState(false);
+  const [showTopup, setShowTopup] = useState(false);
 
-  if (!target) return null;
+  if (!target || !currentUser) return null;
 
-  const submit = () => {
+  const cost = currentUser.isUnlimited ? 0 : (currentUser.freeWinglesSent < 5 ? 0 : 8);
+
+  const submit = async () => {
+    if ((currentUser.wingitsBalance ?? 0) < cost) {
+      setShowTopup(true);
+      return;
+    }
+
     setSending(true);
-    const result = sendWingle(target.id, note);
+    const result = await sendWingle(target.id, note);
     setSending(false);
     if (!result.ok) {
       onClose();
@@ -41,6 +50,7 @@ export function WingleDialog({
   };
 
   return (
+    <>
     <Modal
       open={open}
       onClose={onClose}
@@ -52,7 +62,7 @@ export function WingleDialog({
             Cancel
           </Button>
           <Button onClick={submit} loading={sending}>
-            Send wingle
+            Send wingle {cost > 0 ? `(${cost} Wingits)` : '(Free)'}
           </Button>
         </>
       }>
@@ -68,11 +78,19 @@ export function WingleDialog({
       <div className="mt-2 flex items-center justify-between text-[13px] text-ink-muted">
         <span>{note.length}/280</span>
         <span>
-          {entitlements?.winglesRemaining === null ?
+          {currentUser?.isUnlimited ?
           'Unlimited wingles' :
-          `${entitlements?.winglesRemaining ?? 0} wingles remaining`}
+          `Cost: ${cost > 0 ? '8 Wingits' : 'Free (' + (5 - (currentUser?.freeWinglesSent ?? 0)) + ' free left)'}`}
         </span>
       </div>
-    </Modal>);
-
+    </Modal>
+    <InsufficientWingitsModal 
+      open={showTopup} 
+      onClose={() => setShowTopup(false)} 
+      requiredAmount={cost} 
+      currentBalance={currentUser?.wingitsBalance ?? 0} 
+      actionName="send this Wingle"
+    />
+    </>
+  );
 }

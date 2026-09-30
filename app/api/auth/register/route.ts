@@ -32,25 +32,37 @@ export async function POST(req: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    const user = await db.orm.public.User.create({
-      name,
-      email,
-      phone: phone || '',
-      password: hashedPassword,
-      age,
-      gender,
-      intention,
-      interests: '[]',
-      traits: '[]',
-      lifestyle: JSON.stringify({
-        drinking: '',
-        smoking: '',
-        exercise: '',
-        pets: '',
-        children: '',
-        education: '',
-        work: ''
-      }),
+    const user = await db.transaction(async (tx) => {
+      const newUser = await tx.orm.public.User.create({
+        name,
+        email,
+        phone: phone || '',
+        password: hashedPassword,
+        age,
+        gender,
+        intention,
+        wingitsBalance: 20,
+        interests: '[]',
+        traits: '[]',
+        lifestyle: JSON.stringify({
+          drinking: '',
+          smoking: '',
+          exercise: '',
+          pets: '',
+          children: '',
+          education: '',
+          work: ''
+        }),
+      });
+
+      await tx.orm.public.WingitsTransaction.create({
+        userId: newUser.id,
+        amount: 20,
+        type: 'bonus',
+        description: 'Welcome Bonus'
+      });
+
+      return newUser;
     });
 
     await createSession(user.id);

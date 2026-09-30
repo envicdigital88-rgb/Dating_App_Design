@@ -42,7 +42,7 @@ const baseLifestyle = {
   work: 'Product designer'
 };
 
-type SeedMember = Omit<User, 'password' | 'role' | 'onboarded' | 'traits' | 'prompts'> & {photos: string[];};
+type SeedMember = Omit<User, 'password' | 'role' | 'onboarded' | 'traits' | 'prompts' | 'freeWinglesAccepted' | 'freeWinglesSent' | 'lastDailyBonusAt' | 'isUnlimited'> & {photos: string[];};
 
 const members: SeedMember[] = [
 {
@@ -62,6 +62,7 @@ const members: SeedMember[] = [
   online: true,
   lastActiveAt: minsAgo(2),
   createdAt: daysAgo(140),
+  wingitsBalance: 0,
   photos: [IMG.m1, IMG.lifestyle, IMG.m3]
 },
 {
@@ -81,6 +82,7 @@ const members: SeedMember[] = [
   online: false,
   lastActiveAt: minsAgo(320),
   createdAt: daysAgo(96),
+  wingitsBalance: 0,
   photos: [IMG.m2, IMG.lifestyle]
 },
 {
@@ -100,6 +102,7 @@ const members: SeedMember[] = [
   online: true,
   lastActiveAt: minsAgo(6),
   createdAt: daysAgo(58),
+  wingitsBalance: 0,
   photos: [IMG.m3, IMG.m1]
 },
 {
@@ -119,6 +122,7 @@ const members: SeedMember[] = [
   online: false,
   lastActiveAt: minsAgo(90),
   createdAt: daysAgo(210),
+  wingitsBalance: 0,
   photos: [IMG.m4, IMG.lifestyle]
 },
 {
@@ -138,6 +142,7 @@ const members: SeedMember[] = [
   online: true,
   lastActiveAt: minsAgo(1),
   createdAt: daysAgo(31),
+  wingitsBalance: 0,
   photos: [IMG.m5, IMG.lifestyle]
 },
 {
@@ -157,6 +162,7 @@ const members: SeedMember[] = [
   online: false,
   lastActiveAt: minsAgo(1400),
   createdAt: daysAgo(74),
+  wingitsBalance: 0,
   photos: [IMG.m6, IMG.lifestyle]
 },
 {
@@ -176,6 +182,7 @@ const members: SeedMember[] = [
   online: true,
   lastActiveAt: minsAgo(12),
   createdAt: daysAgo(18),
+  wingitsBalance: 0,
   photos: [IMG.m7, IMG.lifestyle]
 },
 {
@@ -195,7 +202,8 @@ const members: SeedMember[] = [
   suspended: false,
   online: false,
   lastActiveAt: minsAgo(240),
-  createdAt: daysAgo(320)
+  createdAt: daysAgo(320),
+  wingitsBalance: 0
 }];
 
 
@@ -224,7 +232,11 @@ export const seedUsers: User[] = [
   onboarded: true,
   online: true,
   lastActiveAt: new Date().toISOString(),
-  createdAt: daysAgo(12)
+  createdAt: daysAgo(12),
+  wingitsBalance: 50,
+  freeWinglesSent: 0,
+  freeWinglesAccepted: 0,
+  isUnlimited: true
 },
 {
   id: ADMIN_USER_ID,
@@ -247,7 +259,11 @@ export const seedUsers: User[] = [
   onboarded: true,
   online: true,
   lastActiveAt: new Date().toISOString(),
-  createdAt: daysAgo(400)
+  createdAt: daysAgo(400),
+  wingitsBalance: 10000,
+  freeWinglesSent: 0,
+  freeWinglesAccepted: 0,
+  isUnlimited: true
 },
 ...members.map(({ photos, ...m }) => ({
   ...m,
@@ -255,7 +271,10 @@ export const seedUsers: User[] = [
   role: 'member' as const,
   traits: [],
   prompts: [],
-  onboarded: true
+  onboarded: true,
+  freeWinglesSent: 0,
+  freeWinglesAccepted: 0,
+  isUnlimited: true
 }))];
 
 
@@ -378,7 +397,8 @@ export const seedMingles: Mingle[] = [
   deleted: false,
   forwarded: false,
   reactions: null,
-  viewOnce: false
+  viewOnce: false,
+  imageViewCount: 0
 },
 {
   id: 'ms-2',
@@ -390,7 +410,8 @@ export const seedMingles: Mingle[] = [
   deleted: false,
   forwarded: false,
   reactions: null,
-  viewOnce: false
+  viewOnce: false,
+  imageViewCount: 0
 },
 {
   id: 'ms-3',
@@ -402,7 +423,8 @@ export const seedMingles: Mingle[] = [
   deleted: false,
   forwarded: false,
   reactions: null,
-  viewOnce: false
+  viewOnce: false,
+  imageViewCount: 0
 },
 {
   id: 'ms-4',
@@ -415,7 +437,8 @@ export const seedMingles: Mingle[] = [
   deleted: false,
   forwarded: false,
   reactions: null,
-  viewOnce: false
+  viewOnce: false,
+  imageViewCount: 0
 },
 {
   id: 'ms-5',
@@ -427,7 +450,8 @@ export const seedMingles: Mingle[] = [
   deleted: false,
   forwarded: false,
   reactions: null,
-  viewOnce: false
+  viewOnce: false,
+  imageViewCount: 0
 },
 {
   id: 'ms-6',
@@ -439,7 +463,8 @@ export const seedMingles: Mingle[] = [
   deleted: false,
   forwarded: false,
   reactions: null,
-  viewOnce: false
+  viewOnce: false,
+  imageViewCount: 0
 },
 {
   id: 'ms-7',
@@ -451,7 +476,8 @@ export const seedMingles: Mingle[] = [
   deleted: false,
   forwarded: false,
   reactions: null,
-  viewOnce: false
+  viewOnce: false,
+  imageViewCount: 0
 },
 {
   id: 'ms-8',
@@ -463,7 +489,8 @@ export const seedMingles: Mingle[] = [
   deleted: false,
   forwarded: false,
   reactions: null,
-  viewOnce: false
+  viewOnce: false,
+  imageViewCount: 0
 }];
 
 
