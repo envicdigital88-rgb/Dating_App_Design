@@ -9,7 +9,7 @@ import { Badge, EmptyState } from '@/components/ui/Bits';
 import { UsageMeter } from '@/components/UsageMeter';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { money, shortDate } from '@/lib/utils/format';
-import { checkWelcomeBonusAction, claimWelcomeBonusAction } from '@/app/actions/wingits';
+import { checkWelcomeBonusAction, claimWelcomeBonusAction, getWingitsTransactionsAction } from '@/app/actions/wingits';
 import { toast } from 'sonner';
 
 export function SubscriptionPage() {
@@ -17,10 +17,12 @@ export function SubscriptionPage() {
   const { currentUser, entitlements, paymentsOf, db } = useStore();
   const [hasClaimedBonus, setHasClaimedBonus] = React.useState(true);
   const [claiming, setClaiming] = React.useState(false);
+  const [transactions, setTransactions] = React.useState<any[]>([]);
 
   React.useEffect(() => {
     if (currentUser) {
       checkWelcomeBonusAction().then(claimed => setHasClaimedBonus(claimed));
+      getWingitsTransactionsAction().then(txs => setTransactions(txs || []));
     }
   }, [currentUser]);
 
@@ -166,6 +168,34 @@ export function SubscriptionPage() {
           }
         </div>
       </div>
+
+      {transactions.length > 0 && (
+        <div className="mt-8 max-w-4xl rounded-4xl bg-cream-deep p-6 shadow-card">
+          <h2 className="font-display text-xl text-ink">Wingits usage history</h2>
+          <ul className="mt-4 divide-y divide-sand">
+            {transactions.map((tx) => (
+              <li key={tx.id} className="flex items-center justify-between gap-4 py-3.5">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`flex-shrink-0 p-2 rounded-full ${tx.amount > 0 ? 'bg-moss/10 text-moss' : 'bg-red-500/10 text-red-500'}`}>
+                    <CoinsIcon className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="truncate text-[14px] font-medium text-ink">
+                      {tx.description}
+                    </p>
+                    <p className="mt-0.5 truncate text-[12px] text-ink-muted">
+                      {new Date(tx.createdAt).toLocaleDateString()} at {new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                </div>
+                <Badge tone={tx.amount > 0 ? 'moss' : 'red'}>
+                  {tx.amount > 0 ? '+' : ''}{tx.amount}
+                </Badge>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </Page>);
 
 }
