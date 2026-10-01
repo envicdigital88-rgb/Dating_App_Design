@@ -91,15 +91,14 @@ export function SubscriptionPage() {
 
           <div className="mt-6 space-y-4">
             <UsageMeter
-              label="Chat mingles remaining"
-              used={entitlements.chatUsed}
-              limit={entitlements.chatLimit} />
+              label="Free Wingles (Sent)"
+              used={currentUser.isUnlimited ? 0 : currentUser.freeWinglesSent}
+              limit={currentUser.isUnlimited ? null : 5} />
             
             <UsageMeter
-              label="Wingling wingles remaining"
-              used={entitlements.winglesUsed}
-              limit={entitlements.wingleLimit} />
-            
+              label="Free Wingles (Accepted)"
+              used={currentUser.isUnlimited ? 0 : currentUser.freeWinglesAccepted}
+              limit={currentUser.isUnlimited ? null : 2} />
           </div>
 
           <dl className="mt-6 divide-y divide-sand border-t border-sand text-[14px]">
