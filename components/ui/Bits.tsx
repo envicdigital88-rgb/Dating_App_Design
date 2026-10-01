@@ -8,14 +8,15 @@ export function Badge({
   className
 
 
-}: {children: React.ReactNode;tone?: 'neutral' | 'berry' | 'moss' | 'amber' | 'red' | 'plum';className?: string;}) {
+}: {children: React.ReactNode;tone?: 'neutral' | 'berry' | 'moss' | 'amber' | 'red' | 'plum' | 'indigo';className?: string;}) {
   const tones = {
     neutral: 'bg-cream-deep text-ink-soft',
     berry: 'bg-berry-100 text-berry-600',
     moss: 'bg-moss/10 text-moss',
     amber: 'bg-amber-100 text-amber-800',
     red: 'bg-red-100 text-red-700',
-    plum: 'bg-plum-500 text-cream'
+    plum: 'bg-plum-500 text-cream',
+    indigo: 'bg-indigo-100 text-indigo-700'
   };
   return (
     <span

@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { CheckCircle2Icon, SearchIcon, Trash2Icon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
+import { CheckCircle2Icon, SearchIcon, Trash2Icon, ChevronLeftIcon, ChevronRightIcon, InfinityIcon } from 'lucide-react';
 import { AdminHeader } from './AdminShell';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { Avatar, Badge } from '@/components/ui/Bits';
 import { relativeTime, shortDate } from '@/lib/utils/format';
-import { getAdminUsersAction, deleteUserAction, setUserSuspendedAction, setUserVerifiedAction } from '@/app/actions/admin';
+import { getAdminUsersAction, deleteUserAction, setUserSuspendedAction, setUserVerifiedAction, setUserUnlimitedAction } from '@/app/actions/admin';
 import type { User, Photo } from '@/lib/types';
 
 type AdminUser = User & { photos: Photo[] };
@@ -153,6 +153,9 @@ export function AdminUsers() {
 
                 <Badge tone="amber">Unverified</Badge>
                 }
+                {user.isUnlimited && (
+                  <Badge tone="indigo" className="ml-2">Unlimited</Badge>
+                )}
                 </td>
                 <td className="px-5 py-3.5">
                   <div className="flex justify-end gap-1.5">
@@ -167,6 +170,17 @@ export function AdminUsers() {
                     
                       <CheckCircle2Icon className="h-3.5 w-3.5" />
                       {user.verified ? 'Unverify' : 'Verify'}
+                    </Button>
+                    <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setUserUnlimitedAction(user.id, !user.isUnlimited).catch(console.error);
+                      setRealUsers(prev => prev ? prev.map(u => u.id === user.id ? { ...u, isUnlimited: !user.isUnlimited } : u) : null);
+                      toast.success(user.isUnlimited ? 'Unlimited removed' : 'Unlimited granted');
+                    }}>
+                      <InfinityIcon className="h-3.5 w-3.5" />
+                      {user.isUnlimited ? 'Remove Unltd' : 'Make Unltd'}
                     </Button>
                     <Button
                     size="sm"

@@ -174,6 +174,7 @@ export async function getAdminUsersAction() {
         ...u,
         createdAt: u.createdAt.toString(),
         lastActiveAt: u.lastActiveAt?.toString() || u.createdAt.toString(),
+        lastDailyBonusAt: u.lastDailyBonusAt?.toString() || null,
         photos: photos.filter(p => p.userId === u.id).sort((a, b) => a.order - b.order).map(p => ({
           ...p,
           uploadedAt: p.uploadedAt.toString()
@@ -213,6 +214,21 @@ export async function setUserVerifiedAction(userId: string, verified: boolean) {
   } catch (err) {
     console.error('setUserVerifiedAction error:', err);
     return { ok: false, error: 'Failed to verify user' };
+  }
+}
+
+export async function setUserUnlimitedAction(userId: string, isUnlimited: boolean) {
+  try {
+    const session = await getSession();
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
+    const admin = await db.orm.public.User.where({ id: session.userId as string }).first();
+    if (admin?.role !== 'admin') return { ok: false, error: 'Forbidden' };
+
+    await db.orm.public.User.where({ id: userId }).update({ isUnlimited });
+    return { ok: true };
+  } catch (err) {
+    console.error('setUserUnlimitedAction error:', err);
+    return { ok: false, error: 'Failed to set unlimited wingits' };
   }
 }
 
