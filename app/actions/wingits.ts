@@ -137,9 +137,9 @@ export async function getWingitsTransactionsAction(): Promise<any[]> {
 
   const txs = await db.orm.public.WingitsTransaction
     .where({ userId: session.userId as string })
-    .orderBy({ createdAt: 'desc' })
+    .orderBy(t => t.createdAt.desc())
     .limit(50)
-    .findMany();
+    .all();
 
   return txs;
 }
