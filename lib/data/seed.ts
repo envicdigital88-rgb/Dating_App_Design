@@ -597,19 +597,19 @@ export const testimonials = [
 {
   quote:
   'The locked wingles actually made me slow down. I read three profiles properly instead of swiping through ninety.',
-  name: 'Hana & Joe',
+  name: 'Amila & Nethmi',
   detail: 'Together 14 months · met on Wingle Mingle'
 },
 {
   quote:
   'Paying for mingles sounds odd until you realise every conversation you have is with someone who also meant it.',
-  name: 'Femi',
-  detail: 'Bristol · Premium member'
+  name: 'Nuwan',
+  detail: 'Colombo · Premium member'
 },
 {
   quote: 'I sent four wingles, had two real dates, and deleted the app. That is the point, right?',
-  name: 'Cora',
-  detail: 'Manchester · Basic member'
+  name: 'Sanduni',
+  detail: 'Kandy · Basic member'
 }];
 
 
