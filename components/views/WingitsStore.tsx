@@ -2,9 +2,9 @@
 
 import { useStore } from '@/lib/contexts/StoreContext';
 import { Sparkles, Coins, Zap, Shield, ArrowRight } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { addWingitsAction } from '@/app/actions/wingits';
+import { addWingitsAction, getWingitsTransactionsAction } from '@/app/actions/wingits';
 
 const WINGIT_PACKAGES = [
   { id: 'pkg_1', amount: 100, price: 100, popular: false },
@@ -16,6 +16,13 @@ const WINGIT_PACKAGES = [
 export default function WingitsStore() {
   const { currentUser } = useStore();
   const [loadingPkg, setLoadingPkg] = useState<string | null>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
+
+  useEffect(() => {
+    getWingitsTransactionsAction().then(txs => {
+      setTransactions(txs || []);
+    });
+  }, []);
 
   const handlePurchase = async (pkg: typeof WINGIT_PACKAGES[0]) => {
     setLoadingPkg(pkg.id);
@@ -131,6 +138,34 @@ export default function WingitsStore() {
           </div>
         </div>
       </div>
+
+      {transactions.length > 0 && (
+        <div className="mt-12 pt-8 border-t">
+          <h2 className="text-2xl font-bold mb-6">Usage History</h2>
+          <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
+            <div className="divide-y divide-border">
+              {transactions.map((tx) => (
+                <div key={tx.id} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className={`p-2 rounded-full ${tx.amount > 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                      <Coins className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm sm:text-base">{tx.description}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(tx.createdAt).toLocaleDateString()} at {new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className={`font-bold ${tx.amount > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    {tx.amount > 0 ? '+' : ''}{tx.amount}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

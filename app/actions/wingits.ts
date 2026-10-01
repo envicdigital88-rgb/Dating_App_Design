@@ -130,3 +130,16 @@ export async function claimWelcomeBonusAction(): Promise<{ ok: boolean; error?: 
     return { ok: false, error: error?.message || 'Failed to claim bonus' };
   }
 }
+
+export async function getWingitsTransactionsAction(): Promise<any[]> {
+  const session = await getSession();
+  if (!session?.userId) return [];
+
+  const txs = await db.orm.public.WingitsTransaction
+    .where({ userId: session.userId as string })
+    .orderBy({ createdAt: 'desc' })
+    .limit(50)
+    .findMany();
+
+  return txs;
+}
