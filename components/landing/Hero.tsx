@@ -39,13 +39,9 @@ export function Hero() {
           transition={{ duration: 0.55, ease: [0.23, 1, 0.32, 1] }}
           className="flex flex-col items-center text-center lg:items-start lg:text-left"
         >
-
           {/* Headline */}
           <h1 className="font-display text-[52px] font-bold leading-[1.05] tracking-[-0.02em] text-white sm:text-[60px] lg:text-[68px]">
-            Where strangers
-            <br />
-            become
-            <br />
+            What if they like you &nbsp;
             <em
               className="not-italic"
               style={{
@@ -54,15 +50,13 @@ export function Hero() {
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
               }}>
-              storylines.
+              too?
             </em>
           </h1>
 
           {/* Subtitle */}
           <p className="mt-6 max-w-md text-[15px] leading-relaxed text-white/50">
-            More than just a dating app. Wingle Mingle is the perfect place to
-            make new friends, enjoy great chats, and build genuine relationships.
-            No questionnaires or compatibility scores—just real people choosing to connect.
+            WingleMingle is where crushes become conversations, strangers become connections, and unexpected hellos can become something more.
           </p>
 
           {/* CTAs */}
@@ -71,7 +65,7 @@ export function Hero() {
               <button
                 className="flex w-full items-center justify-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-semibold text-white shadow-xl transition-all duration-200 hover:scale-105 hover:shadow-[0_0_40px_rgba(236,72,153,0.45)]"
                 style={{ background: 'linear-gradient(135deg, #ec4899 0%, #a855f7 50%, #0ea5e9 100%)' }}>
-                Finder wingle
+                Find Your Wingle
                 <ArrowRightIcon className="h-4 w-4" />
               </button>
             </Link>
@@ -83,25 +77,7 @@ export function Hero() {
             </Link>
           </div>
 
-          {/* Members count */}
-          <div className="mt-8 flex items-center justify-center gap-3 lg:justify-start text-left">
-            <div className="flex -space-x-2.5">
-              {facePhotos.map((p) => (
-                <img
-                  key={p.id}
-                  src={p.url}
-                  alt=""
-                  className="h-10 w-10 rounded-full border-2 border-[#060414] object-cover"
-                />
-              ))}
-            </div>
-            <div>
-              <p className="text-[13px] text-white/50">
-                <span className="font-semibold text-white">{memberCount * 1043} people</span> joined this month
-              </p>
-              <p className="text-[12px] text-white/30">in London and the South East.</p>
-            </div>
-          </div>
+
         </motion.div>
 
         {/* ── RIGHT: Hero image with neon glow frame + 3D tilt ── */}
@@ -217,27 +193,7 @@ export function Hero() {
             <ArrowRightIcon className="h-3.5 w-3.5 text-white/30" />
           </motion.div>
 
-          {/* ── Top Right Text + Profile Bubbles ── */}
-          <div className="absolute right-0 top-0 hidden flex-col items-center gap-3 lg:flex lg:translate-x-12">
-            <div className="flex flex-col items-center">
-              <p className="font-display text-[13px] italic leading-tight text-white/40">Real people</p>
-              <p className="font-display text-[13px] italic leading-tight text-white/40">Real vibes</p>
-              <div className="mt-2 h-6 w-px bg-gradient-to-b from-white/20 to-transparent" />
-            </div>
-            <div className="flex flex-col gap-2">
-              {facePhotos.slice(1, 4).map((p, i) => (
-                <motion.img
-                  key={p.id}
-                  src={p.url}
-                  alt=""
-                  initial={{ opacity: 0, x: 16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.5 + i * 0.1 }}
-                  className="h-9 w-9 rounded-full border border-white/20 object-cover shadow-lg"
-                />
-              ))}
-            </div>
-          </div>
+
         </motion.div>
       </div>
     </section>
