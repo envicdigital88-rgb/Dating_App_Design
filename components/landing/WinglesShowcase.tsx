@@ -12,13 +12,13 @@ export function WinglesShowcase() {
         <div>
           <SectionHeading
             align="responsive"
-            overline="Wingling wingles"
+            overline="Wingle to Mingles"
             title="Interest you can see, and interest you unlock"
-            body="Wingles you send are always visible to you, with their status. Wingles you receive are a paid feature — you will know someone is there, and one upgrade reveals who." />
+            body="Wingles you send are always visible to you, with their status. Wingles you receive let you know someone is there, and you can reveal who they are." />
           
           <ul className="mt-8 space-y-4">
             {[
-            'Send a wingle with a note — no more shouting into a void',
+            'Send a wingle with a note no more shouting into a void',
             'Track pending, accepted and declined in one place',
             'Accepting a wingle opens a conversation instantly'].
             map((point) =>
