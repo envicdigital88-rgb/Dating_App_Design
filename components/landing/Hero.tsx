@@ -5,7 +5,7 @@ import Link from 'next/link';
 
 import { motion } from 'framer-motion';
 import { ArrowRightIcon, UserIcon } from 'lucide-react';
-import { seedPhotos, seedUsers } from '@/lib/data/seed';
+import { seedPhotos } from '@/lib/data/seed';
 
 const facePhotos = seedPhotos.filter((p) => p.isPrimary && p.userId.startsWith('u-')).slice(0, 4);
 
