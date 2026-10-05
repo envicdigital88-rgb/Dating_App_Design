@@ -8,7 +8,7 @@ import { ArrowRightIcon, UserIcon } from 'lucide-react';
 import { seedPhotos, seedUsers } from '@/lib/data/seed';
 
 const facePhotos = seedPhotos.filter((p) => p.isPrimary && p.userId.startsWith('u-')).slice(0, 4);
-const memberCount = seedUsers.filter((u) => u.role === 'member').length;
+
 
 export function Hero() {
   return (
