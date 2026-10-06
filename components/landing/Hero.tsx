@@ -41,17 +41,7 @@ export function Hero() {
         >
           {/* Headline */}
           <h1 className="font-display text-[52px] font-bold leading-[1.05] tracking-[-0.02em] text-white sm:text-[60px] lg:text-[68px]">
-            What if they like you &nbsp;
-            <em
-              className="not-italic"
-              style={{
-                background: 'linear-gradient(90deg, #ec4899 0%, #c026d3 40%, #0ea5e9 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}>
-              too?
-            </em>
+            What if they like you too?
           </h1>
 
           {/* Subtitle */}
