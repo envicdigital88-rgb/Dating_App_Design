@@ -5,6 +5,7 @@ import React from 'react';
 import { SiteNav } from '@/components/landing/SiteNav';
 import { Hero } from '@/components/landing/Hero';
 import { HowItWorks } from '@/components/landing/HowItWorks';
+import { SecretWingleSection } from '@/components/landing/SecretWingleSection';
 import { DiscoverPreview } from '@/components/landing/DiscoverPreview';
 import { WinglesShowcase } from '@/components/landing/WinglesShowcase';
 import { Safety } from '@/components/landing/Safety';
@@ -26,6 +27,7 @@ export default function Landing() {
       <main>
         <Hero />
         <HowItWorks />
+        <SecretWingleSection />
         <DiscoverPreview />
         <WinglesShowcase />
 

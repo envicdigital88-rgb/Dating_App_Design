@@ -8,7 +8,7 @@ const columns = [
   title: 'Wingle Mingle',
   links: [
   { label: 'How it works', href: '#how' },
-  { label: 'Wingling wingles', href: '#wingles' },
+  { label: 'Wingle to Mingle', href: '#wingles' },
   { label: 'Install the app', href: '#install' }]
 
 },

@@ -64,7 +64,7 @@ export function InstallSection() {
               </div>
               {preview && <img src={preview} alt="" className="aspect-[3/4] w-full object-cover" />}
               <div className="p-4">
-                <p className="font-display text-lg text-ink">Sophie, 28</p>
+                <p className="font-display text-lg text-ink">Poojani, 25</p>
                 <p className="mt-1 text-[12px] text-ink-muted">Margate · Online now</p>
                 <div className="mt-3 flex gap-2">
                   <span className="h-9 flex-1 rounded-full bg-berry-500" />

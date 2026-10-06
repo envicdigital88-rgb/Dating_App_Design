@@ -12,7 +12,7 @@ export function WinglesShowcase() {
         <div>
           <SectionHeading
             align="responsive"
-            overline="Wingle to Mingles"
+            overline="Wingle to Mingle"
             title="Interest you can see, and interest you unlock"
             body="Wingles you send are always visible to you, with their status. Wingles you receive let you know someone is there, and you can reveal who they are." />
           
@@ -40,7 +40,7 @@ export function WinglesShowcase() {
               <img src={accepted} alt="" className="h-16 w-16 shrink-0 rounded-2xl object-cover" />
               }
               <div className="min-w-0 flex-1">
-                <p className="font-display text-lg leading-tight text-ink">Priya, 29</p>
+                <p className="font-display text-lg leading-tight text-ink">Hansani, 29</p>
                 <p className="mt-1 text-[13px] text-ink-soft">Sent 5 days ago · Shoreditch</p>
               </div>
               <span className="inline-flex items-center gap-1 rounded-full bg-moss/10 px-3 py-1.5 text-[12px] font-semibold text-moss">

@@ -44,7 +44,7 @@ export function Testimonials() {
                 {lead.quote}
               </blockquote>
               <div className="mt-10 flex items-center gap-4">
-                <img src={facePhotos[0].url} alt="" className="h-14 w-14 rounded-full border-2 border-white/20 object-cover shadow-lg" />
+                <img src="/download.jpg" alt="" className="h-14 w-14 rounded-full border-2 border-white/20 object-cover shadow-lg" />
                 <div>
                   <p className="font-semibold text-white">{lead.name}</p>
                   <p className="text-[12px] text-white/50">{lead.detail}</p>
