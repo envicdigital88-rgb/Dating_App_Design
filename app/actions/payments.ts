@@ -13,7 +13,7 @@ export async function buyWingitsAction(packageAmountLKR: number, wingitsAmount: 
   if (!session?.userId) return { ok: false, error: 'Unauthorized' };
   const userId = session.userId as string;
 
-  const headersList = headers();
+  const headersList = await headers();
   const host = headersList.get('host') || "www.winglemingle.com";
   const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
   // Fallback to explicit env variable if needed, otherwise use dynamic
