@@ -438,6 +438,7 @@ export async function getUserStateAction() {
       ...user,
       lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
       createdAt: user.createdAt?.toString() || new Date().toISOString(),
+      lastDailyBonusAt: user.lastDailyBonusAt?.toString() || null,
       interests: typeof user.interests === 'string' ? JSON.parse(user.interests) : user.interests,
       traits: typeof user.traits === 'string' ? JSON.parse(user.traits) : user.traits,
       lifestyle: typeof user.lifestyle === 'string' ? JSON.parse(user.lifestyle) : user.lifestyle,

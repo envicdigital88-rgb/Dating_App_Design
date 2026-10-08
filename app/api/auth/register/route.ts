@@ -6,8 +6,7 @@ import { z } from 'zod';
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email address").toLowerCase(),
-  phone: z.string().optional().or(z.literal('')),
+  phone: z.string().min(8, "Invalid phone number"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   age: z.coerce.number().min(18, "Must be at least 18 years old").max(120),
   gender: z.enum(["woman", "man", "non-binary"]),
@@ -23,11 +22,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Validation failed", details: validated.error.flatten().fieldErrors }, { status: 400 });
     }
 
-    const { name, email, phone, password, age, gender, intention } = validated.data;
+    const { name, phone, password, age, gender, intention } = validated.data;
 
-    const existingUser = await db.orm.public.User.where({ email }).first();
+    const existingUser = await db.orm.public.User.where({ phone }).first();
     if (existingUser) {
-      return NextResponse.json({ ok: false, error: "Email already in use" }, { status: 400 });
+      return NextResponse.json({ ok: false, error: "Phone number already in use" }, { status: 400 });
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -35,8 +34,8 @@ export async function POST(req: NextRequest) {
     const user = await db.transaction(async (tx) => {
       const newUser = await tx.orm.public.User.create({
         name,
-        email,
-        phone: phone || '',
+        email: `${phone}@temp.winglemingle.com`,
+        phone,
         password: hashedPassword,
         age,
         gender,

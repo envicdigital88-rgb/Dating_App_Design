@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 import { toast } from 'sonner';
-import { ArrowLeftIcon, ArrowRightIcon, EyeIcon, EyeOffIcon, LockIcon, MailIcon, UserIcon, XCircleIcon, CheckCircle2Icon } from 'lucide-react';
+import { ArrowLeftIcon, ArrowRightIcon, EyeIcon, EyeOffIcon, LockIcon, MailIcon, PhoneIcon, UserIcon, XCircleIcon, CheckCircle2Icon } from 'lucide-react';
 import { heroImage } from '@/lib/data/seed';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 
@@ -13,6 +13,7 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -51,7 +52,7 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email, password, name, phone: '', age: 20, gender: 'woman', intention: 'Long-term relationship'
+          phone, password, name, age: 20, gender: 'woman', intention: 'Long-term relationship'
         })
       });
       result = await res.json();
@@ -72,8 +73,8 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
     }
     
     if (isRegister) {
-      toast.success('Account created — please verify your phone number');
-      window.location.href = '/verify-phone';
+      toast.success('Account created — please verify your email address');
+      window.location.href = '/verify-email';
       return;
     }
     
@@ -97,8 +98,8 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
     }
     
     if (result.data?.isNewUser) {
-      toast.success('Account created via Google — please verify your phone number');
-      window.location.href = '/verify-phone';
+      toast.success('Account created via Google — please verify your email address');
+      window.location.href = '/verify-email';
     } else {
       toast.success(`Welcome back, ${result.data?.name?.split(' ')[0] || ''}`);
       window.location.href = result.data?.role === 'admin' ? '/admin' : '/discover';
@@ -182,23 +183,45 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
               </div>
             )}
 
-            {/* Email */}
-            <div className="relative">
-              <MailIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
-              <div className="absolute left-11 top-2.5 text-[10px] font-semibold uppercase tracking-wide text-white/35">Email</div>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@email.com"
-                autoComplete="email"
-                required
-                className="w-full rounded-2xl border border-white/10 pb-3 pl-11 pr-4 pt-7 text-[14px] text-white placeholder-white/20 outline-none transition-all focus:border-[#0ea5e9]/50 focus:ring-1 focus:ring-[#0ea5e9]/25"
-                style={{ background: 'rgba(255,255,255,0.06)' }}
-              />
-            </div>
+            {/* Email (for login) */}
+            {!isRegister && (
+              <div className="relative">
+                <MailIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                <div className="absolute left-11 top-2.5 text-[10px] font-semibold uppercase tracking-wide text-white/35">Email</div>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@email.com"
+                  autoComplete="email"
+                  required
+                  className="w-full rounded-2xl border border-white/10 pb-3 pl-11 pr-4 pt-7 text-[14px] text-white placeholder-white/20 outline-none transition-all focus:border-[#0ea5e9]/50 focus:ring-1 focus:ring-[#0ea5e9]/25"
+                  style={{ background: 'rgba(255,255,255,0.06)' }}
+                />
+              </div>
+            )}
+
+            {/* Phone (for register) */}
+            {isRegister && (
+              <div className="relative">
+                <PhoneIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                <div className="absolute left-11 top-2.5 text-[10px] font-semibold uppercase tracking-wide text-white/35">Mobile</div>
+                <input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+94 7700 900000"
+                  autoComplete="tel"
+                  required
+                  className="w-full rounded-2xl border border-white/10 pb-3 pl-11 pr-4 pt-7 text-[14px] text-white placeholder-white/20 outline-none transition-all focus:border-[#0ea5e9]/50 focus:ring-1 focus:ring-[#0ea5e9]/25"
+                  style={{ background: 'rgba(255,255,255,0.06)' }}
+                />
+              </div>
+            )}
 
 
 
