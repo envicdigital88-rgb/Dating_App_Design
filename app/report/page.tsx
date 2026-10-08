@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeftIcon, AlertOctagonIcon, ChevronDownIcon, Loader2Icon } from 'lucide-react';
+import { ArrowLeftIcon, ChevronDownIcon, Loader2Icon } from 'lucide-react';
 import { BrandMark } from '@/components/BrandMark';
 import { submitReportAction } from '@/app/actions/safety';
 import { toast } from 'sonner';
