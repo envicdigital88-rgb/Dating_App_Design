@@ -32,15 +32,17 @@ export function SecretWingleSection() {
           <SectionHeading
             align="responsive"
             overline="Secret Wingle"
-            title="Have a secret crush?"
-            body="Send them an anonymous message. If they ever join Wingle Mingle with their phone number, your message will be waiting for them."
+            title="Someone likes you. But who?"
+            body={<>Got a crush you can't confess to? Send them a Secret Wingle and let the mystery begin.<br /><br />They'll know someone has a crush on them, but your identity stays secret. If they join WingleMingle, they can respond, chat with their mystery admirer and exchange hints until one of you decides it's time to reveal the truth.</>}
           />
           
           <ul className="mt-8 space-y-4">
             {[
-              'Send anonymously without revealing yourself yet',
-              'Only visible when they join the app',
-              'Costs 20 Wingits to send'
+              'Send a secret crush message',
+              'Stay anonymous',
+              'Chat, exchange hints & build the suspense',
+              "Reveal yourself when you're ready",
+              '20 Wingits to send'
             ].map((point) => (
               <li key={point} className="flex gap-3 text-[15px] leading-relaxed text-ink-soft">
                 <HeartIcon className="mt-0.5 h-4 w-4 shrink-0 text-berry-500" />

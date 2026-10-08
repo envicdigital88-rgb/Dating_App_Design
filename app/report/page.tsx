@@ -9,9 +9,15 @@ import { submitReportAction } from '@/app/actions/safety';
 import { toast } from 'sonner';
 
 const REASONS = [
-  { value: 'spam', label: 'Spam or Fake Profile' },
-  { value: 'harassment', label: 'Harassment or Abuse' },
-  { value: 'inappropriate', label: 'Inappropriate Content' },
+  { value: 'fake_profile', label: 'Fake profile' },
+  { value: 'harassment', label: 'Harassment' },
+  { value: 'inappropriate', label: 'Inappropriate content' },
+  { value: 'scam', label: 'Scam or fraud' },
+  { value: 'impersonation', label: 'Impersonation' },
+  { value: 'spam', label: 'Spam' },
+  { value: 'secret_wingle_abuse', label: 'Secret Wingle abuse' },
+  { value: 'threatening', label: 'Threatening behaviour' },
+  { value: 'privacy', label: 'Privacy violation' },
   { value: 'other', label: 'Other' },
 ];
 
@@ -88,28 +94,89 @@ export default function ReportPage() {
             <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-50 pointer-events-none" />
             <div className="relative z-10">
               <h1 className="font-display text-4xl md:text-5xl font-bold bg-gradient-to-br from-berry-300 via-plum-300 to-indigo-300 bg-clip-text text-transparent mb-12 tracking-tight text-center sm:text-left">
-                Report a Profile
+                Report a Profile or User
               </h1>
               
               <div className="grid sm:grid-cols-2 gap-10">
                 <div className="space-y-8">
                   <section className="group">
-                    <h2 className="text-xl font-display font-semibold text-ink mb-4 flex items-center gap-3 transition-colors group-hover:text-berry-300">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-berry-500/10 text-berry-400">
-                        <AlertOctagonIcon className="h-4 w-4" />
-                      </span>
-                      See something wrong?
+                    <h2 className="text-2xl font-display font-semibold text-ink mb-4 transition-colors group-hover:text-berry-300">
+                      Help us keep WingleMingle safe
                     </h2>
-                    <div className="border-l-2 border-white/5 pl-6 py-1 ml-[1.25rem]">
-                      <p className="text-ink-soft text-sm mb-2">We take all reports seriously.</p>
-                      <p className="text-ink-soft text-sm">Please provide as much detail as possible so our moderation team can investigate.</p>
+                    <div className="border-l-2 border-white/5 pl-6 py-1">
+                      <p className="text-ink-soft text-[15px] mb-4">
+                        If you believe a profile, message, photograph, Wingle or Secret Wingle violates our Community Guidelines or makes you feel unsafe, please report it.
+                      </p>
+                      <p className="text-ink-soft text-[15px]">
+                        Reports help us identify harmful behaviour and protect the community.
+                      </p>
                     </div>
                   </section>
+
+                  <section className="group">
+                    <h2 className="text-2xl font-display font-semibold text-ink mb-4 transition-colors group-hover:text-berry-300">
+                      What can you report?
+                    </h2>
+                    <div className="border-l-2 border-white/5 pl-6 py-1">
+                      <p className="text-ink-soft text-[15px] mb-2">You can report:</p>
+                      <ul className="list-disc pl-5 space-y-1 text-ink-soft/80 text-[15px]">
+                        <li>A fake or misleading profile</li>
+                        <li>Harassment or bullying</li>
+                        <li>Threatening behaviour</li>
+                        <li>Inappropriate photographs</li>
+                        <li>Sexual or explicit content</li>
+                        <li>Scams or financial fraud</li>
+                        <li>Spam</li>
+                        <li>Impersonation</li>
+                        <li>Misuse of Secret Wingle</li>
+                        <li>Sharing private information</li>
+                        <li>Suspicious or illegal activity</li>
+                        <li>Any other behaviour that concerns you</li>
+                      </ul>
+                    </div>
+                  </section>
+
+                  <section className="group">
+                    <h2 className="text-2xl font-display font-semibold text-ink mb-4 transition-colors group-hover:text-berry-300">
+                      What happens after you report?
+                    </h2>
+                    <div className="border-l-2 border-white/5 pl-6 py-1">
+                      <p className="text-ink-soft text-[15px] mb-4">
+                        We review reports and may take action where appropriate.
+                      </p>
+                      <p className="text-ink-soft text-[15px] mb-4">
+                        Depending on the situation, action may include removing content, restricting features, suspending an account or permanently removing an account from WingleMingle.
+                      </p>
+                      <p className="text-ink-soft text-[15px] mb-4">
+                        We may contact you if we need additional information.
+                      </p>
+                      <p className="text-ink-soft text-[15px]">
+                        For privacy and safety reasons, we may not be able to tell you exactly what action was taken against another user.
+                      </p>
+                    </div>
+                  </section>
+
+                  <section className="group">
+                    <h2 className="text-2xl font-display font-semibold text-ink mb-4 transition-colors group-hover:text-berry-300">
+                      Emergency situations
+                    </h2>
+                    <div className="border-l-2 border-white/5 pl-6 py-1">
+                      <p className="text-ink-soft text-[15px] mb-4 font-semibold text-berry-300">
+                        WingleMingle is not an emergency service.
+                      </p>
+                      <p className="text-ink-soft text-[15px]">
+                        If you believe you are in immediate danger, contact your local emergency services or law enforcement authority.
+                      </p>
+                    </div>
+                  </section>
+                  
+                  <p className="text-ink font-medium mt-8 italic text-[15px]">Thank you for helping us keep WingleMingle safer.</p>
                 </div>
                 
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-                  <h3 className="font-display font-semibold text-lg text-ink mb-4">Submit a report</h3>
-                  <form className="space-y-4" onSubmit={handleSubmit}>
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-6 h-fit sticky top-10">
+                  <h3 className="font-display font-semibold text-xl text-ink mb-2">Your report</h3>
+                  <p className="text-ink-soft text-[14px] mb-6">Please provide as much useful information as possible.</p>
+                  <form className="space-y-5" onSubmit={handleSubmit}>
                     <div>
                       <label htmlFor="url" className="sr-only">Profile URL or Username</label>
                       <input 
@@ -167,15 +234,18 @@ export default function ReportPage() {
                     </div>
 
                     <div>
-                      <label htmlFor="details" className="sr-only">Details</label>
+                      <label htmlFor="details" className="sr-only">Tell us what happened</label>
                       <textarea 
                         id="details" 
-                        rows={4} 
+                        rows={5} 
                         value={details}
                         onChange={(e) => setDetails(e.target.value)}
-                        placeholder="Additional details..." 
+                        placeholder="Tell us what happened..." 
                         className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-ink placeholder:text-ink-muted focus:border-berry-500/50 focus:outline-none focus:ring-1 focus:ring-berry-500/50 resize-none"
                       ></textarea>
+                      <p className="text-ink-muted text-[13px] mt-3 leading-relaxed">
+                        Please do not include passwords, payment card details or other sensitive information that is not necessary for us to investigate the report.
+                      </p>
                     </div>
                     <button 
                       type="submit" 

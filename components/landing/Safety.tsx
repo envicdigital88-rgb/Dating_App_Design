@@ -4,36 +4,36 @@ import { SectionHeading } from '../ui/Bits';
 import { lifestyleImage } from '@/lib/data/seed';
 
 const items = [
-{
-  icon: <ScanFaceIcon className="h-5 w-5" />,
-  title: 'Reviewed profiles',
-  body: 'Every profile and photo is checked by our moderation team before it appears in Discover.'
-},
-{
-  icon: <EyeOffIcon className="h-5 w-5" />,
-  title: 'Minimal exposure',
-  body: 'Only your first name, age and area are ever public. Contact details are never shown.'
-},
-{
-  icon: <BanIcon className="h-5 w-5" />,
-  title: 'Block instantly',
-  body: 'Blocking removes someone from your Discover, your wingles and your inbox at once.'
-},
-{
-  icon: <FlagIcon className="h-5 w-5" />,
-  title: 'Report anything',
-  body: 'Report a profile, a photo or a mingle. Reports are anonymous and always reviewed.'
-},
-{
-  icon: <LockKeyholeIcon className="h-5 w-5" />,
-  title: 'Protected payments',
-  body: 'Payments are verified on our servers. Nothing unlocks until your bank confirms it.'
-},
-{
-  icon: <Trash2Icon className="h-5 w-5" />,
-  title: 'Leave cleanly',
-  body: 'Delete your account whenever you want and your photos and mingles go with it.'
-}];
+  {
+    icon: <ScanFaceIcon className="h-5 w-5" />,
+    title: 'Reviewed profiles',
+    body: 'Every profile and photo is checked by our moderation team before it appears in Discover.'
+  },
+  {
+    icon: <EyeOffIcon className="h-5 w-5" />,
+    title: 'Minimal exposure',
+    body: 'Only your first name, age and area are ever public. Contact details are never shown.'
+  },
+  {
+    icon: <BanIcon className="h-5 w-5" />,
+    title: 'Block instantly',
+    body: 'Blocking removes someone from your Discover, your wingles and your inbox at once.'
+  },
+  {
+    icon: <FlagIcon className="h-5 w-5" />,
+    title: 'Report anything',
+    body: 'Report a profile, a photo or a mingle. Reports are anonymous and always reviewed.'
+  },
+  {
+    icon: <LockKeyholeIcon className="h-5 w-5" />,
+    title: 'Secure payments',
+    body: 'Payments are securely processed and Wingits are added to your account after successful payment confirmation.'
+  },
+  {
+    icon: <Trash2Icon className="h-5 w-5" />,
+    title: 'Leave cleanly',
+    body: 'Delete your account whenever you want and your photos and mingles go with it.'
+  }];
 
 
 export function Safety() {
@@ -52,12 +52,12 @@ export function Safety() {
               src={lifestyleImage}
               alt=""
               className="mt-8 aspect-[16/9] w-full rounded-4xl object-cover opacity-90 mix-blend-luminosity [mask-image:linear-gradient(to_bottom,black_60%,transparent_100%)]" />
-            
+
           </div>
 
           <ul className="grid gap-x-8 gap-y-7 sm:grid-cols-2">
             {items.map((item) =>
-            <li key={item.title} className="flex flex-col items-center text-center sm:items-start sm:text-left">
+              <li key={item.title} className="flex flex-col items-center text-center sm:items-start sm:text-left">
                 <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-berry-500/10 text-berry-500">
                   {item.icon}
                 </span>

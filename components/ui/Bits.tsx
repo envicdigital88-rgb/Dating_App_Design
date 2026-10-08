@@ -103,7 +103,7 @@ export function SectionHeading({
   title,
   body,
   align = 'center'
-}: {overline?: string;title: string;body?: string;align?: 'center' | 'left' | 'responsive';}) {
+}: {overline?: string;title: string;body?: React.ReactNode;align?: 'center' | 'left' | 'responsive';}) {
   const alignClasses = {
     center: 'mx-auto text-center',
     left: 'text-left',

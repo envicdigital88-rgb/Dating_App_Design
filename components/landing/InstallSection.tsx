@@ -20,22 +20,22 @@ export function InstallSection() {
             align="responsive"
             overline="Install Wingle Mingle"
             title="Put it on your home screen, skip the app store"
-            body="Wingle Mingle installs straight from your browser and runs full screen, with push notifications for new wingles and mingles, and an offline fallback for the tube."
+            body="WingleMingle installs straight from your browser and runs full screen, with push notifications for new Wingles and Mingles."
           />
 
           <ul className="mt-8 flex flex-col gap-4 w-fit sm:w-auto mx-auto sm:mx-0 sm:grid sm:grid-cols-3">
             {[
-            { icon: <SmartphoneIcon className="h-4 w-4" />, label: 'Full-screen app' },
-            { icon: <BellIcon className="h-4 w-4" />, label: 'Push notifications' },
-            { icon: <WifiOffIcon className="h-4 w-4" />, label: 'Works offline' }].
-            map((f) =>
-            <li key={f.label} className="flex items-center gap-2.5 text-[14px] text-ink-soft">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-berry-50 text-berry-500">
-                  {f.icon}
-                </span>
-                {f.label}
-              </li>
-            )}
+              { icon: <SmartphoneIcon className="h-4 w-4" />, label: 'Full-screen app' },
+              { icon: <BellIcon className="h-4 w-4" />, label: 'Push notifications' },
+              { icon: <WifiOffIcon className="h-4 w-4" />, label: 'Works offline' }].
+              map((f) =>
+                <li key={f.label} className="flex items-center gap-2.5 text-[14px] text-ink-soft">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-berry-50 text-berry-500">
+                    {f.icon}
+                  </span>
+                  {f.label}
+                </li>
+              )}
           </ul>
 
           <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
@@ -49,7 +49,7 @@ export function InstallSection() {
               variant="outline"
               onClick={enableNotifications}
               disabled={notificationsEnabled}>
-              
+
               {notificationsEnabled ? 'Notifications on' : 'Enable notifications'}
             </Button>
           </div>
@@ -65,7 +65,7 @@ export function InstallSection() {
               {preview && <img src={preview} alt="" className="aspect-[3/4] w-full object-cover" />}
               <div className="p-4">
                 <p className="font-display text-lg text-ink">Poojani, 25</p>
-                <p className="mt-1 text-[12px] text-ink-muted">Margate · Online now</p>
+                <p className="mt-1 text-[12px] text-ink-muted">Mawanella · Online now</p>
                 <div className="mt-3 flex gap-2">
                   <span className="h-9 flex-1 rounded-full bg-berry-500" />
                   <span className="h-9 w-9 rounded-full border border-sand bg-cream-deep" />
@@ -73,10 +73,10 @@ export function InstallSection() {
               </div>
               <div className="flex justify-around border-t border-sand bg-cream-deep px-4 py-2.5 text-ink-muted">
                 {['Discover', 'Wingles', 'Chat', 'You'].map((tab, i) =>
-                <span
-                  key={tab}
-                  className={`text-[10px] font-medium ${i === 0 ? 'text-berry-500' : ''}`}>
-                  
+                  <span
+                    key={tab}
+                    className={`text-[10px] font-medium ${i === 0 ? 'text-berry-500' : ''}`}>
+
                     {tab}
                   </span>
                 )}

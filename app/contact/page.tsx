@@ -43,51 +43,76 @@ export default function ContactPage() {
             
             <div className="relative z-10">
               <h1 className="font-display text-4xl md:text-5xl font-bold bg-gradient-to-br from-berry-300 via-plum-300 to-indigo-300 bg-clip-text text-transparent mb-6 tracking-tight text-center sm:text-left">
-                Contact Us
+                Contact WingleMingle
               </h1>
-              <p className="text-[16px] leading-relaxed text-ink-soft/90 mb-12 text-center sm:text-left border-b border-white/10 pb-8">
-                We'd love to hear from you. Whether you have a question about features, pricing, need a demo, or anything else, our team is ready to answer all your questions.
+              <p className="text-sm font-semibold text-ink-muted uppercase tracking-[0.2em] mb-12 border-b border-white/10 pb-6 text-center sm:text-left">
+                We'd love to hear from you
               </p>
               
-              <div className="grid sm:grid-cols-2 gap-10">
-                
-                <div className="space-y-8">
-                  <section className="group">
-                    <h2 className="text-xl font-display font-semibold text-ink mb-4 flex items-center gap-3 transition-colors group-hover:text-berry-300">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-berry-500/10 text-berry-400">
-                        <MailIcon className="h-4 w-4" />
-                      </span>
-                      Email Support
-                    </h2>
-                    <div className="border-l-2 border-white/5 pl-6 py-1 ml-[1.25rem]">
-                      <p className="text-ink-soft text-sm mb-2">Our friendly team is here to help.</p>
-                      <a href="mailto:info@winglemingle.com" className="text-berry-400 hover:text-berry-300 font-medium transition-colors">
-                        info@winglemingle.com
-                      </a>
+              <div className="space-y-12 text-[16px] leading-relaxed text-ink-soft/90">
+                <section className="group">
+                  <div className="border-l-2 border-white/5 pl-6 py-1">
+                    <p>Whether you have a question about WingleMingle, need help with your account, want to report an issue or simply want to get in touch, we're here to help.</p>
+                  </div>
+                </section>
+
+                <section className="group">
+                  <h2 className="text-2xl font-display font-semibold text-ink mb-4 flex items-center gap-4 transition-colors group-hover:text-berry-300">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-berry-500/10 text-berry-400">
+                      <MailIcon className="h-4 w-4" />
+                    </span>
+                    General Support
+                  </h2>
+                  <div className="ml-[1.25rem] border-l-2 border-white/5 pl-8 py-1">
+                    <p className="mb-2">For questions about:</p>
+                    <ul className="list-disc pl-5 mb-4 space-y-1 text-ink-soft/80">
+                      <li>Your account</li>
+                      <li>Wingits</li>
+                      <li>Wingles</li>
+                      <li>Secret Wingle</li>
+                      <li>Messages</li>
+                      <li>Your profile</li>
+                      <li>Privacy settings</li>
+                      <li>Technical problems</li>
+                    </ul>
+                    <p className="mb-2">Email us at:</p>
+                    <p><a href="mailto:info@winglemingle.com" className="text-berry-400 hover:text-berry-300 transition-colors">info@winglemingle.com</a></p>
+                  </div>
+                </section>
+
+                <section className="group">
+                  <h2 className="text-2xl font-display font-semibold text-ink mb-4 flex items-center gap-4 transition-colors group-hover:text-berry-300">
+                    Safety & Reports
+                  </h2>
+                  <div className="border-l-2 border-white/5 pl-6 py-1">
+                    <p className="mb-4">If you're reporting another user or safety concern, please use our:</p>
+                    <p className="mb-4"><Link href="/report" className="text-berry-400 hover:text-berry-300 font-medium transition-colors">Report a Profile page</Link></p>
+                    <p>This helps us collect the information we need to review the issue.</p>
+                  </div>
+                </section>
+
+                <section className="group">
+                  <h2 className="text-2xl font-display font-semibold text-ink mb-4 flex items-center gap-4 transition-colors group-hover:text-berry-300">
+                    Business or Partnership Enquiries
+                  </h2>
+                  <div className="border-l-2 border-white/5 pl-6 py-1">
+                    <p className="mb-4">For partnership, media, business or other enquiries, please contact us by email.</p>
+                    <p>Email: <a href="mailto:info@winglemingle.com" className="text-berry-400 hover:text-berry-300 transition-colors">info@winglemingle.com</a></p>
+                  </div>
+                </section>
+
+                <section className="group">
+                  <h2 className="text-2xl font-display font-semibold text-ink mb-4 flex items-center gap-4 transition-colors group-hover:text-berry-300">
+                    Before contacting us
+                  </h2>
+                  <div className="border-l-2 border-white/5 pl-6 py-1">
+                    <p className="mb-8">Please do not send us your password, payment card number, verification codes or other sensitive account information by email.</p>
+                    <div className="text-center sm:text-left mt-8 pt-8 border-t border-white/10">
+                      <p className="font-display font-bold text-xl text-ink">WingleMingle</p>
+                      <p className="text-berry-300 mt-2 font-medium">Catch a Wingle. Make a Mingle.</p>
                     </div>
-                  </section>
-                </div>
-                
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-                  <h3 className="font-display font-semibold text-lg text-ink mb-4">Send us a message</h3>
-                  <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
-                    <div>
-                      <label htmlFor="name" className="sr-only">Name</label>
-                      <input type="text" id="name" placeholder="Your name" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-ink placeholder:text-ink-muted focus:border-berry-500/50 focus:outline-none focus:ring-1 focus:ring-berry-500/50" />
-                    </div>
-                    <div>
-                      <label htmlFor="email" className="sr-only">Email</label>
-                      <input type="email" id="email" placeholder="you@example.com" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-ink placeholder:text-ink-muted focus:border-berry-500/50 focus:outline-none focus:ring-1 focus:ring-berry-500/50" />
-                    </div>
-                    <div>
-                      <label htmlFor="message" className="sr-only">Message</label>
-                      <textarea id="message" rows={4} placeholder="How can we help?" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-ink placeholder:text-ink-muted focus:border-berry-500/50 focus:outline-none focus:ring-1 focus:ring-berry-500/50 resize-none"></textarea>
-                    </div>
-                    <button type="submit" className="w-full rounded-xl bg-berry-500 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-berry-600 focus:outline-none focus:ring-2 focus:ring-berry-500/50 focus:ring-offset-2 focus:ring-offset-[#141414]">
-                      Send message
-                    </button>
-                  </form>
-                </div>
+                  </div>
+                </section>
 
               </div>
             </div>

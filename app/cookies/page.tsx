@@ -46,52 +46,177 @@ export default function CookiesPage() {
                 Cookie Policy
               </h1>
               <p className="text-sm font-semibold text-ink-muted uppercase tracking-[0.2em] mb-12 border-b border-white/10 pb-6 text-center sm:text-left">
-                Last updated: {new Date().toLocaleDateString()}
+                Last updated: 8 October 2026
               </p>
               
               <div className="space-y-12 text-[16px] leading-relaxed text-ink-soft/90">
                 
                 <section className="group">
                   <h2 className="text-2xl font-display font-semibold text-ink mb-4 flex items-center gap-4 transition-colors group-hover:text-berry-300">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-berry-500/10 text-berry-400 text-sm font-bold border border-berry-500/20 shadow-inner">1</span>
                     What are cookies?
                   </h2>
-                  <div className="pl-13 ml-[1.125rem] border-l-2 border-white/5 pl-8 py-1">
-                    <p>Cookies are small text files that are placed on your computer or mobile device when you visit a website. They are widely used in order to make websites work, or work more efficiently, as well as to provide information to the owners of the site.</p>
+                  <div className="border-l-2 border-white/5 pl-6 py-1">
+                    <p className="mb-4">Cookies are small files or similar technologies that allow a website or web application to remember information about your device or activity.</p>
+                    <p>WingleMingle may also use technologies such as local storage, pixels, scripts and similar technologies where necessary for the operation of the service.</p>
                   </div>
                 </section>
                 
                 <section className="group">
                   <h2 className="text-2xl font-display font-semibold text-ink mb-4 flex items-center gap-4 transition-colors group-hover:text-berry-300">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-berry-500/10 text-berry-400 text-sm font-bold border border-berry-500/20 shadow-inner">2</span>
-                    How we use cookies
+                    Why does WingleMingle use cookies?
                   </h2>
-                  <div className="pl-13 ml-[1.125rem] border-l-2 border-white/5 pl-8 py-1">
-                    <p>We use cookies to enhance your experience on our platform, such as keeping you signed in, remembering your preferences, and understanding how you use our application to improve its functionality.</p>
+                  <div className="border-l-2 border-white/5 pl-6 py-1">
+                    <p>We may use cookies and similar technologies for several purposes.</p>
                   </div>
                 </section>
                 
                 <section className="group">
                   <h2 className="text-2xl font-display font-semibold text-ink mb-4 flex items-center gap-4 transition-colors group-hover:text-berry-300">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-berry-500/10 text-berry-400 text-sm font-bold border border-berry-500/20 shadow-inner">3</span>
-                    Types of cookies we use
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-berry-500/10 text-berry-400 text-sm font-bold border border-berry-500/20 shadow-inner">1</span>
+                    Strictly necessary technologies
                   </h2>
-                  <div className="pl-13 ml-[1.125rem] border-l-2 border-white/5 pl-8 py-1">
-                    <ul className="list-disc pl-5 space-y-3 marker:text-berry-400">
-                      <li><strong className="text-ink">Essential Cookies:</strong> Required for the basic operation of our platform.</li>
-                      <li><strong className="text-ink">Analytical/Performance Cookies:</strong> Allow us to recognize and count the number of visitors and see how visitors move around our platform when they are using it.</li>
-                      <li><strong className="text-ink">Functionality Cookies:</strong> Used to recognize you when you return to our platform, enabling us to personalize our content for you and remember your preferences.</li>
+                  <div className="ml-[1.125rem] border-l-2 border-white/5 pl-8 py-1">
+                    <p className="mb-4">These technologies are required for WingleMingle to function properly.</p>
+                    <p className="mb-2">They may be used to:</p>
+                    <ul className="list-disc pl-5 mb-4 space-y-1 text-ink-soft/80">
+                      <li>Keep you signed in.</li>
+                      <li>Maintain your session.</li>
+                      <li>Protect your account.</li>
+                      <li>Detect suspicious activity.</li>
+                      <li>Maintain security.</li>
+                      <li>Remember essential service settings.</li>
+                      <li>Support authentication.</li>
+                      <li>Maintain core application functionality.</li>
                     </ul>
+                    <p>Because these technologies may be necessary to provide a service you have requested, they may be used without consent where applicable law permits.</p>
                   </div>
                 </section>
                 
                 <section className="group">
                   <h2 className="text-2xl font-display font-semibold text-ink mb-4 flex items-center gap-4 transition-colors group-hover:text-berry-300">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-berry-500/10 text-berry-400 text-sm font-bold border border-berry-500/20 shadow-inner">4</span>
-                    Managing cookies
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-berry-500/10 text-berry-400 text-sm font-bold border border-berry-500/20 shadow-inner">2</span>
+                    Functional technologies
                   </h2>
-                  <div className="pl-13 ml-[1.125rem] border-l-2 border-white/5 pl-8 py-1">
-                    <p>Most web browsers allow some control of most cookies through the browser settings. To find out more about cookies, including how to see what cookies have been set, visit www.aboutcookies.org or www.allaboutcookies.org.</p>
+                  <div className="ml-[1.125rem] border-l-2 border-white/5 pl-8 py-1">
+                    <p className="mb-4">Functional technologies may remember choices you make so that WingleMingle can provide a more convenient experience.</p>
+                    <p className="mb-2">Examples may include:</p>
+                    <ul className="list-disc pl-5 mb-4 space-y-1 text-ink-soft/80">
+                      <li>Language preferences</li>
+                      <li>Display preferences</li>
+                      <li>User interface settings</li>
+                      <li>Certain application preferences</li>
+                    </ul>
+                    <p>Where consent is legally required, we will ask for it.</p>
+                  </div>
+                </section>
+
+                <section className="group">
+                  <h2 className="text-2xl font-display font-semibold text-ink mb-4 flex items-center gap-4 transition-colors group-hover:text-berry-300">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-berry-500/10 text-berry-400 text-sm font-bold border border-berry-500/20 shadow-inner">3</span>
+                    Analytics technologies
+                  </h2>
+                  <div className="ml-[1.125rem] border-l-2 border-white/5 pl-8 py-1">
+                    <p className="mb-4">We may use analytics technologies to understand how people use WingleMingle.</p>
+                    <p className="mb-2">For example, analytics may help us understand:</p>
+                    <ul className="list-disc pl-5 mb-4 space-y-1 text-ink-soft/80">
+                      <li>Which pages are visited.</li>
+                      <li>Which features are used.</li>
+                      <li>How users navigate the service.</li>
+                      <li>Whether pages are working correctly.</li>
+                      <li>Where technical problems occur.</li>
+                    </ul>
+                    <p>Analytics technologies that are not strictly necessary may require your consent depending on the technology and applicable law.</p>
+                  </div>
+                </section>
+
+                <section className="group">
+                  <h2 className="text-2xl font-display font-semibold text-ink mb-4 flex items-center gap-4 transition-colors group-hover:text-berry-300">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-berry-500/10 text-berry-400 text-sm font-bold border border-berry-500/20 shadow-inner">4</span>
+                    Marketing technologies
+                  </h2>
+                  <div className="ml-[1.125rem] border-l-2 border-white/5 pl-8 py-1">
+                    <p>If WingleMingle introduces advertising or marketing technologies that store or access information on your device, we will provide appropriate information and obtain consent where required.</p>
+                  </div>
+                </section>
+
+                <section className="group">
+                  <h2 className="text-2xl font-display font-semibold text-ink mb-4 flex items-center gap-4 transition-colors group-hover:text-berry-300">
+                    Third-party technologies
+                  </h2>
+                  <div className="border-l-2 border-white/5 pl-6 py-1">
+                    <p className="mb-4">Some technologies may be provided by third parties.</p>
+                    <p className="mb-2">For example, WingleMingle may use third-party providers for:</p>
+                    <ul className="list-disc pl-5 mb-4 space-y-1 text-ink-soft/80">
+                      <li>Analytics</li>
+                      <li>Payments</li>
+                      <li>Security</li>
+                      <li>Authentication</li>
+                      <li>Hosting</li>
+                      <li>Embedded services</li>
+                    </ul>
+                    <p>Third-party providers may process information according to their own privacy policies and contractual arrangements with WingleMingle.</p>
+                  </div>
+                </section>
+
+                <section className="group">
+                  <h2 className="text-2xl font-display font-semibold text-ink mb-4 flex items-center gap-4 transition-colors group-hover:text-berry-300">
+                    Your choices
+                  </h2>
+                  <div className="border-l-2 border-white/5 pl-6 py-1">
+                    <p className="mb-4">Where consent is required, you can choose whether to accept optional cookies or similar technologies.</p>
+                    <p className="mb-2">You should be able to:</p>
+                    <ul className="list-disc pl-5 mb-4 space-y-1 text-ink-soft/80">
+                      <li>Accept optional cookies.</li>
+                      <li>Reject optional cookies.</li>
+                      <li>Change your preferences later.</li>
+                    </ul>
+                    <p className="mb-4">Essential technologies may continue to operate where necessary for WingleMingle to function.</p>
+                    <p className="italic text-ink-soft">For UK users, applicable rules generally require clear information about storage/access technologies and prior consent for non-exempt technologies.</p>
+                  </div>
+                </section>
+
+                <section className="group">
+                  <h2 className="text-2xl font-display font-semibold text-ink mb-4 flex items-center gap-4 transition-colors group-hover:text-berry-300">
+                    Browser controls
+                  </h2>
+                  <div className="border-l-2 border-white/5 pl-6 py-1">
+                    <p className="mb-4">You can also control cookies through your browser settings.</p>
+                    <p>Blocking certain cookies may affect how WingleMingle works.</p>
+                  </div>
+                </section>
+
+                <section className="group">
+                  <h2 className="text-2xl font-display font-semibold text-ink mb-4 flex items-center gap-4 transition-colors group-hover:text-berry-300">
+                    Cookie duration
+                  </h2>
+                  <div className="border-l-2 border-white/5 pl-6 py-1">
+                    <p className="mb-4">Some cookies may exist only while your browser session is active.</p>
+                    <p className="mb-4">Others may remain for a longer period depending on their purpose.</p>
+                    <p>We aim to use reasonable retention periods and review the technologies used on the service.</p>
+                  </div>
+                </section>
+
+                <section className="group">
+                  <h2 className="text-2xl font-display font-semibold text-ink mb-4 flex items-center gap-4 transition-colors group-hover:text-berry-300">
+                    Keeping this policy updated
+                  </h2>
+                  <div className="border-l-2 border-white/5 pl-6 py-1">
+                    <p className="mb-4">The exact cookies and technologies used by WingleMingle may change as the platform develops.</p>
+                    <p>We will update this Cookie Policy when our use of cookies or similar technologies materially changes.</p>
+                  </div>
+                </section>
+
+                <section className="group">
+                  <h2 className="text-2xl font-display font-semibold text-ink mb-4 flex items-center gap-4 transition-colors group-hover:text-berry-300">
+                    Contact
+                  </h2>
+                  <div className="border-l-2 border-white/5 pl-6 py-1">
+                    <p className="mb-4">If you have questions about cookies or privacy:</p>
+                    <p className="mb-8"><a href="mailto:privacy@winglemingle.com" className="text-berry-400 hover:text-berry-300 transition-colors">privacy@winglemingle.com</a></p>
+                    <div className="text-center sm:text-left mt-8 pt-8 border-t border-white/10">
+                      <p className="font-display font-bold text-xl text-ink">WingleMingle</p>
+                      <p className="text-berry-300 mt-2 font-medium">Catch a Wingle. Make a Mingle.</p>
+                    </div>
                   </div>
                 </section>
 

@@ -41,7 +41,7 @@ export function WinglesShowcase() {
               }
               <div className="min-w-0 flex-1">
                 <p className="font-display text-lg leading-tight text-ink">Hansani, 29</p>
-                <p className="mt-1 text-[13px] text-ink-soft">Sent 5 days ago · Shoreditch</p>
+                <p className="mt-1 text-[13px] text-ink-soft">Sent 5 days ago · Gampaha</p>
               </div>
               <span className="inline-flex items-center gap-1 rounded-full bg-moss/10 px-3 py-1.5 text-[12px] font-semibold text-moss">
                 <CheckIcon className="h-3.5 w-3.5" />

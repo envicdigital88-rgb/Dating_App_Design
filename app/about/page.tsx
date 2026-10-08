@@ -43,7 +43,7 @@ export default function AboutPage() {
             
             <div className="relative z-10">
               <h1 className="font-display text-4xl md:text-5xl font-bold bg-gradient-to-br from-berry-300 via-plum-300 to-indigo-300 bg-clip-text text-transparent mb-12 tracking-tight text-center sm:text-left">
-                About Wingle Mingle
+                About WingleMingle
               </h1>
               
               <div className="space-y-12 text-[16px] leading-relaxed text-ink-soft/90">
@@ -54,10 +54,16 @@ export default function AboutPage() {
                   </h2>
                   <div className="border-l-2 border-white/5 pl-6 py-1">
                     <p className="mb-4">
-                      Wingle Mingle started with a simple observation: modern dating apps feel like job interviews. People spend more time swiping and judging than actually talking and connecting. We wanted to change that.
+                      WingleMingle started with a simple idea: meeting someone shouldn't feel like filling out an application.
+                    </p>
+                    <p className="mb-4">
+                      Too many dating apps turn meeting people into endless swiping, judging and trying to find the perfect profile. We wanted to create something a little more human, a place where you can discover someone interesting, make the first move and see where the conversation takes you.
+                    </p>
+                    <p className="mb-4">
+                      That's where the Wingle comes in.
                     </p>
                     <p>
-                      We built a platform where genuine interaction takes the center stage. No endless questionnaires, no algorithmic compatibility scores—just real people finding each other based on shared interests, humor, and a genuine desire to connect.
+                      A Wingle can be a hello, a little bit of curiosity, a secret crush or the beginning of something unexpected. Because sometimes, the best connections aren't the ones you planned for.
                     </p>
                   </div>
                 </section>
@@ -67,8 +73,14 @@ export default function AboutPage() {
                     Our Mission
                   </h2>
                   <div className="border-l-2 border-white/5 pl-6 py-1">
+                    <p className="mb-4">
+                      Our mission is simple: help people connect in a way that feels genuine, fun and safe.
+                    </p>
+                    <p className="mb-4">
+                      Whether you're looking for romance, friendship, companionship or simply someone interesting to talk to, WingleMingle gives you a place to meet, mingle and discover what happens next.
+                    </p>
                     <p>
-                      Our mission is to foster meaningful connections in a safe, fun, and inclusive environment. Whether you are looking for romance, companionship, or just a great conversation on a Friday night, we are here to help you turn strangers into your favorite storylines.
+                      Because you never know where a Wingle might lead.
                     </p>
                   </div>
                 </section>
@@ -78,8 +90,14 @@ export default function AboutPage() {
                     The Team
                   </h2>
                   <div className="border-l-2 border-white/5 pl-6 py-1">
+                    <p className="mb-4">
+                      WingleMingle is built by a small, passionate team who believe technology should help people connect not make connecting feel complicated.
+                    </p>
+                    <p className="mb-4">
+                      We're constantly building, listening and improving as our community grows. Our goal isn't to create another app that keeps you endlessly swiping.
+                    </p>
                     <p>
-                      We are a small, passionate team of designers, developers, and hopeless romantics based out of London. We believe that technology should bring us closer together, not further apart. We are constantly listening to our community and improving Wingle Mingle every day.
+                      It's to create a place where you actually meet someone worth talking to.
                     </p>
                   </div>
                 </section>

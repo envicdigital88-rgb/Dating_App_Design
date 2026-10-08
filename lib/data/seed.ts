@@ -52,7 +52,7 @@ const members: SeedMember[] = [
   phone: '+44 7700 900101',
   age: 29,
   gender: 'woman',
-  location: 'Shoreditch, London',
+  location: 'Gampaha, Sri Lanka',
   bio: 'Architect by day, terrible karaoke singer by night. I will absolutely drag you to a Sunday market.',
   intention: 'Long-term relationship',
   interests: ['Live music', 'Street food', 'Film photography', 'Sea swimming'],
@@ -598,18 +598,18 @@ export const testimonials = [
   quote:
   'The locked wingles actually made me slow down. I read three profiles properly instead of swiping through ninety.',
   name: 'Amila & Nethmi',
-  detail: 'Together 14 months · met on Wingle Mingle'
+  detail: 'Together 3 weeks · met on Wingle Mingle'
 },
 {
   quote:
   'Paying for mingles sounds odd until you realise every conversation you have is with someone who also meant it.',
   name: 'Nuwan',
-  detail: 'Colombo · Premium member'
+  detail: 'Colombo'
 },
 {
   quote: 'I sent four wingles, had two real dates, and deleted the app. That is the point, right?',
   name: 'Sanduni',
-  detail: 'Kandy · Basic member'
+  detail: 'Kandy'
 }];
 
 
