@@ -940,7 +940,11 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         wingitsBalance: 20,
         freeWinglesSent: 0,
         freeWinglesAccepted: 0,
-        isUnlimited: false
+        isUnlimited: false,
+        discoverable: true,
+        showOnline: true,
+        showDistance: true,
+        readReceipts: true
       };
       setDb((d) => ({
         ...d,
