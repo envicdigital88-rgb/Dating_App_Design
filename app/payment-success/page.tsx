@@ -1,6 +1,6 @@
 import React from 'react';
 import { verifyPaymentAction } from '@/app/actions/payments';
-import { CheckCircle2Icon, XCircleIcon, Loader2 } from 'lucide-react';
+import { CheckCircle2Icon, XCircleIcon} from 'lucide-react';
 import Link from 'next/link';
 
 export default async function PaymentSuccessPage({
