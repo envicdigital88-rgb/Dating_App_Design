@@ -3,15 +3,21 @@
 import { getSession } from '@/lib/session';
 import { db } from '@/lib/db';
 import { sendInvoiceEmail } from '@/app/actions/email';
+import { headers } from 'next/headers';
 
 const GENIE_API_URL = process.env.GENIE_API_URL || "https://api.uat.geniebiz.lk";
 const GENIE_APP_KEY = process.env.GENIE_APP_KEY || "";
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 export async function buyWingitsAction(packageAmountLKR: number, wingitsAmount: number) {
   const session = await getSession();
   if (!session?.userId) return { ok: false, error: 'Unauthorized' };
   const userId = session.userId as string;
+
+  const headersList = headers();
+  const host = headersList.get('host') || "www.winglemingle.com";
+  const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
+  // Fallback to explicit env variable if needed, otherwise use dynamic
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
 
   // 1. Insert PENDING record into TransactionLedger
   const ledger = await db.orm.public.TransactionLedger.create({
