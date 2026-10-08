@@ -8,17 +8,31 @@ import { Input } from '@/components/ui/Field';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { faqs } from '@/lib/data/seed';
 import { money } from '@/lib/utils/format';
+import { buyWingitsAction } from '@/app/actions/payments';
+import { toast } from 'sonner';
 
 export function Packages() {
   const { entitlements } = useStore();
   const [customAmount, setCustomAmount] = useState<number | ''>('');
+  const [loadingAmount, setLoadingAmount] = useState<number | null>(null);
 
   if (!entitlements) return null;
 
-  const handleBuy = (amount: number) => {
+  const handleBuy = async (amount: number) => {
     if (amount < 100) return;
-    // Just mock routing or alert for now since we don't have a Wingits checkout API
-    alert(`Checkout for ${amount} Wingits at ${money(amount)}`);
+    setLoadingAmount(amount);
+    
+    // Use packageId format "wingits-<amount>" so webhook knows what to credit
+    const result = await buyWingitsAction(amount, amount);
+    
+    if (!result.ok) {
+      toast.error(result.error || 'Payment gateway rejected the request');
+      setLoadingAmount(null);
+      return;
+    }
+    
+    // Redirect to the Dialog Pay payment page
+    window.location.href = result.redirectUrl;
   };
 
   const presets = [
@@ -65,7 +79,7 @@ export function Packages() {
                 </span>
               </div>
               <div className="mt-auto pt-6">
-                <Button onClick={() => handleBuy(pkg.amount)} variant={pkg.featured ? 'primary' : 'secondary'} className="w-full py-4 text-base font-medium rounded-2xl">
+                <Button loading={loadingAmount === pkg.amount} onClick={() => handleBuy(pkg.amount)} variant={pkg.featured ? 'primary' : 'secondary'} className="w-full py-4 text-base font-medium rounded-2xl">
                   Buy {pkg.amount} Wingits
                 </Button>
               </div>
@@ -94,7 +108,8 @@ export function Packages() {
               </div>
               <div className="w-full sm:w-auto">
                 <Button 
-                  disabled={!customAmount || customAmount < 100} 
+                  disabled={!customAmount || customAmount < 100}
+                  loading={loadingAmount === customAmount}
                   onClick={() => handleBuy(customAmount as number)} 
                   variant="primary" 
                   className="w-full sm:w-auto px-8 py-3 text-lg rounded-2xl whitespace-nowrap">

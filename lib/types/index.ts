@@ -64,6 +64,10 @@ export interface User {
   freeWinglesAccepted: number;
   lastDailyBonusAt?: string;
   isUnlimited: boolean;
+  discoverable: boolean;
+  showOnline: boolean;
+  showDistance: boolean;
+  readReceipts: boolean;
 }
 
 export interface WingitsTransaction {

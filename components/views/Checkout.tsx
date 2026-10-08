@@ -2,13 +2,13 @@
 
 import React, { useState } from 'react';
 import { useParams, useRouter, redirect } from 'next/navigation';
-import { toast } from 'sonner';
 import { CheckCircle2Icon, LockKeyholeIcon, ShieldCheckIcon } from 'lucide-react';
 import { Page } from '@/components/AppShell';
 import { Button } from '@/components/ui/Button';
-import { FieldError, Input, Label } from '@/components/ui/Field';
+import { FieldError } from '@/components/ui/Field';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { money, shortDate } from '@/lib/utils/format';
+import { createIpgTransaction } from '@/app/actions/ipg';
 
 type Stage = 'form' | 'verifying' | 'done';
 
@@ -16,15 +16,11 @@ export function Checkout() {
   const { packageId } = useParams();
   const router = useRouter();
     const navigate = router.push;
-  const { db, purchasePackage, entitlements } = useStore();
+  const { db, entitlements } = useStore();
 
-  const [name, setName] = useState('');
-  const [number, setNumber] = useState('');
-  const [expiry, setExpiry] = useState('');
-  const [cvc, setCvc] = useState('');
   const [error, setError] = useState('');
   const [stage, setStage] = useState<Stage>('form');
-  const [reference, setReference] = useState('');
+  const [reference] = useState('');
 
   const pkg = db.packages.find((p) => p.id === packageId);
   if (!pkg || !entitlements) { redirect("/packages"); return null as any; }
@@ -32,24 +28,19 @@ export function Checkout() {
   const pay = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!/^\d{2}\/\d{2}$/.test(expiry)) {
-      setError('Enter the expiry as MM/YY.');
-      return;
-    }
-    if (cvc.replace(/\D/g, '').length < 3) {
-      setError('Enter the 3-digit security code.');
-      return;
-    }
     setStage('verifying');
-    const result = await purchasePackage(pkg.id, { number, name });
+    
+    // Call server action for IPG
+    const result = await createIpgTransaction(pkg.id, pkg.price);
+    
     if (!result.ok) {
       setStage('form');
-      setError(result.error);
+      setError(result.error || 'Payment gateway rejected the request');
       return;
     }
-    setReference(result.data.reference);
-    setStage('done');
-    toast.success(`${pkg.name} package activated`);
+    
+    // Redirect to the Dialog Pay payment page
+    window.location.href = result.redirectUrl;
   };
 
   if (stage === 'done') {
@@ -108,69 +99,9 @@ export function Checkout() {
           </p>
 
           <form onSubmit={pay} className="mt-7 space-y-4" noValidate>
-            <div>
-              <Label htmlFor="card-name">Name on card</Label>
-              <Input
-                id="card-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Alex Morgan"
-                autoComplete="cc-name"
-                required />
-              
-            </div>
-            <div>
-              <Label htmlFor="card-number">Card number</Label>
-              <Input
-                id="card-number"
-                value={number}
-                onChange={(e) =>
-                setNumber(
-                  e.target.value.
-                  replace(/\D/g, '').
-                  slice(0, 16).
-                  replace(/(.{4})/g, '$1 ').
-                  trim()
-                )
-                }
-                placeholder="4242 4242 4242 4242"
-                inputMode="numeric"
-                autoComplete="cc-number"
-                required />
-              
-              <p className="mt-1.5 text-[12px] text-ink-muted">
-                Test mode  any card works. A number ending 0000 simulates a decline.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="card-expiry">Expiry</Label>
-                <Input
-                  id="card-expiry"
-                  value={expiry}
-                  onChange={(e) => {
-                    const digits = e.target.value.replace(/\D/g, '').slice(0, 4);
-                    setExpiry(digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits);
-                  }}
-                  placeholder="04/28"
-                  inputMode="numeric"
-                  autoComplete="cc-exp"
-                  required />
-                
-              </div>
-              <div>
-                <Label htmlFor="card-cvc">Security code</Label>
-                <Input
-                  id="card-cvc"
-                  value={cvc}
-                  onChange={(e) => setCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                  placeholder="123"
-                  inputMode="numeric"
-                  autoComplete="cc-csc"
-                  required />
-                
-              </div>
-            </div>
+            <p className="mb-6 text-sm text-ink-muted">
+              You will be redirected to the secure Dialog Pay Business gateway to complete your payment.
+            </p>
 
             <FieldError>{error}</FieldError>
 

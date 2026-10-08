@@ -141,5 +141,8 @@ export async function getWingitsTransactionsAction(): Promise<any[]> {
     .limit(50)
     .all();
 
-  return txs;
+  return txs.map((tx: any) => ({
+    ...tx,
+    createdAt: tx.createdAt?.toString() || new Date().toISOString()
+  }));
 }
