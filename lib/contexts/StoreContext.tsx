@@ -267,10 +267,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       
       // Fetch the real user from the server session and all discover users
       import('@/app/actions/user').then(({ getCurrentUser, getDiscoverUsers, getUserStateAction }) => {
-        Promise.all([
-          getCurrentUser(), 
-          getDiscoverUsers()
-        ]).then(([user, discoverRes]) => {
+        getCurrentUser().then((user) => {
+          getDiscoverUsers().then((discoverRes) => {
           let realUsers: User[] = [];
           if (discoverRes?.ok && Array.isArray(discoverRes.data)) {
             realUsers = discoverRes.data as User[];
@@ -327,11 +325,9 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
           if (user) {
             import('@/app/actions/chat').then(({ getConversationsAction }) => {
               import('@/app/actions/wingle').then(({ getReceivedSecretWinglesAction }) => {
-                Promise.all([
-                  getConversationsAction(),
-                  getUserStateAction(),
-                  getReceivedSecretWinglesAction()
-                ]).then(([chatRes, stateRes, secretWinglesRes]) => {
+                getConversationsAction().then((chatRes) => {
+                  getUserStateAction().then((stateRes) => {
+                    getReceivedSecretWinglesAction().then((secretWinglesRes) => {
                   setDb(d => {
                     let updatedConvs = d.conversations;
                     let updatedMingles = d.mingles;
@@ -412,20 +408,41 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                   });
                   // Mark hydrated AFTER all data is loaded — polling starts here
                   setIsHydrated(true);
+                    }).catch((e) => {
+                      console.error('Secondary hydration error:', e);
+                      setIsHydrated(true);
+                    });
+                  }).catch((e) => {
+                    console.error('Secondary hydration error:', e);
+                    setIsHydrated(true);
+                  });
                 }).catch((e) => {
                   console.error('Secondary hydration error:', e);
                   setIsHydrated(true);
                 });
+              }).catch((e) => {
+                console.error("Wingle import error:", e);
+                setIsHydrated(true);
               });
+            }).catch((e) => {
+              console.error("Chat import error:", e);
+              setIsHydrated(true);
             });
           } else {
             // Not logged in — hydration is done immediately
             setIsHydrated(true);
           }
         }).catch((e) => {
-          console.error("Hydration error:", e);
+          console.error("Discover users error:", e);
           setIsHydrated(true);
         });
+      }).catch((e) => {
+        console.error("Current user error:", e);
+        setIsHydrated(true);
+      });
+      }).catch((e) => {
+        console.error("User import error:", e);
+        setIsHydrated(true);
       });
     }
   }, []);
