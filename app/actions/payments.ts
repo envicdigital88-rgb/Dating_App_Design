@@ -48,8 +48,12 @@ export async function buyWingitsAction(packageAmountLKR: number, wingitsAmount: 
     });
     
     if(!res.ok) {
-       console.error("IPG Error", res.status, await res.text());
-       return { ok: false, error: 'Payment gateway rejected the request' };
+       const text = await res.text();
+       console.log("\n==========================================");
+       console.log("IPG ERROR STATUS:", res.status);
+       console.log("IPG ERROR BODY:", text);
+       console.log("==========================================\n");
+       return { ok: false, error: `IPG Rejected (Status ${res.status}): ${text.substring(0, 100)}` };
     }
 
     const data = await res.json();
