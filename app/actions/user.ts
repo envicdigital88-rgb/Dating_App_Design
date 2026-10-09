@@ -20,8 +20,8 @@ export async function getCurrentUser() {
     const now = new Date();
     const lastBonus = user.lastDailyBonusAt ? new Date(user.lastDailyBonusAt.toString()) : null;
     if (!lastBonus || lastBonus.toDateString() !== now.toDateString()) {
+      const { Temporal } = await import('temporal-polyfill');
       await db.transaction(async (tx) => {
-        const { Temporal } = await import('temporal-polyfill');
         await tx.orm.public.User.where({ id: user.id }).update({
           wingitsBalance: user.wingitsBalance + 1,
           lastDailyBonusAt: Temporal.Instant.from(now.toISOString())
