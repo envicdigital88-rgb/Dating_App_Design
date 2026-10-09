@@ -5,6 +5,7 @@ import { db } from '@/lib/db'
 export async function getRandomUsersForLanding() {
   try {
     const allUsers = await db.orm.public.User.where({ role: 'member' })
+      .limit(20)
       .include('photos')
       .all()
 

@@ -46,28 +46,34 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
     setBusy(true);
     let result: any;
     
-    if (isRegister) {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email, password, name, phone: '', age: 20, gender: 'woman', intention: 'Long-term relationship'
-        })
-      });
-      result = await res.json();
-    } else {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-      result = await res.json();
+    try {
+      if (isRegister) {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email, password, name, phone: '', age: 20, gender: 'woman', intention: 'Long-term relationship'
+          })
+        });
+        result = await res.json();
+      } else {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        result = await res.json();
+      }
+    } catch (e) {
+      setBusy(false);
+      setError('A network error occurred. Please try again.');
+      return;
     }
       
     setBusy(false);
     
-    if (!result.ok) {
-      setError(result.error as string);
+    if (!result?.ok) {
+      setError(result?.error || 'An unexpected error occurred.');
       return;
     }
     
