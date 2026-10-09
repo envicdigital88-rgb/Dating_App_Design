@@ -33,13 +33,7 @@ export async function buyWingitsAction(packageAmountLKR: number, wingitsAmount: 
     redirectUrl: `${APP_URL}/payment-success?ledgerId=${ledger.id}`,
     webhook: `${APP_URL}/api/webhooks/dialog`,
     customerReference: userId,
-    reference: ledger.id,
-    billingDetails: {
-      email: "user@winglemingle.com", 
-      name: "Wingle User",
-      address1: "Sri Lanka",
-      address2: ""
-    }
+    reference: ledger.id
   };
 
   try {
