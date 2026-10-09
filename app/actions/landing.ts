@@ -6,6 +6,7 @@ export async function getRandomUsersForLanding() {
   try {
     const allUsers = await db.orm.public.User.where({ role: 'member' })
       .include('photos')
+      .limit(50)
       .all()
 
     const validUsers = allUsers.filter((u: any) => u.photos?.some((p: any) => p.isPrimary))

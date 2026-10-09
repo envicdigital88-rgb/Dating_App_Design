@@ -127,6 +127,7 @@ export interface DiscoverFilters {
 }
 
 export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: string[] = []) {
+  console.log('getDiscoverUsers START');
   try {
     const session = await getSession()
     if (!session?.userId) return { ok: false, error: 'Unauthorized', data: [] }
@@ -181,10 +182,8 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
     if (userIds.length === 0) return { ok: true, data: [] };
 
     // Fetch photos and heartReacts in parallel - NO prompts in initial load
-    const [photos, heartReactsRaw] = await Promise.all([
-      db.orm.public.Photo.where((p) => p.userId.in(userIds)).all(),
-      db.orm.public.HeartBucket.where((h) => h.targetUserId.in(userIds)).all()
-    ]);
+    const photos = await db.orm.public.Photo.where((p) => p.userId.in(userIds)).all();
+    const heartReactsRaw = await db.orm.public.HeartBucket.where((h) => h.targetUserId.in(userIds)).all();
 
     const heartReactsMap = new Map();
     if (Array.isArray(heartReactsRaw)) {
@@ -214,9 +213,10 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
       };
 
     });
-    
+    console.log('getDiscoverUsers END');
     return { ok: true, data: mappedUsers }
   } catch (err) {
+    console.log('getDiscoverUsers ERROR', err);
     console.error('getDiscoverUsers error:', err)
     return { ok: false, error: 'Failed to fetch discover users', data: [] }
   }
@@ -395,23 +395,20 @@ export async function getDiscoverProfiles() {
 }
 
 export async function getUserStateAction() {
+  console.log('getUserStateAction START');
   try {
     const session = await getSession()
     if (!session?.userId) return { ok: false, error: 'Unauthorized' }
     const userId = session.userId as string
     
-    const [likes, passes, heartBucket] = await Promise.all([
-      db.orm.public.Like.where(l => or(l.fromUserId.eq(userId), l.toUserId.eq(userId))).all(),
-      db.orm.public.Pass.where(p => or(p.userId.eq(userId), p.targetUserId.eq(userId))).all(),
-      db.orm.public.HeartBucket.where(h => or(h.userId.eq(userId), h.targetUserId.eq(userId))).all()
-    ]);
+    const likes = await db.orm.public.Like.where(l => or(l.fromUserId.eq(userId), l.toUserId.eq(userId))).all();
+    const passes = await db.orm.public.Pass.where(p => or(p.userId.eq(userId), p.targetUserId.eq(userId))).all();
+    const heartBucket = await db.orm.public.HeartBucket.where(h => or(h.userId.eq(userId), h.targetUserId.eq(userId))).all();
 
-    const [wingles, connections, blocks, notifications] = await Promise.all([
-      db.orm.public.Wingle.where(w => or(w.fromUserId.eq(userId), w.toUserId.eq(userId))).all(),
-      db.orm.public.Connection.where(c => or(c.userId1.eq(userId), c.userId2.eq(userId))).all(),
-      db.orm.public.Block.where(b => or(b.blockerId.eq(userId), b.blockedUserId.eq(userId))).all(),
-      db.orm.public.Notification.where({ userId }).all()
-    ]);
+    const wingles = await db.orm.public.Wingle.where(w => or(w.fromUserId.eq(userId), w.toUserId.eq(userId))).all();
+    const connections = await db.orm.public.Connection.where(c => or(c.userId1.eq(userId), c.userId2.eq(userId))).all();
+    const blocks = await db.orm.public.Block.where(b => or(b.blockerId.eq(userId), b.blockedUserId.eq(userId))).all();
+    const notifications = await db.orm.public.Notification.where({ userId }).all();
 
     const relatedUserIds = new Set<string>();
     likes.forEach(l => { relatedUserIds.add(l.fromUserId); relatedUserIds.add(l.toUserId); });
@@ -464,11 +461,13 @@ export async function getUserStateAction() {
     };
 
     console.log(`[getUserStateAction] Returning state for ${userId}: ${wingles.length} wingles, ${connections.length} connections, ${relatedUsers.length} related users`);
+    console.log('getUserStateAction END');
     return { 
       ok: true, 
       data: payload
     }
   } catch (err) {
+    console.log('getUserStateAction ERROR', err);
     console.error('getUserStateAction error:', err)
     return { ok: false, error: 'Failed to fetch user state' }
   }
