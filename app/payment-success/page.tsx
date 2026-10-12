@@ -6,10 +6,11 @@ import Link from 'next/link';
 export default async function PaymentSuccessPage({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const ledgerId = searchParams.ledgerId as string | undefined;
-  const transactionId = searchParams.transactionId as string | undefined;
+  const params = await searchParams;
+  const ledgerId = params.ledgerId as string | undefined;
+  const transactionId = params.transactionId as string | undefined;
 
   // Dialog redirects with transactionId
   if (!ledgerId || !transactionId) {

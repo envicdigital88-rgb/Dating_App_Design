@@ -32,8 +32,7 @@ export async function buyWingitsAction(packageAmountLKR: number, wingitsAmount: 
     currency: "LKR",
     redirectUrl: `${APP_URL}/payment-success?ledgerId=${ledger.id}`,
     webhook: `${APP_URL}/api/webhooks/dialog`,
-    customerReference: userId,
-    reference: ledger.id
+    customerReference: ledger.id
   };
 
   try {
@@ -84,6 +83,7 @@ export async function verifyPaymentAction(ledgerId: string, transactionId: strin
     }
 
     const data = await res.json();
+
     if (data.status !== 'SUCCESS' && data.status !== 'COMPLETED') {
       return { ok: false, error: 'Transaction is not completed' };
     }

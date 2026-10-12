@@ -20,18 +20,16 @@ export async function getCurrentUser() {
     const now = new Date();
     const lastBonus = user.lastDailyBonusAt ? new Date(user.lastDailyBonusAt.toString()) : null;
     if (!lastBonus || lastBonus.toDateString() !== now.toDateString()) {
-      await db.transaction(async (tx) => {
-        const { Temporal } = await import('temporal-polyfill');
-        await tx.orm.public.User.where({ id: user.id }).update({
-          wingitsBalance: user.wingitsBalance + 1,
-          lastDailyBonusAt: Temporal.Instant.from(now.toISOString())
-        });
-        await tx.orm.public.WingitsTransaction.create({
-          userId: user.id,
-          amount: 1,
-          type: 'bonus',
-          description: 'Daily Login Bonus'
-        });
+      const { Temporal } = await import('temporal-polyfill');
+      await db.orm.public.User.where({ id: user.id }).update({
+        wingitsBalance: user.wingitsBalance + 1,
+        lastDailyBonusAt: Temporal.Instant.from(now.toISOString())
+      });
+      await db.orm.public.WingitsTransaction.create({
+        userId: user.id,
+        amount: 1,
+        type: 'bonus',
+        description: 'Daily Login Bonus'
       });
       user.wingitsBalance += 1;
       user.lastDailyBonusAt = now.toISOString() as any;
@@ -156,7 +154,7 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
       onboarded: true,
       role: 'member',
       suspended: false
-    }).limit(300).all()
+    }).limit(50).all()
     
     const excludedSet = new Set(excludedIds);
     let filteredUsers = rawUsers.filter(u => !excludedSet.has(u.id));
@@ -421,10 +419,8 @@ export async function getUserStateAction() {
     let relatedUsers: any[] = [];
     if (relatedUserIds.size > 0) {
       const uIds = Array.from(relatedUserIds);
-      const [rUsers, rPhotos] = await Promise.all([
-        db.orm.public.User.where((u) => u.id.in(uIds)).all(),
-        db.orm.public.Photo.where((p) => p.userId.in(uIds)).all()
-      ]);
+      const rUsers = await db.orm.public.User.where((u) => u.id.in(uIds)).all();
+      const rPhotos = await db.orm.public.Photo.where((p) => p.userId.in(uIds)).all();
       relatedUsers = rUsers.map((u: any) => ({
         ...u,
         photos: rPhotos.filter((p: any) => p.userId === u.id && p.moderation === 'approved')

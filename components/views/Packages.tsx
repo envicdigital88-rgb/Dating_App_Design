@@ -87,23 +87,27 @@ export function Packages() {
           ))}
         </ul>
 
-        <div className="mt-10 rounded-[2rem] bg-cream-deep p-8 shadow-card border border-sand/50">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="max-w-md">
+        <div className="mx-auto max-w-4xl mt-10 rounded-4xl bg-gradient-to-br from-cream-deep to-sand/20 p-8 shadow-card border border-sand/50 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+            <CoinsIcon className="w-48 h-48 -mr-12 -mt-12 text-berry-500" />
+          </div>
+          
+          <div className="relative z-10 flex flex-col md:flex-row gap-6 items-center justify-between">
+            <div className="text-center md:text-left max-w-md">
               <h3 className="font-display text-2xl font-semibold text-ink mb-2">Custom Amount</h3>
-              <p className="text-[14px] text-ink-soft leading-relaxed">Need a specific number of Wingits? Enter any amount you'd like to buy (minimum 100).</p>
+              <p className="text-[14px] text-ink-soft leading-relaxed">Enter any specific amount of Wingits you'd like to buy. (1 Wingit = Rs. 1, minimum 100).</p>
             </div>
             
             <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
-              <div className="relative w-full sm:w-64">
-                <CoinsIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-muted" />
+              <div className="relative w-full sm:w-48">
+                <CoinsIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-berry-400" />
                 <Input
                   type="number"
                   min="100"
                   value={customAmount}
                   onChange={(e) => setCustomAmount(e.target.value ? parseInt(e.target.value, 10) : '')}
                   placeholder="e.g. 250"
-                  className="pl-12 py-3 text-lg rounded-2xl"
+                  className="pl-12 py-3 text-lg rounded-2xl w-full bg-white shadow-sm ring-1 ring-sand focus:ring-berry-500 font-semibold"
                 />
               </div>
               <div className="w-full sm:w-auto">
@@ -112,10 +116,10 @@ export function Packages() {
                   loading={loadingAmount === customAmount}
                   onClick={() => handleBuy(customAmount as number)} 
                   variant="primary" 
-                  className="w-full sm:w-auto px-8 py-3 text-lg rounded-2xl whitespace-nowrap">
+                  className="w-full sm:w-auto px-8 py-3 text-lg rounded-2xl whitespace-nowrap shadow-md">
                   {customAmount && customAmount >= 100 
-                    ? `Buy for ${money(customAmount as number)}` 
-                    : 'Enter an amount'}
+                    ? `Pay ${money(customAmount as number)}` 
+                    : 'Enter Amount'}
                 </Button>
               </div>
             </div>

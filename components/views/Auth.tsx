@@ -162,7 +162,7 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
           </div>
 
           {/* Form */}
-          <form onSubmit={submit} className="space-y-3" noValidate>
+          <form onSubmit={submit} method="POST" className="space-y-3" noValidate>
 
             {/* Name (register only) */}
             {isRegister && (

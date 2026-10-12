@@ -217,6 +217,7 @@ export async function deleteMingleAction(mingleId: string, type: 'me' | 'everyon
 }
 
 export async function getConversationsAction() {
+  console.log('getConversationsAction START');
   try {
     const session = await getSession()
     if (!session?.userId) return { ok: false, error: 'Unauthorized' }
