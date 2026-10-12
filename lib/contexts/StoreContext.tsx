@@ -265,171 +265,201 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         }
       } catch (e) {}
       
-      // Fetch the real user and discover users in PARALLEL — do not block hydration on discover feed
-      import('@/app/actions/user').then(({ getCurrentUser, getDiscoverUsers, getUserStateAction }) => {
-        // Run both calls concurrently so neither blocks the other
-        const userPromise = getCurrentUser();
-        const discoverPromise = getDiscoverUsers().catch((e: any) => {
+      // Helper to detect stale deployment action mismatch
+      const checkStaleDeployment = (err: any) => {
+        const msg = String(err?.message || err || '');
+        if (msg.includes('Failed to find Server Action') || msg.includes('older deployment')) {
+          console.warn('Stale deployment detected, reloading page for latest build assets...');
+          window.location.reload();
+        }
+      };
+
+      // Fetch the real user via stable /api/auth/me (immune to Server Action deployment hash changes)
+      const userPromise = fetch('/api/auth/me', { cache: 'no-store' })
+        .then(async (res) => {
+          if (!res.ok) return null;
+          const json = await res.json();
+          return json?.ok ? json.user : null;
+        })
+        .catch(async (e) => {
+          console.warn('API /api/auth/me fetch failed, trying getCurrentUser action fallback:', e);
+          try {
+            const { getCurrentUser } = await import('@/app/actions/user');
+            return await getCurrentUser();
+          } catch (err: any) {
+            checkStaleDeployment(err);
+            return null;
+          }
+        });
+
+      // Fetch discover users in parallel in the background
+      const discoverPromise = import('@/app/actions/user')
+        .then(({ getDiscoverUsers }) => getDiscoverUsers())
+        .catch((e: any) => {
+          checkStaleDeployment(e);
           console.error('Discover users error during hydration:', e);
           return { ok: false, error: 'failed', data: [] as User[] };
         });
 
-        userPromise.then((user) => {
-          // Hydrate the current user IMMEDIATELY - do not wait for discover
-          if (user) {
-            const mappedUser = {
-              ...user,
-              lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
-              createdAt: user.createdAt?.toString() || new Date().toISOString(),
-              isUnlimited: (user as any).isUnlimited ?? false
-            } as unknown as User;
+      userPromise.then((user) => {
+        // Hydrate the current user IMMEDIATELY - do not wait for discover
+        if (user) {
+          const mappedUser = {
+            ...user,
+            lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
+            createdAt: user.createdAt?.toString() || new Date().toISOString(),
+            isUnlimited: (user as any).isUnlimited ?? false
+          } as unknown as User;
+          setDb(d => {
+            const allUsers = [...d.users];
+            if (!allUsers.find(u => u.id === mappedUser.id)) {
+              allUsers.push(mappedUser);
+            }
+            const allPhotos = allUsers.flatMap((u: any) => u.photos || []);
+            return { ...d, users: allUsers, photos: allPhotos };
+          });
+          setSessionId(user.id);
+        } else {
+          setSessionId(null);
+        }
+        // Mark hydrated as soon as we know who the user is (or is not)
+        setIsHydrated(true);
+
+        // Apply discover users when they arrive (non-blocking, in background)
+        discoverPromise.then((discoverRes: any) => {
+          const realUsers: User[] = (discoverRes?.ok && Array.isArray(discoverRes.data))
+            ? discoverRes.data as User[]
+            : [];
+          if (realUsers.length > 0) {
             setDb(d => {
               const allUsers = [...d.users];
-              if (!allUsers.find(u => u.id === mappedUser.id)) {
-                allUsers.push(mappedUser);
-              }
+              realUsers.forEach((ru: any) => {
+                if (!allUsers.find(u => u.id === ru.id)) {
+                  if (ru.heartReacts === undefined) {
+                    ru.heartReacts = ((ru.id.charCodeAt(0) + ru.id.charCodeAt(ru.id.length - 1)) % 50) + 1;
+                  }
+                  allUsers.push(ru);
+                }
+              });
               const allPhotos = allUsers.flatMap((u: any) => u.photos || []);
               return { ...d, users: allUsers, photos: allPhotos };
             });
-            setSessionId(user.id);
-          } else {
-            setSessionId(null);
           }
-          // Mark hydrated as soon as we know who the user is (or is not)
-          setIsHydrated(true);
+        });
 
-          // Apply discover users when they arrive (non-blocking, in background)
-          discoverPromise.then((discoverRes: any) => {
-            const realUsers: User[] = (discoverRes?.ok && Array.isArray(discoverRes.data))
-              ? discoverRes.data as User[]
-              : [];
-            if (realUsers.length > 0) {
+        // If logged in, fetch secondary data in parallel in the background
+        if (user) {
+          Promise.all([
+            import('@/app/actions/chat'),
+            import('@/app/actions/wingle'),
+            import('@/app/actions/user')
+          ]).then(([{ getConversationsAction }, { getReceivedSecretWinglesAction }, { getUserStateAction }]) => {
+            Promise.allSettled([
+              getConversationsAction(),
+              getUserStateAction(),
+              getReceivedSecretWinglesAction()
+            ]).then(([chatResult, stateResult, secretWinglesResult]) => {
+              const chatRes = chatResult.status === 'fulfilled' ? chatResult.value : null;
+              const stateRes = stateResult.status === 'fulfilled' ? stateResult.value : null;
+              const secretWinglesRes = secretWinglesResult.status === 'fulfilled' ? secretWinglesResult.value : null;
+
               setDb(d => {
+                let updatedConvs = d.conversations;
+                let updatedMingles = d.mingles;
+                if (chatRes?.ok && chatRes.data) {
+                  updatedConvs = chatRes.data.conversations as unknown as Conversation[];
+                  updatedMingles = chatRes.data.mingles as unknown as Mingle[];
+                }
+
+                let newLikes = d.likes;
+                let newPasses = d.passes;
+                let newHeartBucket = d.heartBucket;
+                let newWingles = d.wingles;
+                let newConnections = d.connections;
+                let newBlocks = d.blocks;
+                let newSecretWingles = d.secretWingles;
                 const allUsers = [...d.users];
-                realUsers.forEach((ru: any) => {
-                  if (!allUsers.find(u => u.id === ru.id)) {
-                    if (ru.heartReacts === undefined) {
-                      ru.heartReacts = ((ru.id.charCodeAt(0) + ru.id.charCodeAt(ru.id.length - 1)) % 50) + 1;
-                    }
-                    allUsers.push(ru);
-                  }
-                });
-                const allPhotos = allUsers.flatMap((u: any) => u.photos || []);
-                return { ...d, users: allUsers, photos: allPhotos };
-              });
-            }
-          });
+                const allPhotos = [...d.photos];
 
-          // If logged in, fetch secondary data in parallel in the background
-          if (user) {
-            Promise.all([
-              import('@/app/actions/chat'),
-              import('@/app/actions/wingle')
-            ]).then(([{ getConversationsAction }, { getReceivedSecretWinglesAction }]) => {
-              Promise.allSettled([
-                getConversationsAction(),
-                getUserStateAction(),
-                getReceivedSecretWinglesAction()
-              ]).then(([chatResult, stateResult, secretWinglesResult]) => {
-                const chatRes = chatResult.status === 'fulfilled' ? chatResult.value : null;
-                const stateRes = stateResult.status === 'fulfilled' ? stateResult.value : null;
-                const secretWinglesRes = secretWinglesResult.status === 'fulfilled' ? secretWinglesResult.value : null;
-
-                setDb(d => {
-                  let updatedConvs = d.conversations;
-                  let updatedMingles = d.mingles;
-                  if (chatRes?.ok && chatRes.data) {
-                    updatedConvs = chatRes.data.conversations as unknown as Conversation[];
-                    updatedMingles = chatRes.data.mingles as unknown as Mingle[];
-                  }
-
-                  let newLikes = d.likes;
-                  let newPasses = d.passes;
-                  let newHeartBucket = d.heartBucket;
-                  let newWingles = d.wingles;
-                  let newConns = d.connections;
-                  let newBlocks = d.blocks;
-                  let newSecretWingles = d.secretWingles;
-                  const allUsers = [...d.users];
-                  const allPhotos = [...d.photos];
-
-                  if (stateRes?.ok && stateRes.data) {
-                    newLikes = stateRes.data.likes as any[];
-                    newPasses = stateRes.data.passes as any[];
-                    newHeartBucket = stateRes.data.heartBucket as any[];
-                    newWingles = stateRes.data.wingles as any[];
-                    newConns = stateRes.data.connections as any[];
-                    newBlocks = (stateRes.data as any).blocks as any[] || d.blocks;
-                    
-                    if (stateRes.data.relatedUsers) {
-                      const relatedUsers = stateRes.data.relatedUsers as any[];
-                      relatedUsers.forEach(ru => {
-                        if (!allUsers.find(u => u.id === ru.id)) {
-                          if (ru.heartReacts === undefined) {
-                            ru.heartReacts = ((ru.id.charCodeAt(0) + ru.id.charCodeAt(ru.id.length - 1)) % 50) + 1;
-                          }
-                          allUsers.push(ru);
-                          allPhotos.push(...(ru.photos || []));
+                if (stateRes?.ok && stateRes.data) {
+                  newLikes = stateRes.data.likes as any[];
+                  newPasses = stateRes.data.passes as any[];
+                  newHeartBucket = stateRes.data.heartBucket as any[];
+                  newWingles = stateRes.data.wingles as any[];
+                  newConnections = stateRes.data.connections as any[];
+                  newBlocks = (stateRes.data as any).blocks as any[] || d.blocks;
+                  
+                  if (stateRes.data.relatedUsers) {
+                    const relatedUsers = stateRes.data.relatedUsers as any[];
+                    relatedUsers.forEach(ru => {
+                      if (!allUsers.find(u => u.id === ru.id)) {
+                        if (ru.heartReacts === undefined) {
+                          ru.heartReacts = ((ru.id.charCodeAt(0) + ru.id.charCodeAt(ru.id.length - 1)) % 50) + 1;
                         }
-                      });
-                    }
-                  }
-
-                  if (secretWinglesRes?.ok && secretWinglesRes.data) {
-                    newSecretWingles = secretWinglesRes.data as SecretWingle[];
-                    newSecretWingles.forEach(sw => {
-                      if (sw.sender && !allUsers.find(u => u.id === sw.senderId)) {
-                        const s = sw.sender as any;
-                        if (s.heartReacts === undefined) {
-                          s.heartReacts = ((s.id.charCodeAt(0) + s.id.charCodeAt(s.id.length - 1)) % 50) + 1;
-                        }
-                        allUsers.push(s);
-                        allPhotos.push(...(s.photos || []));
+                        allUsers.push(ru);
+                        allPhotos.push(...(ru.photos || []));
                       }
                     });
                   }
+                }
 
-                  let newNotifications = d.notifications;
-                  if (stateRes?.data && stateRes.data.notifications) {
-                    const remoteNotifs = stateRes.data.notifications as any[];
-                    if (JSON.stringify(d.notifications) !== JSON.stringify(remoteNotifs)) {
-                      newNotifications = remoteNotifs;
+                if (secretWinglesRes?.ok && secretWinglesRes.data) {
+                  newSecretWingles = secretWinglesRes.data as SecretWingle[];
+                  newSecretWingles.forEach(sw => {
+                    if (sw.sender && !allUsers.find(u => u.id === sw.senderId)) {
+                      const s = sw.sender as any;
+                      if (s.heartReacts === undefined) {
+                        s.heartReacts = ((s.id.charCodeAt(0) + s.id.charCodeAt(s.id.length - 1)) % 50) + 1;
+                      }
+                      allUsers.push(s);
+                      allPhotos.push(...(s.photos || []));
                     }
-                  }
+                  });
+                }
 
-                  return { 
-                    ...d, 
-                    users: allUsers, 
-                    photos: allPhotos,
-                    conversations: updatedConvs,
-                    mingles: updatedMingles,
-                    likes: newLikes,
-                    passes: newPasses,
-                    heartBucket: newHeartBucket,
-                    wingles: newWingles,
-                    connections: newConns,
-                    blocks: newBlocks,
-                    secretWingles: newSecretWingles,
-                    notifications: newNotifications
-                  };
-                });
-              }).catch((e) => {
-                console.error('Secondary hydration settled error:', e);
+                let newNotifications = d.notifications;
+                if (stateRes?.data && stateRes.data.notifications) {
+                  const remoteNotifs = stateRes.data.notifications as any[];
+                  if (JSON.stringify(d.notifications) !== JSON.stringify(remoteNotifs)) {
+                    newNotifications = remoteNotifs;
+                  }
+                }
+
+                return { 
+                  ...d, 
+                  users: allUsers, 
+                  photos: allPhotos,
+                  conversations: updatedConvs,
+                  mingles: updatedMingles,
+                  likes: newLikes,
+                  passes: newPasses,
+                  heartBucket: newHeartBucket,
+                  wingles: newWingles,
+                  connections: newConnections,
+                  blocks: newBlocks,
+                  secretWingles: newSecretWingles,
+                  notifications: newNotifications
+                };
               });
             }).catch((e) => {
-              console.error('Dynamic imports error:', e);
+              checkStaleDeployment(e);
+              console.error('Secondary hydration settled error:', e);
             });
-          }
-        }).catch((e: any) => { console.error('getCurrentUser error:', e); setIsHydrated(true); });
-      }).catch((e) => {
-        console.error("User import error:", e);
+          }).catch((e) => {
+            checkStaleDeployment(e);
+            console.error('Dynamic imports error:', e);
+          });
+        }
+      }).catch((e: any) => {
+        checkStaleDeployment(e);
+        console.error('userPromise error:', e);
         setIsHydrated(true);
       });
 
-      // Safety timeout: Never leave the UI hanging in skeleton state
+      // Safety timeout: Only as a last resort if network completely stalls
       const safetyTimer = setTimeout(() => {
         setIsHydrated(true);
-      }, 1500);
+      }, 8000);
 
       return () => clearTimeout(safetyTimer);
     }
