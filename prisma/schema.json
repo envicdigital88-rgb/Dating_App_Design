@@ -64,6 +64,10 @@
       "model": "Subscription",
       "namespace": "public"
     },
+    "transactionLedger": {
+      "model": "TransactionLedger",
+      "namespace": "public"
+    },
     "usage": {
       "model": "Usage",
       "namespace": "public"
@@ -1608,6 +1612,114 @@
               "table": "subscription"
             }
           },
+          "TransactionLedger": {
+            "fields": {
+              "amountLKR": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/float8@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "status": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "transactionReference": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "userId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "wingitsCredited": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "user": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "userId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "User",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "amountLKR": {
+                  "column": "amountLKR"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "status": {
+                  "column": "status"
+                },
+                "transactionReference": {
+                  "column": "transactionReference"
+                },
+                "updatedAt": {
+                  "column": "updatedAt"
+                },
+                "userId": {
+                  "column": "userId"
+                },
+                "wingitsCredited": {
+                  "column": "wingitsCredited"
+                }
+              },
+              "namespaceId": "public",
+              "table": "transactionLedger"
+            }
+          },
           "Usage": {
             "fields": {
               "chatUsed": {
@@ -1703,6 +1815,13 @@
                 "nullable": false,
                 "type": {
                   "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar"
+                }
+              },
+              "discoverable": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
                   "kind": "scalar"
                 }
               },
@@ -1839,10 +1958,31 @@
                   "kind": "scalar"
                 }
               },
+              "readReceipts": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
               "role": {
                 "nullable": false,
                 "type": {
                   "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "showDistance": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
+                  "kind": "scalar"
+                }
+              },
+              "showOnline": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/bool@1",
                   "kind": "scalar"
                 }
               },
@@ -2131,6 +2271,21 @@
                   "namespace": "public"
                 }
               },
+              "transactionLedgers": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "userId"
+                  ]
+                },
+                "to": {
+                  "model": "TransactionLedger",
+                  "namespace": "public"
+                }
+              },
               "usage": {
                 "cardinality": "1:1",
                 "nullable": true,
@@ -2207,6 +2362,9 @@
                 "createdAt": {
                   "column": "createdAt"
                 },
+                "discoverable": {
+                  "column": "discoverable"
+                },
                 "email": {
                   "column": "email"
                 },
@@ -2264,8 +2422,17 @@
                 "pushSubscription": {
                   "column": "pushSubscription"
                 },
+                "readReceipts": {
+                  "column": "readReceipts"
+                },
                 "role": {
                   "column": "role"
+                },
+                "showDistance": {
+                  "column": "showDistance"
+                },
+                "showOnline": {
+                  "column": "showOnline"
                 },
                 "suspended": {
                   "column": "suspended"
@@ -3919,6 +4086,97 @@
               },
               "uniques": []
             },
+            "transactionLedger": {
+              "columns": {
+                "amountLKR": {
+                  "codecId": "pg/float8@1",
+                  "nativeType": "float8",
+                  "nullable": false
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "status": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "PENDING"
+                  },
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "transactionReference": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
+                "updatedAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "userId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "wingitsCredited": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "onDelete": "cascade",
+                  "source": {
+                    "columns": [
+                      "userId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "transactionLedger"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "user"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "userId"
+                  ],
+                  "name": "transactionLedger_userId_idx_a489d58a",
+                  "prefix": "transactionLedger_userId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
             "usage": {
               "columns": {
                 "chatUsed": {
@@ -4015,6 +4273,15 @@
                     "kind": "function"
                   },
                   "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "discoverable": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nativeType": "bool",
                   "nullable": false
                 },
                 "email": {
@@ -4152,6 +4419,15 @@
                   "nativeType": "json",
                   "nullable": true
                 },
+                "readReceipts": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
                 "role": {
                   "codecId": "pg/text@1",
                   "default": {
@@ -4159,6 +4435,24 @@
                     "value": "member"
                   },
                   "nativeType": "text",
+                  "nullable": false
+                },
+                "showDistance": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nativeType": "bool",
+                  "nullable": false
+                },
+                "showOnline": {
+                  "codecId": "pg/bool@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": true
+                  },
+                  "nativeType": "bool",
                   "nullable": false
                 },
                 "suspended": {
@@ -4472,10 +4766,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "1d1301ae7f679a954442e7ffb2d14949a3965644f942cffc6c161ce3fc1c9cce"
+    "storageHash": "6ef80f0bea0017584650e9db662ceaeb3efe612b913b82c835ce11ef196edb6d"
   },
   "execution": {
-    "executionHash": "798d36864cb0d19157cc44ccae8a080a9418954c07e4759d0f8b3313df67446c",
+    "executionHash": "cfcecedce98a9ee2c5be4cb3bd5d93271de2f5d9917661c48300aebc7990c4f4",
     "mutations": {
       "defaults": [
         {
@@ -4641,6 +4935,17 @@
             "column": "id",
             "namespace": "public",
             "table": "subscription"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "id",
+            "namespace": "public",
+            "table": "transactionLedger"
           }
         },
         {

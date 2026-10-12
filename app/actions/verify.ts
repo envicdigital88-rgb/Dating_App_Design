@@ -2,47 +2,67 @@
 
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
+import { Resend } from 'resend'
 
-export async function verifyPhoneNumber() {
+const resend = new Resend(process.env.RESEND_API_KEY)
+
+export async function verifyEmailAddress(email: string) {
   try {
     const session = await getSession()
     if (!session?.userId) {
       return { ok: false, error: 'Unauthorized' }
     }
 
-    // In a real app, this is where you'd call an SMS provider like Twilio
-    // to send an OTP to `phone`.
-    // For this demo, we'll just simulate a successful send.
-    
+    // Check if email is already taken before sending OTP
+    const existing = await db.orm.public.User.where({ email }).first();
+    if (existing && existing.id !== session.userId) {
+      return { ok: false, error: 'This email is already in use by another account.' }
+    }
+
+    // In a real app, generate a real OTP and save it in the database.
+    // For this demo, we'll simulate sending the OTP.
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    await resend.emails.send({
+      from: 'Wingle Mingle <no-reply@winglemingle.com>',
+      to: email,
+      subject: 'Verify your email address',
+      html: `<p>Your verification code is: <strong>${otp}</strong></p>`
+    });
+
     return { ok: true }
-  } catch (error) {
-    console.error('Verify phone error:', error)
-    return { ok: false, error: 'Failed to send OTP' }
+  } catch (error: any) {
+    console.error('Verify email error:', error)
+    return { ok: false, error: error?.message || 'Failed to send OTP email' }
   }
 }
 
-export async function confirmOtp(phone: string, otp: string) {
+export async function confirmEmailOtp(email: string, otp: string) {
   try {
     const session = await getSession()
     if (!session?.userId) {
       return { ok: false, error: 'Unauthorized' }
     }
 
-    // In a real app, you would verify the OTP here with your SMS provider.
-    // For this demo, we'll accept '000000' or any 4-6 digit code.
     if (otp.length < 4) {
       return { ok: false, error: 'Invalid OTP' }
     }
 
-    // Update the user's phone number and set verified to true
+    // Check if email is already taken
+    const existing = await db.orm.public.User.where({ email }).first();
+    if (existing && existing.id !== session.userId) {
+      return { ok: false, error: 'This email is already in use by another account.' }
+    }
+
+    // Update the user's email and set verified to true
     await db.orm.public.User.where({ id: session.userId as string }).update({
-      phone: phone,
+      email: email,
       verified: true
     })
 
     return { ok: true }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Confirm OTP error:', error)
-    return { ok: false, error: 'Failed to verify OTP' }
+    return { ok: false, error: error?.message || 'Failed to verify OTP' }
   }
 }

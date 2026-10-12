@@ -16,12 +16,6 @@ export function Settings() {
   const { currentUser, db, updateProfile, unblockUser, userById, logout, deleteAccount } = useStore();
   const { promptInstall, installed, notificationsEnabled, enableNotifications } = usePwa();
   const [deleting, setDeleting] = useState(false);
-  const [privacy, setPrivacy] = useState({
-    showOnline: true,
-    showDistance: true,
-    readReceipts: true,
-    discoverable: true
-  });
   const [draftAnonymousName, setDraftAnonymousName] = useState(currentUser?.anonymousName || '');
   const [isEditingAnonymousName, setIsEditingAnonymousName] = useState(!currentUser?.anonymousName);
 
@@ -88,11 +82,19 @@ export function Settings() {
                           <Button
                             variant="primary"
                             onClick={() => {
-                              if (!draftAnonymousName.trim()) {
+                              const nameToSave = draftAnonymousName.trim();
+                              if (!nameToSave) {
                                 toast.error('Please enter a name');
                                 return;
                               }
-                              updateProfile({ anonymousName: draftAnonymousName.trim() });
+                              
+                              const mixRegex = /^(?=.*[a-zA-Z])(?=.*[0-9])[a-zA-Z0-9]+$/;
+                              if (!mixRegex.test(nameToSave)) {
+                                toast.error('Name must contain both letters and numbers without spaces');
+                                return;
+                              }
+                              
+                              updateProfile({ anonymousName: nameToSave });
                               setIsEditingAnonymousName(false);
                               toast.success('Preferred name saved');
                             }}
@@ -142,16 +144,16 @@ export function Settings() {
                 </div>
                 <button
                 role="switch"
-                aria-checked={privacy[key]}
+                aria-checked={currentUser[key as keyof typeof currentUser] as boolean}
                 aria-label={label}
-                onClick={() => setPrivacy((p) => ({ ...p, [key]: !p[key] }))}
+                onClick={() => updateProfile({ [key]: !currentUser[key as keyof typeof currentUser] })}
                 className={`relative h-6 w-11 shrink-0 rounded-full transition-colors duration-150 ease-soft ${
-                privacy[key] ? 'bg-berry-500' : 'bg-sand'}`
+                currentUser[key as keyof typeof currentUser] ? 'bg-berry-500' : 'bg-sand'}`
                 }>
                 
                   <span
                   className={`absolute top-0.5 h-5 w-5 rounded-full bg-cream-deep shadow-sm transition-transform duration-150 ease-soft ${
-                  privacy[key] ? 'translate-x-[22px]' : 'translate-x-0.5'}`
+                  currentUser[key as keyof typeof currentUser] ? 'translate-x-[22px]' : 'translate-x-0.5'}`
                   } />
                 
                 </button>

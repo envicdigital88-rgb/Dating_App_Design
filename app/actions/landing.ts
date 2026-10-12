@@ -5,11 +5,19 @@ import { db } from '@/lib/db'
 export async function getRandomUsersForLanding() {
   try {
     const allUsers = await db.orm.public.User.where({ role: 'member' })
-      .limit(20)
-      .include('photos')
+      .limit(50)
       .all()
+      
+    const userIds = allUsers.map((u: any) => u.id);
+    const photos = await db.orm.public.Photo.where((p) => p.userId.in(userIds)).all();
+    
+    // Attach photos
+    const allUsersWithPhotos = allUsers.map((u: any) => {
+      u.photos = photos.filter((p: any) => p.userId === u.id);
+      return u;
+    });
 
-    const validUsers = allUsers.filter((u: any) => u.photos?.some((p: any) => p.isPrimary))
+    const validUsers = allUsersWithPhotos.filter((u: any) => u.photos?.some((p: any) => p.isPrimary))
 
     const men = validUsers.filter((u: any) => u.gender === 'man')
     const women = validUsers.filter((u: any) => u.gender === 'woman')

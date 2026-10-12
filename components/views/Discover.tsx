@@ -135,7 +135,7 @@ function FilterPanel({ filters, onChange, onClose, activeCount }: {
 
 export function Discover() {
   const router = useRouter();
-  const { discoverFeed, isDiscoverFetching, fetchDiscoverUsers, entitlements, likeUser, passUser, hasLiked, photosOf, wingleStatusWith, currentUser, addToHeartBucket, heartBucketOf } = useStore();
+  const { discoverFeed, isDiscoverFetching, isHydrated, fetchDiscoverUsers, entitlements, likeUser, passUser, hasLiked, photosOf, wingleStatusWith, currentUser, addToHeartBucket, heartBucketOf } = useStore();
 
   const [tab, setTab] = useState<'nearby' | 'daily5'>('nearby');
   const [wingleTarget, setWingleTarget] = useState<User | null>(null);
@@ -149,6 +149,7 @@ export function Discover() {
   const recycleZoneRef = useRef<HTMLDivElement>(null);
 
   const rawFeed = discoverFeed();
+  const rawFeedLength = rawFeed.length;
 
   useEffect(() => { 
     setHasMore(true);
@@ -158,14 +159,15 @@ export function Discover() {
     });
   }, [tab, filters, fetchDiscoverUsers]);
 
+  // Paginate only when running low on profiles (between 1 and 3 left)
   useEffect(() => {
-    if (tab === 'nearby' && hasMore && !isDiscoverFetching && rawFeed.length < 3) {
+    if (tab === 'nearby' && hasMore && !isDiscoverFetching && rawFeedLength > 0 && rawFeedLength < 3) {
       const seenIds = rawFeed.map(u => u.id);
       fetchDiscoverUsers(filters, seenIds).then((count) => {
         if (typeof count === 'number' && count < 20) setHasMore(false);
       });
     }
-  }, [rawFeed.length, tab, hasMore, isDiscoverFetching, filters, fetchDiscoverUsers, rawFeed]);
+  }, [rawFeedLength, tab, hasMore, isDiscoverFetching, filters, fetchDiscoverUsers]);
 
   const activeFilterCount = useMemo(() => {
     let c = 0;
@@ -294,7 +296,7 @@ export function Discover() {
 
           {/* Card */}
           <div className="mx-auto w-full max-w-xl sm:max-w-2xl lg:max-w-none lg:mx-0">
-            {isDiscoverFetching ? (
+            {(feed.length === 0 && (!isHydrated || isDiscoverFetching)) ? (
               <div className="relative w-full overflow-hidden rounded-[32px] bg-white shadow-card ring-1 ring-sand/40 p-4 h-[700px] flex flex-col justify-end">
                 <Skeleton className="absolute inset-0 bg-sand/30" />
                 <div className="relative z-10 w-full rounded-3xl bg-white/80 p-5 backdrop-blur-md">

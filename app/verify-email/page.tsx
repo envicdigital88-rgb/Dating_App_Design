@@ -4,31 +4,31 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRightIcon, PhoneIcon, ShieldCheckIcon } from 'lucide-react';
+import { MailIcon, ArrowRightIcon, ShieldCheckIcon } from 'lucide-react';
 import { useStore } from '@/lib/contexts/StoreContext';
-import { verifyPhoneNumber, confirmOtp } from '@/app/actions/verify';
-export default function VerifyPhonePage() {
+import { verifyEmailAddress, confirmEmailOtp } from '@/app/actions/verify';
+export default function VerifyEmailPage() {
   const { updateProfile, currentUser } = useStore();
   
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
-  const [phone, setPhone] = useState('');
+  const [step, setStep] = useState<'email' | 'otp'>('email');
+  const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const handlePhoneSubmit = async (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone.trim()) {
-      toast.error('Please enter a valid mobile number.');
+    if (!email.trim() || !email.includes('@')) {
+      toast.error('Please enter a valid email address.');
       return;
     }
     setBusy(true);
     
-    const result = await verifyPhoneNumber();
+    const result = await verifyEmailAddress(email);
     setBusy(false);
     
     if (result.ok) {
       setStep('otp');
-      toast.success(`OTP sent to ${phone}`);
+      toast.success(`OTP sent to ${email}`);
     } else {
       toast.error(result.error);
     }
@@ -42,12 +42,12 @@ export default function VerifyPhonePage() {
     }
     setBusy(true);
     
-    const result = await confirmOtp(phone, otp);
+    const result = await confirmEmailOtp(email, otp);
     setBusy(false);
 
     if (result.ok) {
       // Still update the local store for UI reactivity if needed, but DB is updated.
-      updateProfile({ phone, verified: true });
+      updateProfile({ email, verified: true });
       toast.success('Verification complete!');
       if (currentUser && !currentUser.onboarded) {
         window.location.href = '/onboarding';
@@ -86,9 +86,9 @@ export default function VerifyPhonePage() {
           </div>
 
           <AnimatePresence mode="wait">
-            {step === 'phone' ? (
+            {step === 'email' ? (
               <motion.div
-                key="phone"
+                key="email"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
@@ -100,22 +100,22 @@ export default function VerifyPhonePage() {
                     Verify it's you
                   </h1>
                   <p className="mt-2 text-[13px] leading-relaxed text-white/50">
-                    To keep Wingle Mingle safe, we need to verify your mobile number before continuing.
+                    To keep Wingle Mingle safe, we need to verify your email address before continuing.
                   </p>
                 </div>
 
                 {/* Form */}
-                <form onSubmit={handlePhoneSubmit} className="space-y-4" noValidate>
+                <form onSubmit={handleEmailSubmit} className="space-y-4" noValidate>
                   <div className="relative">
-                    <PhoneIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
-                    <div className="absolute left-11 top-2.5 text-[10px] font-semibold uppercase tracking-wide text-white/35">Mobile</div>
+                    <MailIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                    <div className="absolute left-11 top-2.5 text-[10px] font-semibold uppercase tracking-wide text-white/35">Email</div>
                     <input
-                      id="phone"
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+94 7700 900000"
-                      autoComplete="tel"
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      autoComplete="email"
                       required
                       className="w-full rounded-2xl border border-white/10 pb-3 pl-11 pr-4 pt-7 text-[14px] text-white placeholder-white/20 outline-none transition-all focus:border-[#0ea5e9]/50 focus:ring-1 focus:ring-[#0ea5e9]/25"
                       style={{ background: 'rgba(255,255,255,0.06)' }}
@@ -152,7 +152,7 @@ export default function VerifyPhonePage() {
                     Enter OTP
                   </h1>
                   <p className="mt-2 text-[13px] leading-relaxed text-white/50">
-                    We just sent a code to <span className="text-white font-medium">{phone}</span>. Enter it below to complete setup.
+                    We just sent a code to <span className="text-white font-medium">{email}</span>. Enter it below to complete setup.
                   </p>
                 </div>
 
@@ -190,8 +190,8 @@ export default function VerifyPhonePage() {
                   </button>
                   
                   <div className="text-center mt-6">
-                    <button type="button" onClick={() => setStep('phone')} className="text-[12px] text-white/50 hover:text-white transition-colors">
-                      Change mobile number
+                    <button type="button" onClick={() => setStep('email')} className="text-[12px] text-white/50 hover:text-white transition-colors">
+                      Change email address
                     </button>
                   </div>
                 </form>

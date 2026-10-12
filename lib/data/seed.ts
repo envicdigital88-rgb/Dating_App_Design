@@ -42,7 +42,7 @@ const baseLifestyle = {
   work: 'Product designer'
 };
 
-type SeedMember = Omit<User, 'password' | 'role' | 'onboarded' | 'traits' | 'prompts' | 'freeWinglesAccepted' | 'freeWinglesSent' | 'lastDailyBonusAt' | 'isUnlimited'> & {photos: string[];};
+type SeedMember = Omit<User, 'password' | 'role' | 'onboarded' | 'traits' | 'prompts' | 'freeWinglesAccepted' | 'freeWinglesSent' | 'lastDailyBonusAt' | 'isUnlimited' | 'discoverable' | 'showOnline' | 'showDistance' | 'readReceipts'> & {photos: string[];};
 
 const members: SeedMember[] = [
 {
@@ -236,7 +236,11 @@ export const seedUsers: User[] = [
   wingitsBalance: 50,
   freeWinglesSent: 0,
   freeWinglesAccepted: 0,
-  isUnlimited: true
+  isUnlimited: true,
+  discoverable: true,
+  showOnline: true,
+  showDistance: true,
+  readReceipts: true
 },
 {
   id: ADMIN_USER_ID,
@@ -263,7 +267,11 @@ export const seedUsers: User[] = [
   wingitsBalance: 10000,
   freeWinglesSent: 0,
   freeWinglesAccepted: 0,
-  isUnlimited: true
+  isUnlimited: true,
+  discoverable: true,
+  showOnline: true,
+  showDistance: true,
+  readReceipts: true
 },
 ...members.map(({ photos, ...m }) => ({
   ...m,
@@ -274,7 +282,11 @@ export const seedUsers: User[] = [
   onboarded: true,
   freeWinglesSent: 0,
   freeWinglesAccepted: 0,
-  isUnlimited: true
+  isUnlimited: true,
+  discoverable: true,
+  showOnline: true,
+  showDistance: true,
+  readReceipts: true
 }))];
 
 

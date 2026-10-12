@@ -34,9 +34,9 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'1d1301ae7f679a954442e7ffb2d14949a3965644f942cffc6c161ce3fc1c9cce'>;
+  StorageHashBase<'6ef80f0bea0017584650e9db662ceaeb3efe612b913b82c835ce11ef196edb6d'>;
 export type ExecutionHash =
-  ExecutionHashBase<'798d36864cb0d19157cc44ccae8a080a9418954c07e4759d0f8b3313df67446c'>;
+  ExecutionHashBase<'cfcecedce98a9ee2c5be4cb3bd5d93271de2f5d9917661c48300aebc7990c4f4'>;
 export type ProfileHash =
   ProfileHashBase<'3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2'>;
 
@@ -371,6 +371,16 @@ export type FieldOutputTypes = {
       readonly startedAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
       readonly expiresAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
     };
+    readonly TransactionLedger: {
+      readonly id: CodecTypes['pg/text@1']['output'];
+      readonly userId: CodecTypes['pg/text@1']['output'];
+      readonly amountLKR: CodecTypes['pg/float8@1']['output'];
+      readonly wingitsCredited: CodecTypes['pg/int4@1']['output'];
+      readonly transactionReference: CodecTypes['pg/text@1']['output'] | null;
+      readonly status: CodecTypes['pg/text@1']['output'];
+      readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
+      readonly updatedAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
+    };
     readonly Usage: {
       readonly id: CodecTypes['pg/text@1']['output'];
       readonly userId: CodecTypes['pg/text@1']['output'];
@@ -406,6 +416,10 @@ export type FieldOutputTypes = {
       readonly freeWinglesAccepted: CodecTypes['pg/int4@1']['output'];
       readonly lastDailyBonusAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
       readonly isUnlimited: CodecTypes['pg/bool@1']['output'];
+      readonly discoverable: CodecTypes['pg/bool@1']['output'];
+      readonly showOnline: CodecTypes['pg/bool@1']['output'];
+      readonly showDistance: CodecTypes['pg/bool@1']['output'];
+      readonly readReceipts: CodecTypes['pg/bool@1']['output'];
     };
     readonly UserStatus: {
       readonly id: CodecTypes['pg/text@1']['output'];
@@ -565,6 +579,16 @@ export type FieldInputTypes = {
       readonly startedAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
       readonly expiresAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
     };
+    readonly TransactionLedger: {
+      readonly id: CodecTypes['pg/text@1']['input'];
+      readonly userId: CodecTypes['pg/text@1']['input'];
+      readonly amountLKR: CodecTypes['pg/float8@1']['input'];
+      readonly wingitsCredited: CodecTypes['pg/int4@1']['input'];
+      readonly transactionReference: CodecTypes['pg/text@1']['input'] | null;
+      readonly status: CodecTypes['pg/text@1']['input'];
+      readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
+      readonly updatedAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
+    };
     readonly Usage: {
       readonly id: CodecTypes['pg/text@1']['input'];
       readonly userId: CodecTypes['pg/text@1']['input'];
@@ -600,6 +624,10 @@ export type FieldInputTypes = {
       readonly freeWinglesAccepted: CodecTypes['pg/int4@1']['input'];
       readonly lastDailyBonusAt: CodecTypes['pg/timestamptz-temporal@1']['input'] | null;
       readonly isUnlimited: CodecTypes['pg/bool@1']['input'];
+      readonly discoverable: CodecTypes['pg/bool@1']['input'];
+      readonly showOnline: CodecTypes['pg/bool@1']['input'];
+      readonly showDistance: CodecTypes['pg/bool@1']['input'];
+      readonly readReceipts: CodecTypes['pg/bool@1']['input'];
     };
     readonly UserStatus: {
       readonly id: CodecTypes['pg/text@1']['input'];
@@ -759,6 +787,16 @@ export type StorageColumnTypes = {
       readonly status: CodecTypes['pg/text@1']['output'];
       readonly userId: CodecTypes['pg/text@1']['output'];
     };
+    readonly transactionLedger: {
+      readonly amountLKR: CodecTypes['pg/float8@1']['output'];
+      readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
+      readonly id: CodecTypes['pg/text@1']['output'];
+      readonly status: CodecTypes['pg/text@1']['output'];
+      readonly transactionReference: CodecTypes['pg/text@1']['output'] | null;
+      readonly updatedAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
+      readonly userId: CodecTypes['pg/text@1']['output'];
+      readonly wingitsCredited: CodecTypes['pg/int4@1']['output'];
+    };
     readonly usage: {
       readonly chatUsed: CodecTypes['pg/int4@1']['output'];
       readonly id: CodecTypes['pg/text@1']['output'];
@@ -770,6 +808,7 @@ export type StorageColumnTypes = {
       readonly anonymousName: CodecTypes['pg/text@1']['output'] | null;
       readonly bio: CodecTypes['pg/text@1']['output'];
       readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
+      readonly discoverable: CodecTypes['pg/bool@1']['output'];
       readonly email: CodecTypes['pg/text@1']['output'];
       readonly freeWinglesAccepted: CodecTypes['pg/int4@1']['output'];
       readonly freeWinglesSent: CodecTypes['pg/int4@1']['output'];
@@ -789,7 +828,10 @@ export type StorageColumnTypes = {
       readonly password: CodecTypes['pg/text@1']['output'];
       readonly phone: CodecTypes['pg/text@1']['output'];
       readonly pushSubscription: CodecTypes['pg/json@1']['output'] | null;
+      readonly readReceipts: CodecTypes['pg/bool@1']['output'];
       readonly role: CodecTypes['pg/text@1']['output'];
+      readonly showDistance: CodecTypes['pg/bool@1']['output'];
+      readonly showOnline: CodecTypes['pg/bool@1']['output'];
       readonly suspended: CodecTypes['pg/bool@1']['output'];
       readonly traits: CodecTypes['pg/text@1']['output'];
       readonly verified: CodecTypes['pg/bool@1']['output'];
@@ -953,6 +995,16 @@ export type StorageColumnInputTypes = {
       readonly status: CodecTypes['pg/text@1']['input'];
       readonly userId: CodecTypes['pg/text@1']['input'];
     };
+    readonly transactionLedger: {
+      readonly amountLKR: CodecTypes['pg/float8@1']['input'];
+      readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
+      readonly id: CodecTypes['pg/text@1']['input'];
+      readonly status: CodecTypes['pg/text@1']['input'];
+      readonly transactionReference: CodecTypes['pg/text@1']['input'] | null;
+      readonly updatedAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
+      readonly userId: CodecTypes['pg/text@1']['input'];
+      readonly wingitsCredited: CodecTypes['pg/int4@1']['input'];
+    };
     readonly usage: {
       readonly chatUsed: CodecTypes['pg/int4@1']['input'];
       readonly id: CodecTypes['pg/text@1']['input'];
@@ -964,6 +1016,7 @@ export type StorageColumnInputTypes = {
       readonly anonymousName: CodecTypes['pg/text@1']['input'] | null;
       readonly bio: CodecTypes['pg/text@1']['input'];
       readonly createdAt: CodecTypes['pg/timestamptz-temporal@1']['input'];
+      readonly discoverable: CodecTypes['pg/bool@1']['input'];
       readonly email: CodecTypes['pg/text@1']['input'];
       readonly freeWinglesAccepted: CodecTypes['pg/int4@1']['input'];
       readonly freeWinglesSent: CodecTypes['pg/int4@1']['input'];
@@ -983,7 +1036,10 @@ export type StorageColumnInputTypes = {
       readonly password: CodecTypes['pg/text@1']['input'];
       readonly phone: CodecTypes['pg/text@1']['input'];
       readonly pushSubscription: CodecTypes['pg/json@1']['input'] | null;
+      readonly readReceipts: CodecTypes['pg/bool@1']['input'];
       readonly role: CodecTypes['pg/text@1']['input'];
+      readonly showDistance: CodecTypes['pg/bool@1']['input'];
+      readonly showOnline: CodecTypes['pg/bool@1']['input'];
       readonly suspended: CodecTypes['pg/bool@1']['input'];
       readonly traits: CodecTypes['pg/text@1']['input'];
       readonly verified: CodecTypes['pg/bool@1']['input'];
@@ -1047,6 +1103,10 @@ export namespace Models {
     freeWinglesAccepted: CodecTypes['pg/int4@1']['output'];
     lastDailyBonusAt: CodecTypes['pg/timestamptz-temporal@1']['output'] | null;
     isUnlimited: CodecTypes['pg/bool@1']['output'];
+    discoverable: CodecTypes['pg/bool@1']['output'];
+    showOnline: CodecTypes['pg/bool@1']['output'];
+    showDistance: CodecTypes['pg/bool@1']['output'];
+    readReceipts: CodecTypes['pg/bool@1']['output'];
     blocksMade: public_Block[];
     blocksReceived: public_Block[];
     heartBucketMade: public_HeartBucket[];
@@ -1064,6 +1124,7 @@ export namespace Models {
     sentLikes: public_Like[];
     statuses: public_UserStatus[];
     subscriptions: public_Subscription[];
+    transactionLedgers: public_TransactionLedger[];
     usage: public_Usage | null;
     wingitsTransactions: public_WingitsTransaction[];
     winglesReceived: public_Wingle[];
@@ -1086,6 +1147,7 @@ export namespace Models {
       | 'sentLikes'
       | 'statuses'
       | 'subscriptions'
+      | 'transactionLedgers'
       | 'usage'
       | 'wingitsTransactions'
       | 'winglesReceived'
@@ -1098,6 +1160,18 @@ export namespace Models {
     type: CodecTypes['pg/text@1']['output'];
     description: CodecTypes['pg/text@1']['output'];
     createdAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
+    user: public_User;
+    readonly [RelationKeys]?: 'user';
+  };
+  export type public_TransactionLedger = {
+    id: CodecTypes['pg/text@1']['output'];
+    userId: CodecTypes['pg/text@1']['output'];
+    amountLKR: CodecTypes['pg/float8@1']['output'];
+    wingitsCredited: CodecTypes['pg/int4@1']['output'];
+    transactionReference: CodecTypes['pg/text@1']['output'] | null;
+    status: CodecTypes['pg/text@1']['output'];
+    createdAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
+    updatedAt: CodecTypes['pg/timestamptz-temporal@1']['output'];
     user: public_User;
     readonly [RelationKeys]?: 'user';
   };
@@ -1303,6 +1377,7 @@ export declare const models: {
   public: {
     User: Models.public_User;
     WingitsTransaction: Models.public_WingitsTransaction;
+    TransactionLedger: Models.public_TransactionLedger;
     Photo: Models.public_Photo;
     Prompt: Models.public_Prompt;
     UserStatus: Models.public_UserStatus;
@@ -2399,6 +2474,80 @@ type ContractBase = Omit<
                 },
               ];
             };
+            readonly transactionLedger: {
+              columns: {
+                readonly id: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                };
+                readonly userId: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                };
+                readonly amountLKR: {
+                  readonly nativeType: 'float8';
+                  readonly codecId: 'pg/float8@1';
+                  readonly nullable: false;
+                };
+                readonly wingitsCredited: {
+                  readonly nativeType: 'int4';
+                  readonly codecId: 'pg/int4@1';
+                  readonly nullable: false;
+                };
+                readonly transactionReference: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                };
+                readonly status: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/text@1', 'PENDING'>;
+                  };
+                };
+                readonly createdAt: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                  readonly nullable: false;
+                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
+                };
+                readonly updatedAt: {
+                  readonly nativeType: 'timestamptz';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                  readonly nullable: false;
+                  readonly default: { readonly kind: 'function'; readonly expression: 'now()' };
+                };
+              };
+              primaryKey: { readonly columns: readonly ['id'] };
+              uniques: readonly [];
+              indexes: readonly [
+                {
+                  readonly name: 'transactionLedger_userId_idx_a489d58a';
+                  readonly prefix: 'transactionLedger_userId_idx';
+                  readonly columns: readonly ['userId'];
+                  readonly unique: false;
+                },
+              ];
+              foreignKeys: readonly [
+                {
+                  readonly source: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'transactionLedger';
+                    readonly columns: readonly ['userId'];
+                  };
+                  readonly target: {
+                    readonly namespaceId: 'public' & NamespaceId;
+                    readonly tableName: 'user';
+                    readonly columns: readonly ['id'];
+                  };
+                },
+              ];
+            };
             readonly usage: {
               columns: {
                 readonly id: {
@@ -2652,6 +2801,42 @@ type ContractBase = Omit<
                     readonly value: DefaultLiteralValue<'pg/bool@1', false>;
                   };
                 };
+                readonly discoverable: {
+                  readonly nativeType: 'bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', true>;
+                  };
+                };
+                readonly showOnline: {
+                  readonly nativeType: 'bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', true>;
+                  };
+                };
+                readonly showDistance: {
+                  readonly nativeType: 'bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', true>;
+                  };
+                };
+                readonly readReceipts: {
+                  readonly nativeType: 'bool';
+                  readonly codecId: 'pg/bool@1';
+                  readonly nullable: false;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/bool@1', true>;
+                  };
+                };
               };
               primaryKey: { readonly columns: readonly ['id'] };
               uniques: readonly [{ readonly columns: readonly ['email'] }];
@@ -2881,6 +3066,10 @@ type ContractBase = Omit<
     readonly wingitsTransaction: {
       readonly namespace: 'public' & NamespaceId;
       readonly model: 'WingitsTransaction';
+    };
+    readonly transactionLedger: {
+      readonly namespace: 'public' & NamespaceId;
+      readonly model: 'TransactionLedger';
     };
     readonly photo: { readonly namespace: 'public' & NamespaceId; readonly model: 'Photo' };
     readonly prompt: { readonly namespace: 'public' & NamespaceId; readonly model: 'Prompt' };
@@ -3859,6 +4048,73 @@ type ContractBase = Omit<
               };
             };
           };
+          readonly TransactionLedger: {
+            readonly fields: {
+              readonly id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly userId: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly amountLKR: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/float8@1' };
+              };
+              readonly wingitsCredited: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/int4@1' };
+              };
+              readonly transactionReference: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly status: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly createdAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                };
+              };
+              readonly updatedAt: {
+                readonly nullable: false;
+                readonly type: {
+                  readonly kind: 'scalar';
+                  readonly codecId: 'pg/timestamptz-temporal@1';
+                };
+              };
+            };
+            readonly relations: {
+              readonly user: {
+                readonly to: { readonly namespace: 'public' & NamespaceId; readonly model: 'User' };
+                readonly cardinality: 'N:1';
+                readonly nullable: false;
+                readonly on: {
+                  readonly localFields: readonly ['userId'];
+                  readonly targetFields: readonly ['id'];
+                };
+              };
+            };
+            readonly storage: {
+              readonly table: 'transactionLedger';
+              readonly namespaceId: 'public';
+              readonly fields: {
+                readonly id: { readonly column: 'id' };
+                readonly userId: { readonly column: 'userId' };
+                readonly amountLKR: { readonly column: 'amountLKR' };
+                readonly wingitsCredited: { readonly column: 'wingitsCredited' };
+                readonly transactionReference: { readonly column: 'transactionReference' };
+                readonly status: { readonly column: 'status' };
+                readonly createdAt: { readonly column: 'createdAt' };
+                readonly updatedAt: { readonly column: 'updatedAt' };
+              };
+            };
+          };
           readonly Usage: {
             readonly fields: {
               readonly id: {
@@ -4020,6 +4276,22 @@ type ContractBase = Omit<
                 };
               };
               readonly isUnlimited: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
+              readonly discoverable: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
+              readonly showOnline: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
+              readonly showDistance: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
+              };
+              readonly readReceipts: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
               };
@@ -4200,6 +4472,17 @@ type ContractBase = Omit<
                   readonly targetFields: readonly ['userId'];
                 };
               };
+              readonly transactionLedgers: {
+                readonly to: {
+                  readonly namespace: 'public' & NamespaceId;
+                  readonly model: 'TransactionLedger';
+                };
+                readonly cardinality: '1:N';
+                readonly on: {
+                  readonly localFields: readonly ['id'];
+                  readonly targetFields: readonly ['userId'];
+                };
+              };
               readonly usage: {
                 readonly to: {
                   readonly namespace: 'public' & NamespaceId;
@@ -4278,6 +4561,10 @@ type ContractBase = Omit<
                 readonly freeWinglesAccepted: { readonly column: 'freeWinglesAccepted' };
                 readonly lastDailyBonusAt: { readonly column: 'lastDailyBonusAt' };
                 readonly isUnlimited: { readonly column: 'isUnlimited' };
+                readonly discoverable: { readonly column: 'discoverable' };
+                readonly showOnline: { readonly column: 'showOnline' };
+                readonly showDistance: { readonly column: 'showDistance' };
+                readonly readReceipts: { readonly column: 'readReceipts' };
               };
             };
           };
@@ -4606,6 +4893,14 @@ type ContractBase = Omit<
           readonly ref: {
             readonly namespace: 'public';
             readonly table: 'subscription';
+            readonly column: 'id';
+          };
+          readonly onCreate: { readonly kind: 'generator'; readonly id: 'uuidv4' };
+        },
+        {
+          readonly ref: {
+            readonly namespace: 'public';
+            readonly table: 'transactionLedger';
             readonly column: 'id';
           };
           readonly onCreate: { readonly kind: 'generator'; readonly id: 'uuidv4' };
