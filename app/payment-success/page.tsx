@@ -1,6 +1,6 @@
 import React from 'react';
 import { verifyPaymentAction } from '@/app/actions/payments';
-import { CheckCircle2Icon, XCircleIcon} from 'lucide-react';
+import { CheckCircle2Icon, XCircleIcon, ArrowRightIcon, CoinsIcon } from 'lucide-react';
 import Link from 'next/link';
 
 export default async function PaymentSuccessPage({
@@ -15,12 +15,19 @@ export default async function PaymentSuccessPage({
   // Dialog redirects with transactionId
   if (!ledgerId || !transactionId) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-cream">
-        <div className="text-center p-8 bg-white rounded-3xl shadow-card max-w-md w-full">
-          <XCircleIcon className="w-16 h-16 text-berry-500 mx-auto mb-6" />
-          <h1 className="font-display text-2xl font-bold text-ink mb-4">Invalid Request</h1>
-          <p className="text-ink-soft mb-8">Missing transaction details.</p>
-          <Link href="/packages" className="inline-block bg-primary text-white font-medium py-3 px-8 rounded-full">
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="relative w-full max-w-lg rounded-4xl bg-cream-deep border border-sand/80 p-8 sm:p-10 text-center shadow-card overflow-hidden">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-berry-500/15 text-berry-400 ring-1 ring-berry-500/30">
+            <XCircleIcon className="h-10 w-10" />
+          </div>
+          <h1 className="font-display text-3xl font-bold text-ink mb-3">Invalid Request</h1>
+          <p className="text-[15px] leading-relaxed text-ink-soft mb-8">
+            Missing transaction details. We could not verify this payment.
+          </p>
+          <Link
+            href="/packages"
+            className="inline-flex items-center justify-center w-full py-4 px-8 rounded-2xl bg-gradient-to-r from-berry-500 to-plum-500 text-white font-semibold shadow-lg shadow-berry-500/20 hover:opacity-95 transition-all"
+          >
             Return to Packages
           </Link>
         </div>
@@ -33,33 +40,91 @@ export default async function PaymentSuccessPage({
 
   if (!result.ok) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-cream">
-        <div className="text-center p-8 bg-white rounded-3xl shadow-card max-w-md w-full">
-          <XCircleIcon className="w-16 h-16 text-berry-500 mx-auto mb-6" />
-          <h1 className="font-display text-2xl font-bold text-ink mb-4">Payment Failed</h1>
-          <p className="text-ink-soft mb-8">{result.error || 'Your payment could not be verified.'}</p>
-          <Link href="/packages" className="inline-block bg-primary text-white font-medium py-3 px-8 rounded-full">
-            Try Again
-          </Link>
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="relative w-full max-w-lg rounded-4xl bg-cream-deep border border-sand/80 p-8 sm:p-10 text-center shadow-card overflow-hidden">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-berry-500/15 text-berry-400 ring-1 ring-berry-500/30">
+            <XCircleIcon className="h-10 w-10" />
+          </div>
+          <h1 className="font-display text-3xl font-bold text-ink mb-3">Payment Failed</h1>
+          <p className="text-[15px] leading-relaxed text-ink-soft mb-8">
+            {result.error || 'Your payment could not be verified by Dialog Pay.'}
+          </p>
+          <div className="space-y-3">
+            <Link
+              href="/packages"
+              className="inline-flex items-center justify-center w-full py-4 px-8 rounded-2xl bg-gradient-to-r from-berry-500 to-plum-500 text-white font-semibold shadow-lg shadow-berry-500/20 hover:opacity-95 transition-all"
+            >
+              Try Again
+            </Link>
+            <Link
+              href="/discover"
+              className="inline-block text-sm text-ink-muted hover:text-white transition-colors"
+            >
+              Back to Discover
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-cream">
-      <div className="text-center p-8 bg-white rounded-3xl shadow-card max-w-md w-full">
-        <CheckCircle2Icon className="w-20 h-20 text-moss mx-auto mb-6" />
-        <h1 className="font-display text-2xl font-bold text-ink mb-4">Payment Successful!</h1>
-        <p className="text-ink-soft mb-6">
-          Your account has been credited. A receipt has been sent to your email.
-        </p>
-        <div className="bg-sand/30 rounded-2xl p-4 mb-8 text-left text-sm text-ink-muted">
-          <p><strong>Transaction ID:</strong> {transactionId}</p>
+    <div className="flex min-h-screen items-center justify-center p-4">
+      <div className="relative w-full max-w-lg rounded-4xl bg-cream-deep border border-sand/80 p-8 sm:p-10 text-center shadow-card overflow-hidden">
+        {/* Top decorative gradient bar */}
+        <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-berry-500 via-plum-500 to-moss" />
+
+        {/* Success Icon */}
+        <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-moss/15 text-moss ring-1 ring-moss/30 shadow-lg shadow-moss/10">
+          <CheckCircle2Icon className="h-10 w-10 text-moss" />
         </div>
-        <Link href="/packages" className="inline-block bg-moss text-white font-medium py-3 px-8 rounded-full hover:bg-moss-light transition-colors">
-          Continue to App
-        </Link>
+
+        {/* Title & Description */}
+        <h1 className="font-display text-3xl sm:text-4xl font-bold text-ink mb-3 tracking-tight">
+          Payment Confirmed!
+        </h1>
+        <p className="text-[15px] leading-relaxed text-ink-soft mb-8 max-w-sm mx-auto">
+          Your Wingits have been successfully credited to your account. A payment invoice has been sent to your email.
+        </p>
+
+        {/* Transaction Summary Card */}
+        <div className="rounded-2xl bg-cream/80 border border-sand/80 p-5 mb-8 text-left space-y-3">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-ink-muted">Status</span>
+            <span className="inline-flex items-center gap-1.5 font-medium text-moss text-xs bg-moss/10 px-2.5 py-1 rounded-full border border-moss/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-moss animate-pulse" />
+              Confirmed
+            </span>
+          </div>
+
+          <div className="h-px bg-sand/60 w-full" />
+
+          <div className="flex flex-col gap-1 text-sm">
+            <span className="text-ink-muted text-xs">Transaction ID</span>
+            <span className="font-mono text-xs sm:text-sm text-ink bg-cream-deep px-3 py-2 rounded-xl border border-sand/50 break-all select-all">
+              {transactionId}
+            </span>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="space-y-3">
+          <Link
+            href="/packages"
+            className="inline-flex items-center justify-center gap-2 w-full py-4 px-8 rounded-2xl bg-gradient-to-r from-berry-500 via-plum-500 to-berry-500 text-white font-semibold shadow-lg shadow-berry-500/25 hover:opacity-95 hover:scale-[1.01] active:scale-[0.99] transition-all text-base"
+          >
+            <CoinsIcon className="w-5 h-5" />
+            <span>Continue to Packages</span>
+            <ArrowRightIcon className="w-4 h-4 ml-1" />
+          </Link>
+
+          <Link
+            href="/discover"
+            className="inline-block text-sm text-ink-muted hover:text-white transition-colors"
+          >
+            Or start discovering profiles
+          </Link>
+        </div>
       </div>
     </div>
   );
