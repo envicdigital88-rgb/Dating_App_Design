@@ -1,8 +1,15 @@
 'use server';
 
-export { buyWingitsAction, verifyPaymentAction } from '@/app/actions/payments';
-import { buyWingitsAction } from '@/app/actions/payments';
+import { buyWingitsAction as buyWingits, verifyPaymentAction as verifyPayment } from '@/app/actions/payments';
+
+export async function buyWingitsAction(packageAmountLKR: number, wingitsAmount: number) {
+  return buyWingits(packageAmountLKR, wingitsAmount);
+}
+
+export async function verifyPaymentAction(ledgerId: string, transactionId: string) {
+  return verifyPayment(ledgerId, transactionId);
+}
 
 export async function createIpgTransaction(_packageId: string, amount: number) {
-  return buyWingitsAction(amount, amount);
+  return buyWingits(amount, amount);
 }
