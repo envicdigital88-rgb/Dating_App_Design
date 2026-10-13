@@ -3,6 +3,7 @@
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { Temporal } from 'temporal-polyfill'
+import { formatNotifyPhoneNumber, getPhoneVariants, sendNotifySms } from '@/lib/notify'
 
 export async function sendWingle(toUserId: string, note: string) {
   try {
@@ -228,80 +229,219 @@ export async function respondToWingle(wingleId: string, accept: boolean) {
   }
 }
 
-export async function sendSecretWingleAction(targetPhone: string, message: string) {
+export async function sendSecretWingleAction(
+  targetPhone: string,
+  message: string,
+  options?: {
+    recipientName?: string;
+    senderName?: string;
+    isAnonymous?: boolean;
+    language?: 'en' | 'si' | 'ta';
+  }
+) {
   try {
-    const session = await getSession()
-    if (!session?.userId) return { ok: false, error: 'Unauthorized' }
+    const session = await getSession();
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
 
-    if (!targetPhone || !message) {
-      return { ok: false, error: 'Phone number and message are required' }
+    if (!targetPhone?.trim() || !message?.trim()) {
+      return { ok: false, error: 'Phone number and message are required' };
     }
 
-    const newSecretWingle = await db.orm.public.SecretWingle.create({
-      senderId: session.userId as string,
-      targetPhone: targetPhone,
-      message: message
-    })
+    const formattedPhone = formatNotifyPhoneNumber(targetPhone);
+    if (!formattedPhone || formattedPhone.length < 9) {
+      return { ok: false, error: 'Please enter a valid mobile number' };
+    }
 
-    // Simulate sending SMS and WhatsApp
-    console.log(`[SIMULATED TWILIO API] SMS sent to ${targetPhone}: "Someone has a secret crush on you! They sent you a message on WingleMingle: '${message}'. Sign up to see who it is!"`);
-    console.log(`[SIMULATED WHATSAPP API] WhatsApp sent to ${targetPhone}: "Someone has a secret crush on you! They sent you a message on WingleMingle: '${message}'. Sign up to see who it is!"`);
+    const currentUser = await db.orm.public.User.where({ id: session.userId as string }).first();
+    if (!currentUser) return { ok: false, error: 'User not found' };
 
-    return { ok: true, data: newSecretWingle }
-  } catch (err) {
-    console.error('Send Secret Wingle error:', err)
-    return { ok: false, error: 'Failed to send Secret Wingle' }
+    if (currentUser.phone && formatNotifyPhoneNumber(currentUser.phone) === formattedPhone) {
+      return { ok: false, error: 'You cannot send a Secret Wingle to your own phone number!' };
+    }
+
+    const SECRET_WINGLE_COST = 20;
+    if (currentUser.wingitsBalance < SECRET_WINGLE_COST) {
+      return { ok: false, error: 'Insufficient Wingits balance (20 Wingits required)' };
+    }
+
+    // Deduct Wingits and save SecretWingle atomically
+    const newSecretWingle = await db.transaction(async (tx) => {
+      await tx.orm.public.User.where({ id: currentUser.id }).update({
+        wingitsBalance: currentUser.wingitsBalance - SECRET_WINGLE_COST
+      });
+
+      await tx.orm.public.WingitsTransaction.create({
+        id: crypto.randomUUID(),
+        userId: currentUser.id,
+        amount: -SECRET_WINGLE_COST,
+        type: 'spend',
+        description: 'Sent a Secret Wingle'
+      });
+
+      return await tx.orm.public.SecretWingle.create({
+        senderId: currentUser.id,
+        targetPhone: formattedPhone,
+        message: message.trim()
+      });
+    });
+
+    // Send SMS via Notify.lk using structured multilingual template
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.winglemingle.com';
+    const { buildSecretWingleSms } = await import('@/lib/notify');
+    const smsText = buildSecretWingleSms({
+      recipientName: options?.recipientName || options?.senderName,
+      appUrl
+    });
+
+    const smsRes = await sendNotifySms({
+      to: formattedPhone,
+      message: smsText
+    });
+
+    // If the recipient is already registered, send in-app notification & push
+    try {
+      const phoneVariants = getPhoneVariants(formattedPhone);
+      const existingUser = await db.orm.public.User.where(u => u.phone.in(phoneVariants)).first();
+
+      if (existingUser && existingUser.id !== currentUser.id) {
+        await db.orm.public.Notification.create({
+          userId: existingUser.id,
+          type: 'secret_wingle',
+          title: 'Secret Wingle Received! 🤫',
+          body: 'Someone sent you a Secret Wingle. Check your Secret Wingles tab to see who it is!',
+          href: '/secret-wingles'
+        });
+
+        const { sendPushNotificationAction } = await import('@/app/actions/push');
+        await sendPushNotificationAction(existingUser.id, {
+          title: 'Secret Wingle Received! 🤫',
+          body: 'Someone sent you a Secret Wingle. Open the app to see it!',
+          url: `${appUrl}/secret-wingles`
+        });
+
+        const { pusherServer } = await import('@/lib/pusher');
+        await pusherServer.trigger(`private-user-${existingUser.id}`, 'state-changed', {});
+      }
+    } catch (pushErr) {
+      console.error('Error notifying existing recipient:', pushErr);
+    }
+
+    return {
+      ok: true,
+      data: {
+        ...newSecretWingle,
+        createdAt: newSecretWingle.createdAt.toString()
+      },
+      smsStatus: smsRes.status || (smsRes.simulated ? 'simulated' : 'sent')
+    };
+  } catch (err: any) {
+    console.error('Send Secret Wingle error:', err);
+    return { ok: false, error: err?.message || 'Failed to send Secret Wingle' };
   }
 }
 
 export async function getReceivedSecretWinglesAction() {
   try {
-    const session = await getSession()
-    if (!session?.userId) return { ok: false, error: 'Unauthorized' }
+    const session = await getSession();
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
 
-    const currentUser = await db.orm.public.User.where({ id: session.userId as string }).first()
+    const currentUser = await db.orm.public.User.where({ id: session.userId as string }).first();
     if (!currentUser || !currentUser.phone) {
-      return { ok: true, data: [] }
+      return { ok: true, data: [] };
     }
 
-    const secretWingles = await db.orm.public.SecretWingle.where({
-      targetPhone: currentUser.phone
-    }).all()
+    const phoneVariants = getPhoneVariants(currentUser.phone);
+    const secretWingles = await db.orm.public.SecretWingle.where(sw =>
+      sw.targetPhone.in(phoneVariants)
+    ).all();
 
-    // Unlock all of them since the user is now signed in
-    if (secretWingles.length > 0) {
-      for (const sw of secretWingles) {
-        if (!sw.unlocked) {
-          await db.orm.public.SecretWingle.where({ id: sw.id }).update({ unlocked: true })
+    // Mark as unlocked and ensure recipient received their 20 Wingits gift
+    for (const sw of secretWingles) {
+      if (!sw.unlocked) {
+        await db.orm.public.SecretWingle.where({ id: sw.id }).update({ unlocked: true });
+
+        const alreadyCredited = await db.orm.public.WingitsTransaction.where({
+          userId: currentUser.id,
+          description: `Secret Wingle recipient bonus for ${sw.id} (+20 Wingits)`
+        }).first();
+
+        if (!alreadyCredited) {
+          const freshUser = await db.orm.public.User.where({ id: currentUser.id }).first();
+          const currentBal = freshUser?.wingitsBalance || 0;
+          await db.orm.public.User.where({ id: currentUser.id }).update({
+            wingitsBalance: currentBal + 20
+          });
+
+          await db.orm.public.WingitsTransaction.create({
+            id: crypto.randomUUID(),
+            userId: currentUser.id,
+            amount: 20,
+            type: 'bonus',
+            description: `Secret Wingle recipient bonus for ${sw.id} (+20 Wingits)`
+          });
         }
       }
     }
 
     const sendersIds = Array.from(new Set(secretWingles.map(sw => sw.senderId)));
-    const senders = sendersIds.length > 0 
+    const senders = sendersIds.length > 0
       ? await db.orm.public.User.where(u => u.id.in(sendersIds)).all()
       : [];
     const validSenders = senders.filter(Boolean);
 
+    // Fetch primary photos of senders
+    const senderPhotos = sendersIds.length > 0
+      ? await db.orm.public.Photo.where(p => p.userId.in(sendersIds)).all()
+      : [];
+
     const populatedSecretWingles = secretWingles.map(sw => {
       const sender = validSenders.find(s => s && s.id === sw.senderId);
+      const primaryPhoto = senderPhotos.find(p => p.userId === sw.senderId && p.isPrimary);
+
       return {
         ...sw,
+        createdAt: sw.createdAt.toString(),
         unlocked: true,
         sender: sender ? {
           id: sender.id,
           name: sender.name,
           age: sender.age,
           gender: sender.gender,
-          location: sender.location
+          location: sender.location,
+          photo: primaryPhoto?.url || null
         } : null
-      }
+      };
     });
 
-    return { ok: true, data: populatedSecretWingles }
+    return { ok: true, data: populatedSecretWingles };
   } catch (err) {
-    console.error('Get Secret Wingles error:', err)
-    return { ok: false, error: 'Failed to fetch Secret Wingles' }
+    console.error('Get Secret Wingles error:', err);
+    return { ok: false, error: 'Failed to fetch Secret Wingles' };
+  }
+}
+
+export async function getSentSecretWinglesAction() {
+  try {
+    const session = await getSession();
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
+
+    const sent = await db.orm.public.SecretWingle.where({
+      senderId: session.userId as string
+    }).all();
+
+    // Sort by createdAt descending
+    sent.sort((a, b) => new Date(b.createdAt.toString()).getTime() - new Date(a.createdAt.toString()).getTime());
+
+    return {
+      ok: true,
+      data: sent.map(sw => ({
+        ...sw,
+        createdAt: sw.createdAt.toString()
+      }))
+    };
+  } catch (err) {
+    console.error('Get Sent Secret Wingles error:', err);
+    return { ok: false, error: 'Failed to fetch sent Secret Wingles' };
   }
 }
 

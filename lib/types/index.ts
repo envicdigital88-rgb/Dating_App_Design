@@ -184,6 +184,7 @@ export interface SecretWingle {
     age: number;
     gender: string;
     location: string;
+    photo?: string | null;
   } | null;
 }
 

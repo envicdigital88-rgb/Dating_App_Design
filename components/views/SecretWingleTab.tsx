@@ -1,184 +1,657 @@
 'use client';
 
-import React, { useState } from 'react';
-import { SendIcon, Coins } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  SendIcon,
+  Sparkles,
+  Lock,
+  Unlock,
+  Phone,
+  ShieldCheck,
+  CheckCircle2,
+  Clock,
+  Heart,
+  MessageSquare,
+  History,
+  Inbox,
+  Coins
+} from 'lucide-react';
 import { Page, PageHeader } from '@/components/AppShell';
 import { Button } from '@/components/ui/Button';
 import { toast } from 'sonner';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { useRouter } from 'next/navigation';
+import { getSentSecretWinglesAction } from '@/app/actions/wingle';
+import { initiateSecretWinglePaymentAction, checkAndVerifyPendingPaymentAction } from '@/app/actions/payments';
+import { buildSecretWingleSms } from '@/lib/notify';
+
+interface SentSecretWingle {
+  id: string;
+  targetPhone: string;
+  message: string;
+  createdAt: string;
+  unlocked: boolean;
+}
 
 export function SecretWingleTab() {
-  const { sendSecretWingle, secretWinglesReceived, currentUser, spendWingits } = useStore();
+  const { secretWinglesReceived, currentUser, ensureConversation } = useStore();
   const router = useRouter();
+
+  const [activeTab, setActiveTab] = useState<'compose' | 'received' | 'sent'>('compose');
   const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  
-  const [showModal, setShowModal] = useState(false);
 
-  const SECRET_WINGLE_COST = 20;
-  const balance = currentUser?.wingitsBalance || 0;
+  // Recipient / Crush name option
+  const [recipientName, setRecipientName] = useState('');
 
-  const handleInitialClick = () => {
-    if (!phone.trim()) {
-      toast.error('Please enter a phone number');
+  // Payment auto-detection states
+  const [pendingLedgerId, setPendingLedgerId] = useState<string | null>(null);
+  const [isCheckingPayment, setIsCheckingPayment] = useState(false);
+
+  const smsPreview = buildSecretWingleSms({
+    recipientName,
+    appUrl: 'https://www.winglemingle.com'
+  });
+
+  const [sentList, setSentList] = useState<SentSecretWingle[]>([]);
+  const [loadingSent, setLoadingSent] = useState(false);
+
+  const SECRET_WINGLE_PRICE_LKR = 50;
+
+  const receivedWingles = secretWinglesReceived();
+
+  // Load sent secret wingles
+  useEffect(() => {
+    async function loadSent() {
+      setLoadingSent(true);
+      try {
+        const res = await getSentSecretWinglesAction();
+        if (res.ok && res.data) {
+          setSentList(res.data as SentSecretWingle[]);
+        }
+      } catch (e) {
+        console.error('Failed to load sent secret wingles', e);
+      } finally {
+        setLoadingSent(false);
+      }
+    }
+    loadSent();
+  }, []);
+
+  // Auto-polling for payment confirmation while pendingLedgerId is active
+  useEffect(() => {
+    if (!pendingLedgerId) return;
+
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 60; // Poll for 3 minutes
+
+    const interval = setInterval(async () => {
+      if (cancelled) return;
+      attempts++;
+      if (attempts > maxAttempts) {
+        clearInterval(interval);
+        setPendingLedgerId(null);
+        return;
+      }
+
+      try {
+        setIsCheckingPayment(true);
+        const check = await checkAndVerifyPendingPaymentAction(pendingLedgerId);
+        if (check.ok) {
+          clearInterval(interval);
+          setPendingLedgerId(null);
+          toast.success('🎉 Payment Confirmed! Secret Wingle dispatched & 20 Wingits awarded!');
+          setPhone('');
+          setMessage('');
+          setRecipientName('');
+          // Refresh sent list
+          const sentRes = await getSentSecretWinglesAction();
+          if (sentRes.ok && sentRes.data) {
+            setSentList(sentRes.data as SentSecretWingle[]);
+          }
+          setActiveTab('sent');
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+      } finally {
+        setIsCheckingPayment(false);
+      }
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [pendingLedgerId]);
+
+  const handleSendClick = async () => {
+    const cleanPhone = phone.trim();
+    if (!cleanPhone) {
+      toast.error('Please enter a recipient phone number');
+      return;
+    }
+    if (cleanPhone.replace(/[^0-9]/g, '').length < 9) {
+      toast.error('Please enter a valid mobile number (e.g. 077 123 4567)');
       return;
     }
     if (!message.trim()) {
-      toast.error('Please enter a message');
-      return;
-    }
-    setShowModal(true);
-  };
-
-  const confirmSend = async () => {
-    if (balance < SECRET_WINGLE_COST) {
-      router.push('/store');
+      toast.error('Please enter a secret message');
       return;
     }
 
     setLoading(true);
-    setShowModal(false);
-    try {
-      const paymentRes = await spendWingits(SECRET_WINGLE_COST, 'Sent a Secret Wingle');
-      if (!paymentRes.ok) {
-        setLoading(false);
-        return; // error handled inside spendWingits
-      }
 
-      const res = await sendSecretWingle(phone, message);
-      if (res.ok) {
-        toast.success('Secret Wingle sent!');
-        setPhone('');
-        setMessage('');
+    try {
+      const res = await initiateSecretWinglePaymentAction(cleanPhone, message, {
+        recipientName: recipientName.trim() || undefined
+      });
+
+      if (res.ok && res.redirectUrl) {
+        toast.info('Connecting to Genie payment gateway...');
+        if (res.ledgerId) {
+          setPendingLedgerId(res.ledgerId);
+        }
+        const win = window.open(res.redirectUrl, '_blank');
+        if (!win) {
+          window.location.href = res.redirectUrl;
+        }
       } else {
-        toast.error(res.error || 'Failed to send Secret Wingle');
+        toast.error(res.error || 'Failed to connect to Genie payment gateway');
       }
-    } catch (err) {
-      toast.error('An error occurred');
+    } catch (err: any) {
+      toast.error(err?.message || 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
   };
 
+  const promptSuggestions = [
+    "Hey, I've had a crush on you for a while... ✨",
+    "You've caught my eye every single time I see you! 🌹",
+    "Guess who thinks about you constantly? 😉",
+    "Coffee with a secret admirer sometime? ☕"
+  ];
+
+  const maskPhone = (raw: string) => {
+    const clean = raw.replace(/[^0-9]/g, '');
+    if (clean.length >= 7) {
+      return `+${clean.slice(0, 4)} ••• •${clean.slice(-3)}`;
+    }
+    return raw;
+  };
+
   return (
     <Page>
-      <PageHeader
-        title="Secret Wingles"
-      />
-      <div className="flex-1 overflow-y-auto p-4 flex justify-center">
-        <div className="w-full max-w-md flex flex-col space-y-8 mt-4">
-          
-          {/* Received Secret Wingles Section */}
-          {secretWinglesReceived().length > 0 && (
-            <div className="space-y-4">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Someone likes you! 🤫</h3>
-              <div className="space-y-3">
-                {secretWinglesReceived().map((sw) => (
-                  <div key={sw.id} className="bg-white dark:bg-[--surface-dark] border border-[--primary]/30 rounded-2xl p-5 shadow-md shadow-[--primary]/10 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-16 h-16 bg-[--primary]/10 rounded-bl-full -z-10" />
-                    <p className="text-gray-900 dark:text-white font-medium text-lg mb-2">"{sw.message}"</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Sent by: <span className="font-semibold text-[--primary]">{sw.sender?.name || 'A secret admirer'}</span> 
-                      {sw.sender && ` (${sw.sender.age}, ${sw.sender.location})`}
+      <PageHeader title="Secret Wingles" />
+
+      <div className="flex-1 overflow-y-auto px-4 py-6 flex justify-center">
+        <div className="w-full max-w-xl flex flex-col space-y-6">
+
+          {/* Navigation Tabs */}
+          <div className="flex bg-gray-100 dark:bg-white/5 p-1 rounded-2xl border border-gray-200/60 dark:border-white/10">
+            <button
+              onClick={() => setActiveTab('compose')}
+              className={`flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                activeTab === 'compose'
+                  ? 'bg-white dark:bg-[#1f1d36] text-[#ec4899] shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              <SendIcon className="w-3.5 h-3.5" />
+              <span>Send Secretly</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('received')}
+              className={`flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                activeTab === 'received'
+                  ? 'bg-white dark:bg-[#1f1d36] text-[#ec4899] shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              <Inbox className="w-3.5 h-3.5" />
+              <span>Received</span>
+              {receivedWingles.length > 0 && (
+                <span className="bg-[#ec4899] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  {receivedWingles.length}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('sent')}
+              className={`flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                activeTab === 'sent'
+                  ? 'bg-white dark:bg-[#1f1d36] text-[#ec4899] shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              <History className="w-3.5 h-3.5" />
+              <span>Sent History</span>
+              {sentList.length > 0 && (
+                <span className="bg-gray-200 dark:bg-white/20 text-gray-700 dark:text-gray-300 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  {sentList.length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* ────────── TAB 1: COMPOSE / SEND ────────── */}
+          {activeTab === 'compose' && (
+            <div className="space-y-6 animate-in fade-in duration-150">
+              {/* Header Hero Banner */}
+              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#8b2fc9]/20 via-[#ec4899]/15 to-[#0ea5e9]/10 border border-white/10 p-6 sm:p-8">
+                <div className="relative z-10 flex flex-col items-center text-center space-y-2">
+                  <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-[#ec4899] to-[#8b2fc9] flex items-center justify-center text-white shadow-lg shadow-[#ec4899]/25 mb-1">
+                    <Sparkles className="w-6 h-6" />
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-display font-bold text-gray-900 dark:text-white">
+                    Have a secret crush? 🤫
+                  </h2>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 max-w-md leading-relaxed">
+                    Send them an anonymous SMS. When they open WingleMingle with their phone number, your identity will be revealed!
+                  </p>
+                </div>
+              </div>
+
+              {/* Compose Card */}
+              <div className="bg-white dark:bg-[#0e0c22] border border-gray-200/80 dark:border-white/10 rounded-3xl p-5 sm:p-7 shadow-sm space-y-5">
+
+                {/* Recipient Mobile Number */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-[#ec4899]" />
+                      Their Mobile Number (යවන කෙනාගේ Number එක)
+                    </label>
+                    <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3" /> Anonymous SMS
+                    </span>
+                  </div>
+
+                  <div className="relative">
+                    <input
+                      type="tel"
+                      placeholder="077 123 4567 or +94 77 123 4567"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full px-4 py-3.5 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-[#ec4899]/50 focus:border-[#ec4899] transition-all outline-none text-sm font-medium"
+                    />
+                  </div>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    Works with any Sri Lankan Dialog, Mobitel, Airtel, or Hutch number.
+                  </p>
+                </div>
+
+                {/* Recipient / Crush's Name (Optional) */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
+                      <Heart className="w-3.5 h-3.5 text-[#ec4899]" />
+                      Their Name / Crush&apos;s Name (Optional)
+                    </label>
+                    <span className="text-[10px] text-gray-400 font-medium">
+                      {recipientName.trim() ? `Greeting: "Hey ${recipientName.trim()}"` : 'Anonymous Greeting'}
+                    </span>
+                  </div>
+
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="e.g. Smriti, Hiruni, Kasun... (leave empty for generic greeting)"
+                      value={recipientName}
+                      onChange={(e) => setRecipientName(e.target.value)}
+                      maxLength={30}
+                      className="w-full px-4 py-3 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-[#ec4899]/50 focus:border-[#ec4899] transition-all outline-none text-xs font-medium"
+                    />
+                  </div>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-normal">
+                    💡 මැසේජ් එක යන කෙනාගේ නම (Crush&apos;s Name) දැම්මොත් SMS එකේ <b>&quot;Hey {recipientName.trim() || 'Smriti'}&quot;</b> කියලා එයාටම කතා කරලා මැසේජ් එක යනවා. <b>ඔයාගේ නම 100% Anonymous</b> රහසක් විදියටම තියෙනවා!
+                  </p>
+                </div>
+
+                {/* Message Field */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
+                      <MessageSquare className="w-3.5 h-3.5 text-[#0ea5e9]" />
+                      Your Secret Message
+                    </label>
+                    <span className={`text-[11px] font-medium ${message.length > 250 ? 'text-red-500' : 'text-gray-400'}`}>
+                      {message.length} / 250
+                    </span>
+                  </div>
+
+                  <textarea
+                    placeholder="Write something sweet, playful, or intriguing..."
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value.slice(0, 250))}
+                    rows={4}
+                    className="w-full px-4 py-3.5 rounded-2xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-[#ec4899]/50 focus:border-[#ec4899] transition-all outline-none resize-none text-sm leading-relaxed"
+                  />
+
+                  {/* Suggestion Chips */}
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Need inspiration? Tap to use:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {promptSuggestions.map((prompt, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setMessage(prompt)}
+                          className="text-[11px] px-3 py-1.5 rounded-full bg-gray-100 dark:bg-white/5 hover:bg-[#ec4899]/10 hover:text-[#ec4899] text-gray-700 dark:text-gray-300 border border-gray-200/50 dark:border-white/5 transition-colors text-left"
+                        >
+                          {prompt}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ────────── LIVE SMS PREVIEW CARD ────────── */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                      <span>📱 Real SMS Preview (English • සිංහල • தமிழ்)</span>
+                    </span>
+                  </div>
+
+                  <div className="relative rounded-2xl bg-gradient-to-b from-gray-100 to-gray-50 dark:from-white/10 dark:to-white/5 p-3.5 border border-gray-200/80 dark:border-white/10 shadow-inner space-y-2">
+                    <div className="flex items-center gap-2 text-[10px] text-gray-400 pb-1 border-b border-gray-200/50 dark:border-white/5">
+                      <span className="font-semibold text-gray-700 dark:text-gray-300">From: WingleMingle</span>
+                      <span>•</span>
+                      <span>To: {phone || 'Recipient Number'}</span>
+                    </div>
+
+                    <div className="bg-white dark:bg-[#15122e] rounded-2xl p-3 border border-pink-500/20 shadow-sm">
+                      <p className="text-xs text-gray-900 dark:text-white leading-relaxed whitespace-pre-line font-medium">
+                        {smsPreview}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Submit Action */}
+                <div className="pt-2 space-y-3">
+                  {pendingLedgerId && (
+                    <div className="bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-blue-500/10 border border-purple-500/30 rounded-2xl p-4 text-xs space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                          <Clock className="w-4 h-4 text-purple-500 animate-spin" />
+                          <span>Waiting for Geniebiz Payment...</span>
+                        </span>
+                        <span className="text-[10px] bg-purple-500/20 text-purple-600 dark:text-purple-300 font-semibold px-2 py-0.5 rounded-full">
+                          Auto-Checking
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                        Complete your payment in the Geniebiz window. Once approved, this will automatically confirm and send your message.
+                      </p>
+                      <div className="flex items-center gap-2 pt-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={async () => {
+                            if (!pendingLedgerId) return;
+                            setIsCheckingPayment(true);
+                            const check = await checkAndVerifyPendingPaymentAction(pendingLedgerId);
+                            setIsCheckingPayment(false);
+                            if (check.ok) {
+                              setPendingLedgerId(null);
+                              toast.success('🎉 Payment Confirmed! Secret Wingle dispatched & 20 Wingits awarded!');
+                              setPhone('');
+                              setMessage('');
+                              const sentRes = await getSentSecretWinglesAction();
+                              if (sentRes.ok && sentRes.data) {
+                                setSentList(sentRes.data as SentSecretWingle[]);
+                              }
+                              setActiveTab('sent');
+                            } else {
+                              toast.info('Payment is still pending on Geniebiz. Please complete the payment.');
+                            }
+                          }}
+                          loading={isCheckingPayment}
+                          className="w-full text-xs py-1.5"
+                        >
+                          Check Status Now
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setPendingLedgerId(null)}
+                          className="text-xs py-1.5 text-gray-400"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  <Button
+                    className="w-full py-4 text-base font-semibold flex items-center justify-center gap-2 shadow-lg shadow-[#ec4899]/25 bg-gradient-to-r from-[#ec4899] to-[#8b2fc9] text-white hover:opacity-95"
+                    onClick={handleSendClick}
+                    loading={loading}
+                    disabled={loading || !phone.trim() || !message.trim()}
+                  >
+                    <SendIcon className="w-4 h-4" />
+                    <span>Send Secret Wingle</span>
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-white/20 font-bold ml-1">
+                      Rs. {SECRET_WINGLE_PRICE_LKR}
+                    </span>
+                  </Button>
+
+                  <div className="bg-gray-50 dark:bg-white/[0.03] border border-gray-200/60 dark:border-white/5 rounded-2xl p-3.5 text-[11px] space-y-2 text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center justify-between text-gray-700 dark:text-gray-300 font-medium">
+                      <span className="flex items-center gap-1.5">
+                        <Lock className="w-3.5 h-3.5 text-[#ec4899]" />
+                        <span>Genie Payment Gateway</span>
+                      </span>
+                      <span className="font-bold text-gray-900 dark:text-white">Rs. {SECRET_WINGLE_PRICE_LKR} LKR</span>
+                    </div>
+                    <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
+                      <span className="flex items-center gap-1.5">
+                        <Coins className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Wingits Rewards</span>
+                      </span>
+                      <span>+20 for you & +20 for them</span>
+                    </div>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 pt-0.5 leading-normal">
+                      🔒 An anonymous SMS is sent immediately after successful Genie payment.
                     </p>
                   </div>
-                ))}
+                </div>
               </div>
             </div>
           )}
 
-          {/* Send Form Section */}
-          <div className="text-center space-y-2 mt-4">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Have a secret crush?</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Send them an anonymous message. If they sign up for WingleMingle with their phone number, they'll see it!
-            </p>
-          </div>
+          {/* ────────── TAB 2: RECEIVED WINGLES ────────── */}
+          {activeTab === 'received' && (
+            <div className="space-y-4 animate-in fade-in duration-150">
+              {!currentUser?.phone && (
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-3.5 text-xs text-amber-700 dark:text-amber-300 flex items-center justify-between gap-3">
+                  <span>💡 Link your mobile number to ensure all Secret Wingles sent to your phone are revealed!</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => router.push('/settings')}
+                    className="shrink-0 text-xs py-1 px-3 border-amber-500/30"
+                  >
+                    Settings
+                  </Button>
+                </div>
+              )}
 
-          <div className="bg-white dark:bg-[--surface-dark] border border-gray-200 dark:border-[--border-dark] rounded-2xl p-6 shadow-sm flex flex-col space-y-4">
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Their Phone Number</label>
-              <input
-                type="tel"
-                placeholder="+1 234 567 8900"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-[--border-dark] bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[--primary] focus:border-transparent transition-all outline-none"
-              />
-            </div>
-            
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Your Message</label>
-              <textarea
-                placeholder="Hey, I've had a crush on you for a while..."
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                rows={4}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-[--border-dark] bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-[--primary] focus:border-transparent transition-all outline-none resize-none"
-              />
-            </div>
+              {receivedWingles.length === 0 ? (
+                <div className="bg-white dark:bg-[#0e0c22] border border-gray-200/80 dark:border-white/10 rounded-3xl p-10 text-center space-y-3">
+                  <div className="h-16 w-16 mx-auto rounded-full bg-[#ec4899]/10 text-[#ec4899] flex items-center justify-center">
+                    <Lock className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                    No Secret Wingles yet
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+                    When someone sends a Secret Wingle to your phone number, it will show up right here unlocked!
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between px-1">
+                    <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                      <span>Someone likes you!</span>
+                      <span className="bg-[#ec4899]/15 text-[#ec4899] text-xs font-bold px-2 py-0.5 rounded-full">
+                        {receivedWingles.length}
+                      </span>
+                    </h3>
+                  </div>
 
-            <Button
-              className="w-full py-4 text-lg font-semibold flex items-center justify-center gap-2"
-              onClick={handleInitialClick}
-              loading={loading}
-              disabled={loading || !phone.trim() || !message.trim()}
-            >
-              <SendIcon className="w-5 h-5" />
-              Send Secretly
-            </Button>
-          </div>
-          
+                  <div className="space-y-3">
+                    {receivedWingles.map((sw) => (
+                      <div
+                        key={sw.id}
+                        className="bg-white dark:bg-[#0e0c22] border border-[#ec4899]/30 rounded-3xl p-5 shadow-sm relative overflow-hidden space-y-4"
+                      >
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-[#ec4899]/20 to-transparent rounded-bl-full pointer-events-none" />
+
+                        {/* Message Quote */}
+                        <div className="relative z-10">
+                          <p className="text-gray-900 dark:text-white font-medium text-base sm:text-lg leading-snug">
+                            "{sw.message}"
+                          </p>
+                        </div>
+
+                        {/* Sender Details */}
+                        <div className="pt-3 border-t border-gray-100 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-[#ec4899] to-[#8b2fc9] flex items-center justify-center text-white overflow-hidden flex-shrink-0">
+                              {sw.sender?.photo ? (
+                                <img
+                                  src={sw.sender.photo}
+                                  alt={sw.sender.name}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <Heart className="w-5 h-5 fill-white" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
+                                {sw.sender?.name || 'A secret admirer'}
+                              </p>
+                              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                {sw.sender ? `${sw.sender.age} yrs • ${sw.sender.location}` : 'Identity revealed upon sign in'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons for Recipient */}
+                          <div className="flex items-center gap-2">
+                            {sw.sender?.id && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => router.push(`/profile/${sw.sender!.id}`)}
+                                  className="text-xs py-1.5 px-3 rounded-xl border-gray-200 dark:border-white/10"
+                                >
+                                  View Profile
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    const conv = ensureConversation(sw.sender!.id);
+                                    router.push(`/mingles/${conv.id}`);
+                                  }}
+                                  className="text-xs py-1.5 px-3 rounded-xl bg-gradient-to-r from-[#ec4899] to-[#8b2fc9] text-white flex items-center gap-1.5 shadow-sm shadow-[#ec4899]/20"
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5" />
+                                  <span>Chat with Admirer</span>
+                                </Button>
+                              </>
+                            )}
+
+                            <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-2 py-1 rounded-full shrink-0">
+                              <Unlock className="w-3 h-3" /> Unlocked
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ────────── TAB 3: SENT HISTORY ────────── */}
+          {activeTab === 'sent' && (
+            <div className="space-y-4 animate-in fade-in duration-150">
+              {loadingSent ? (
+                <div className="py-12 text-center text-xs text-gray-400">Loading sent Secret Wingles...</div>
+              ) : sentList.length === 0 ? (
+                <div className="bg-white dark:bg-[#0e0c22] border border-gray-200/80 dark:border-white/10 rounded-3xl p-10 text-center space-y-3">
+                  <div className="h-16 w-16 mx-auto rounded-full bg-blue-500/10 text-[#0ea5e9] flex items-center justify-center">
+                    <History className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                    No sent Secret Wingles yet
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+                    When you send a Secret Wingle, you can track whether it was delivered via SMS and unlocked right here.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setActiveTab('compose')}
+                    className="mt-2"
+                  >
+                    Send your first Secret Wingle
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {sentList.map((sw) => (
+                    <div
+                      key={sw.id}
+                      className="bg-white dark:bg-[#0e0c22] border border-gray-200/80 dark:border-white/10 rounded-3xl p-4 sm:p-5 shadow-sm space-y-3"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                          <Phone className="w-3.5 h-3.5 text-gray-400" />
+                          {maskPhone(sw.targetPhone)}
+                        </span>
+
+                        {sw.unlocked ? (
+                          <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                            <CheckCircle2 className="w-3 h-3" /> Opened by recipient
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-full">
+                            <Clock className="w-3 h-3" /> Delivered via SMS
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 italic bg-gray-50 dark:bg-white/5 p-3 rounded-2xl">
+                        "{sw.message}"
+                      </p>
+
+                      <p className="text-[10px] text-gray-400">
+                        Sent on {new Date(sw.createdAt).toLocaleDateString()} at{' '}
+                        {new Date(sw.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
       </div>
-
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-card w-full max-w-sm rounded-3xl p-6 shadow-xl border relative">
-            <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-amber-100 dark:bg-amber-900/30 text-amber-500 p-3 rounded-full border border-amber-200 dark:border-amber-700/50">
-              <Coins className="w-8 h-8" />
-            </div>
-            
-            <div className="mt-6 text-center space-y-3">
-              <h2 className="text-2xl font-bold">Secret Wingle</h2>
-              
-              {balance >= SECRET_WINGLE_COST ? (
-                <>
-                  <p className="text-muted-foreground">
-                    This costs <strong className="text-foreground">{SECRET_WINGLE_COST} Wingits</strong>.
-                  </p>
-                  <div className="bg-secondary/50 p-3 rounded-xl">
-                    <p className="text-sm">Your balance: <strong className="text-amber-500">{balance} Wingits</strong></p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p className="text-muted-foreground">
-                    You need <strong className="text-foreground">{SECRET_WINGLE_COST} Wingits</strong>, but you only have <strong className="text-amber-500">{balance}</strong>.
-                  </p>
-                </>
-              )}
-            </div>
-
-            <div className="mt-8 flex flex-col gap-3">
-              {balance >= SECRET_WINGLE_COST ? (
-                <Button onClick={confirmSend} className="w-full">
-                  Confirm & Send
-                </Button>
-              ) : (
-                <Button onClick={confirmSend} className="w-full bg-amber-500 hover:bg-amber-600 text-white">
-                  Buy Wingits
-                </Button>
-              )}
-              <Button variant="ghost" onClick={() => setShowModal(false)} className="w-full">
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </Page>
   );
 }

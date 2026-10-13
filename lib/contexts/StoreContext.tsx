@@ -1792,13 +1792,17 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       const { sendSecretWingleAction } = await import('@/app/actions/wingle');
       const res = await sendSecretWingleAction(targetPhone, message);
       if (res.ok && res.data) {
-        // We do not add it to our local db since we are the sender and the SecretWingles tab is for received ones.
-        // Wait, if there was a "sent" view, we would add it. For now just return ok.
+        setDb((d) => ({
+          ...d,
+          users: d.users.map((u) =>
+            u.id === sessionId ? { ...u, wingitsBalance: Math.max(0, u.wingitsBalance - 20) } : u
+          )
+        }));
         return { ok: true, data: res.data as any };
       }
       return { ok: false, error: res.error || 'Failed to send' };
     },
-    []
+    [sessionId]
   );
 
   /* ---------------------------------------------------------------- chat */

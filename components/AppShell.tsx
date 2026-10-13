@@ -62,6 +62,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     notificationsOf,
     unreadHeartBucketCount,
     unreadBrokenHeartCount,
+    secretWinglesReceived,
     logout
   } = useStore();
 
@@ -93,6 +94,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
     0
   );
   const unreadNotifications = notificationsOf().filter((n) => !n.read).length;
+  const unreadSecretWingles = secretWinglesReceived().length;
   const primaryPhoto = photosOf(currentUser.id)[0];
 
   const main: NavItem[] = [
@@ -101,7 +103,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   { to: '/broken-heart', label: 'Broken Heart', icon: <HeartCrackIcon className="h-[18px] w-[18px]" />, badge: unreadBrokenHeartCount() },
   { to: '/likes', label: 'Likes', icon: <HeartIcon className="h-[18px] w-[18px]" />, badge: unreadLikesCount() },
   { to: '/wingles', label: 'Wingles', icon: <SendIcon className="h-[18px] w-[18px]" />, badge: unreadWinglesCount() },
-  { to: '/secret-wingles', label: 'Secret Wingles', icon: <GhostIcon className="h-[18px] w-[18px]" /> },
+  { to: '/secret-wingles', label: 'Secret Wingles', icon: <GhostIcon className="h-[18px] w-[18px]" />, badge: unreadSecretWingles || undefined },
   { to: '/connections', label: 'Connections', icon: <UsersIcon className="h-[18px] w-[18px]" /> },
   { to: '/mingles', label: 'Mingles', icon: <MessageCircleIcon className="h-[18px] w-[18px]" />, badge: unreadMingles },
   { to: '/photos', label: 'Photos', icon: <ImageIcon className="h-[18px] w-[18px]" /> },

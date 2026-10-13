@@ -68,6 +68,81 @@ export default async function PaymentSuccessPage({
     );
   }
 
+  if (result.isSecretWingle) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="relative w-full max-w-lg rounded-4xl bg-cream-deep border border-sand/80 p-8 sm:p-10 text-center shadow-card overflow-hidden">
+          {/* Top decorative gradient bar */}
+          <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-[#ec4899] via-[#8b2fc9] to-[#0ea5e9]" />
+
+          {/* Glowing Hero Icon */}
+          <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-tr from-[#ec4899] to-[#8b2fc9] text-white shadow-lg shadow-[#ec4899]/30 ring-4 ring-pink-500/20">
+            <span className="text-3xl">🤫</span>
+          </div>
+
+          <h1 className="font-display text-3xl sm:text-4xl font-bold text-ink mb-3 tracking-tight">
+            Secret Wingle Sent! 💌
+          </h1>
+          <p className="text-[15px] leading-relaxed text-ink-soft mb-6 max-w-sm mx-auto">
+            Your payment of <strong>Rs. 50</strong> was successful! Your anonymous SMS is on its way, and both of you have received bonus Wingits!
+          </p>
+
+          {/* Rewards Callout Card */}
+          <div className="rounded-2xl bg-white/60 dark:bg-white/5 border border-sand/80 p-4 mb-6 text-left space-y-3">
+            <div className="flex items-center justify-between text-xs sm:text-sm">
+              <span className="flex items-center gap-1.5 text-ink font-medium">
+                <CoinsIcon className="w-4 h-4 text-amber-500" />
+                <span>Your Reward</span>
+              </span>
+              <span className="font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full">
+                +20 Wingits Credited
+              </span>
+            </div>
+
+            <div className="h-px bg-sand/40 w-full" />
+
+            <div className="flex items-center justify-between text-xs sm:text-sm">
+              <span className="flex items-center gap-1.5 text-ink font-medium">
+                <span className="text-sm">🎁</span>
+                <span>Crush's Gift</span>
+              </span>
+              <span className="font-bold text-pink-600 dark:text-pink-400 bg-pink-500/10 px-2.5 py-0.5 rounded-full">
+                +20 Wingits Gifted
+              </span>
+            </div>
+
+            <div className="h-px bg-sand/40 w-full" />
+
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-ink-muted">Transaction ID</span>
+              <span className="font-mono text-ink-soft text-[11px] truncate max-w-[180px]">
+                {transactionId}
+              </span>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="space-y-3">
+            <Link
+              href="/secret-wingles"
+              className="inline-flex items-center justify-center gap-2 w-full py-4 px-8 rounded-2xl bg-gradient-to-r from-[#ec4899] to-[#8b2fc9] text-white font-semibold shadow-lg shadow-[#ec4899]/25 hover:opacity-95 hover:scale-[1.01] active:scale-[0.99] transition-all text-base"
+            >
+              <span>View Secret Wingles History</span>
+              <ArrowRightIcon className="w-4 h-4 ml-1" />
+            </Link>
+
+            <Link
+              href="/discover"
+              className="inline-block text-sm text-ink-muted hover:text-white transition-colors"
+            >
+              Back to Discover
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <div className="relative w-full max-w-lg rounded-4xl bg-cream-deep border border-sand/80 p-8 sm:p-10 text-center shadow-card overflow-hidden">
