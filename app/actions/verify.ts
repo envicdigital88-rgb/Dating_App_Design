@@ -4,7 +4,13 @@ import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+function getResendClient() {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) {
+    return null;
+  }
+  return new Resend(apiKey);
+}
 
 export async function verifyEmailAddress(email: string) {
   try {
@@ -22,6 +28,12 @@ export async function verifyEmailAddress(email: string) {
     // In a real app, generate a real OTP and save it in the database.
     // For this demo, we'll simulate sending the OTP.
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    const resend = getResendClient();
+    if (!resend) {
+      console.warn('[Resend] RESEND_API_KEY not configured. Simulating OTP email.');
+      return { ok: true, simulated: true };
+    }
 
     await resend.emails.send({
       from: 'Wingle Mingle <no-reply@winglemingle.com>',

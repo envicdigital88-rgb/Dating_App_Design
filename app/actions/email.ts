@@ -5,10 +5,21 @@ import { render } from '@react-email/components';
 import { InvoiceEmail } from '@/components/emails/InvoiceEmail';
 import React from 'react';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResendClient() {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) {
+    return null;
+  }
+  return new Resend(apiKey);
+}
 
 export async function sendInvoiceEmail(transactionId: string, amount: number, wingitsCredited: number, date: string, customerEmail: string) {
   try {
+    const resend = getResendClient();
+    if (!resend) {
+      console.warn('[Resend] RESEND_API_KEY not configured. Skipping invoice email.');
+      return { ok: false, error: 'Email service not configured' };
+    }
     const htmlBody = await render(
       React.createElement(InvoiceEmail, {
         transactionId,
