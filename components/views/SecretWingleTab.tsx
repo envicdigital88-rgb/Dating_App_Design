@@ -47,6 +47,7 @@ export function SecretWingleTab() {
 
   // Payment auto-detection states
   const [pendingLedgerId, setPendingLedgerId] = useState<string | null>(null);
+  const [pendingPaymentUrl, setPendingPaymentUrl] = useState<string | null>(null);
   const [isCheckingPayment, setIsCheckingPayment] = useState(false);
 
   const smsPreview = buildSecretWingleSms({
@@ -60,6 +61,64 @@ export function SecretWingleTab() {
   const SECRET_WINGLE_PRICE_LKR = 50;
 
   const receivedWingles = secretWinglesReceived();
+
+  // Helper to verify and finalize pending payment
+  const verifyAndCompletePending = async (ledgerId: string) => {
+    try {
+      setIsCheckingPayment(true);
+      const check = await checkAndVerifyPendingPaymentAction(ledgerId);
+      if (check.ok) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('wm_pending_secret_wingle_ledger');
+          localStorage.removeItem('wm_pending_secret_wingle_url');
+        }
+        setPendingLedgerId(null);
+        setPendingPaymentUrl(null);
+        toast.success('🎉 Payment Confirmed! Secret Wingle dispatched & 20 Wingits awarded!');
+        setPhone('');
+        setMessage('');
+        setRecipientName('');
+        const sentRes = await getSentSecretWinglesAction();
+        if (sentRes.ok && sentRes.data) {
+          setSentList(sentRes.data as SentSecretWingle[]);
+        }
+        setActiveTab('sent');
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('Check error:', err);
+      return false;
+    } finally {
+      setIsCheckingPayment(false);
+    }
+  };
+
+  // Restore pending ledger from localStorage if user reloaded/returned
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedLedgerId = localStorage.getItem('wm_pending_secret_wingle_ledger');
+      const savedUrl = localStorage.getItem('wm_pending_secret_wingle_url');
+      if (savedLedgerId) {
+        setPendingLedgerId(savedLedgerId);
+        setPendingPaymentUrl(savedUrl);
+        // Immediately try checking
+        verifyAndCompletePending(savedLedgerId);
+      }
+    }
+  }, []);
+
+  // Window focus listener: when user switches back from Dialog tab, check automatically
+  useEffect(() => {
+    if (!pendingLedgerId) return;
+
+    const onFocus = () => {
+      verifyAndCompletePending(pendingLedgerId);
+    };
+
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [pendingLedgerId]);
 
   // Load sent secret wingles
   useEffect(() => {
@@ -92,32 +151,16 @@ export function SecretWingleTab() {
       attempts++;
       if (attempts > maxAttempts) {
         clearInterval(interval);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('wm_pending_secret_wingle_ledger');
+          localStorage.removeItem('wm_pending_secret_wingle_url');
+        }
         setPendingLedgerId(null);
+        setPendingPaymentUrl(null);
         return;
       }
 
-      try {
-        setIsCheckingPayment(true);
-        const check = await checkAndVerifyPendingPaymentAction(pendingLedgerId);
-        if (check.ok) {
-          clearInterval(interval);
-          setPendingLedgerId(null);
-          toast.success('🎉 Payment Confirmed! Secret Wingle dispatched & 20 Wingits awarded!');
-          setPhone('');
-          setMessage('');
-          setRecipientName('');
-          // Refresh sent list
-          const sentRes = await getSentSecretWinglesAction();
-          if (sentRes.ok && sentRes.data) {
-            setSentList(sentRes.data as SentSecretWingle[]);
-          }
-          setActiveTab('sent');
-        }
-      } catch (err) {
-        console.error('Polling error:', err);
-      } finally {
-        setIsCheckingPayment(false);
-      }
+      await verifyAndCompletePending(pendingLedgerId);
     }, 3000);
 
     return () => {
@@ -152,6 +195,11 @@ export function SecretWingleTab() {
         toast.info('Connecting to Genie payment gateway...');
         if (res.ledgerId) {
           setPendingLedgerId(res.ledgerId);
+          setPendingPaymentUrl(res.redirectUrl);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('wm_pending_secret_wingle_ledger', res.ledgerId);
+            localStorage.setItem('wm_pending_secret_wingle_url', res.redirectUrl);
+          }
         }
         const win = window.open(res.redirectUrl, '_blank');
         if (!win) {
@@ -378,55 +426,70 @@ export function SecretWingleTab() {
                 {/* Submit Action */}
                 <div className="pt-2 space-y-3">
                   {pendingLedgerId && (
-                    <div className="bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-blue-500/10 border border-purple-500/30 rounded-2xl p-4 text-xs space-y-2">
+                    <div className="bg-gradient-to-r from-purple-500/15 via-pink-500/15 to-blue-500/15 border-2 border-pink-500/30 rounded-3xl p-5 text-xs space-y-3 shadow-lg">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                          <Clock className="w-4 h-4 text-purple-500 animate-spin" />
-                          <span>Waiting for Geniebiz Payment...</span>
+                        <span className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-pink-500 animate-spin" />
+                          <span>Dialog Genie Payment in Progress...</span>
                         </span>
-                        <span className="text-[10px] bg-purple-500/20 text-purple-600 dark:text-purple-300 font-semibold px-2 py-0.5 rounded-full">
-                          Auto-Checking
+                        <span className="text-[10px] bg-pink-500/20 text-pink-600 dark:text-pink-300 font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
+                          Auto-Verifying
                         </span>
                       </div>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                        Complete your payment in the Geniebiz window. Once approved, this will automatically confirm and send your message.
-                      </p>
-                      <div className="flex items-center gap-2 pt-1">
+
+                      <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-3 text-[11px] text-amber-700 dark:text-amber-300 space-y-1">
+                        <p className="font-semibold flex items-center gap-1.5">
+                          <span>💡 Dialog Test Mode Notice:</span>
+                        </p>
+                        <p className="leading-relaxed">
+                          Dialog test window එකේ OTP දැමීමෙන් පසු <code>{`{"message": "Forbidden"}`}</code> ලෙස දිස්වුවද ගෙවීම සාර්ථකව සම්පූර්ණ වී ඇත! පහත <b>&quot;Verify &amp; Send Secret Wingle&quot;</b> button එක click කරන්න.
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
                         <Button
                           size="sm"
-                          variant="outline"
                           onClick={async () => {
                             if (!pendingLedgerId) return;
-                            setIsCheckingPayment(true);
-                            const check = await checkAndVerifyPendingPaymentAction(pendingLedgerId);
-                            setIsCheckingPayment(false);
-                            if (check.ok) {
-                              setPendingLedgerId(null);
-                              toast.success('🎉 Payment Confirmed! Secret Wingle dispatched & 20 Wingits awarded!');
-                              setPhone('');
-                              setMessage('');
-                              const sentRes = await getSentSecretWinglesAction();
-                              if (sentRes.ok && sentRes.data) {
-                                setSentList(sentRes.data as SentSecretWingle[]);
-                              }
-                              setActiveTab('sent');
-                            } else {
-                              toast.info('Payment is still pending on Geniebiz. Please complete the payment.');
+                            const ok = await verifyAndCompletePending(pendingLedgerId);
+                            if (!ok) {
+                              toast.info('Payment is still pending on Dialog. Please finish the payment window or try again in a few seconds.');
                             }
                           }}
                           loading={isCheckingPayment}
-                          className="w-full text-xs py-1.5"
+                          className="w-full py-3 bg-gradient-to-r from-[#ec4899] to-[#8b2fc9] text-white font-semibold text-xs shadow-md hover:opacity-95"
                         >
-                          Check Status Now
+                          <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                          Verify &amp; Send Secret Wingle Now
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setPendingLedgerId(null)}
-                          className="text-xs py-1.5 text-gray-400"
-                        >
-                          Cancel
-                        </Button>
+
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                          {pendingPaymentUrl && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(pendingPaymentUrl, '_blank')}
+                              className="w-full sm:w-auto text-xs py-2 whitespace-nowrap"
+                            >
+                              Open Dialog Tab
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              if (typeof window !== 'undefined') {
+                                localStorage.removeItem('wm_pending_secret_wingle_ledger');
+                                localStorage.removeItem('wm_pending_secret_wingle_url');
+                              }
+                              setPendingLedgerId(null);
+                              setPendingPaymentUrl(null);
+                            }}
+                            className="text-xs py-2 text-gray-400 hover:text-red-400"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}

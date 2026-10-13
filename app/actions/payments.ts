@@ -1,11 +1,29 @@
 'use server';
 
 import crypto from 'crypto';
+import { headers } from 'next/headers';
 import { getSession } from '@/lib/session';
 import { db } from '@/lib/db';
 import { sendInvoiceEmail } from '@/app/actions/email';
 
 const DEFAULT_GENIE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBJZCI6IjM2YmFmY2U3LWEyMDEtNDI5Yi1hOWUyLWM1Yjc4NTQ2Njc3YyIsImNvbXBhbnlJZCI6IjYzOTdmMzlkZjA3ZmJhMDAwODQyYTkwYiIsImlhdCI6MTY3MDkwMjY4NSwiZXhwIjo0ODI2NTc2Mjg1fQ.fy12dgFhA3iB_RCjD7y8j5HClNRZUiBZgAg-QzFpxaE";
+
+async function getAppUrl(): Promise<string> {
+  try {
+    const headerList = await headers();
+    const host = headerList.get('x-forwarded-host') || headerList.get('host');
+    const proto = headerList.get('x-forwarded-proto') || 'https';
+    if (host) {
+      return `${proto}://${host}`;
+    }
+  } catch {}
+
+  const rawAppUrl = (process.env.NEXT_PUBLIC_APP_URL || '').trim();
+  if (rawAppUrl) {
+    return rawAppUrl.replace(/^http:\/\//, 'https://');
+  }
+  return 'https://www.winglemingle.com';
+}
 
 export async function buyWingitsAction(packageAmountLKR: number, wingitsAmount: number) {
   const session = await getSession();
@@ -15,8 +33,7 @@ export async function buyWingitsAction(packageAmountLKR: number, wingitsAmount: 
   const GENIE_API_URL = (process.env.GENIE_API_URL || "https://api.uat.geniebiz.lk").trim();
   const GENIE_APP_KEY = (process.env.GENIE_APP_KEY || "").trim() || DEFAULT_GENIE_KEY;
 
-  const rawAppUrl = (process.env.NEXT_PUBLIC_APP_URL || '').trim();
-  const APP_URL = rawAppUrl ? rawAppUrl.replace(/^http:\/\//, 'https://') : 'https://winglemingle.com';
+  const APP_URL = await getAppUrl();
 
   // 1. Insert PENDING record into TransactionLedger
   const ledger = await db.orm.public.TransactionLedger.create({
@@ -115,8 +132,7 @@ export async function initiateSecretWinglePaymentAction(
   const GENIE_API_URL = (process.env.GENIE_API_URL || "https://api.uat.geniebiz.lk").trim();
   const GENIE_APP_KEY = (process.env.GENIE_APP_KEY || "").trim() || DEFAULT_GENIE_KEY;
 
-  const rawAppUrl = (process.env.NEXT_PUBLIC_APP_URL || '').trim();
-  const APP_URL = rawAppUrl ? rawAppUrl.replace(/^http:\/\//, 'https://') : 'https://winglemingle.com';
+  const APP_URL = await getAppUrl();
 
   const AMOUNT_LKR = 50;
   const WINGITS_REWARD = 20;
