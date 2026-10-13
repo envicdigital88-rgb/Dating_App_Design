@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   SendIcon,
   Sparkles,
@@ -62,12 +62,22 @@ export function SecretWingleTab() {
 
   const receivedWingles = secretWinglesReceived();
 
+  const paymentPopupRef = useRef<Window | null>(null);
+
   // Helper to verify and finalize pending payment
   const verifyAndCompletePending = async (ledgerId: string) => {
     try {
       setIsCheckingPayment(true);
       const check = await checkAndVerifyPendingPaymentAction(ledgerId);
       if (check.ok) {
+        // Auto-close Dialog payment popup window so user never sees the blank/forbidden page
+        if (paymentPopupRef.current && !paymentPopupRef.current.closed) {
+          try {
+            paymentPopupRef.current.close();
+          } catch {}
+          paymentPopupRef.current = null;
+        }
+
         if (typeof window !== 'undefined') {
           localStorage.removeItem('wm_pending_secret_wingle_ledger');
           localStorage.removeItem('wm_pending_secret_wingle_url');
@@ -201,7 +211,12 @@ export function SecretWingleTab() {
             localStorage.setItem('wm_pending_secret_wingle_url', res.redirectUrl);
           }
         }
-        const win = window.open(res.redirectUrl, '_blank');
+        const win = window.open(
+          res.redirectUrl,
+          'GeniePaymentWindow',
+          'width=550,height=750,left=250,top=100'
+        );
+        paymentPopupRef.current = win;
         if (!win) {
           window.location.href = res.redirectUrl;
         }
@@ -468,7 +483,10 @@ export function SecretWingleTab() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => window.open(pendingPaymentUrl, '_blank')}
+                              onClick={() => {
+                                const win = window.open(pendingPaymentUrl, 'GeniePaymentWindow', 'width=550,height=750,left=250,top=100');
+                                paymentPopupRef.current = win;
+                              }}
                               className="w-full sm:w-auto text-xs py-2 whitespace-nowrap"
                             >
                               Open Dialog Tab
@@ -478,6 +496,12 @@ export function SecretWingleTab() {
                             size="sm"
                             variant="ghost"
                             onClick={() => {
+                              if (paymentPopupRef.current && !paymentPopupRef.current.closed) {
+                                try {
+                                  paymentPopupRef.current.close();
+                                } catch {}
+                                paymentPopupRef.current = null;
+                              }
                               if (typeof window !== 'undefined') {
                                 localStorage.removeItem('wm_pending_secret_wingle_ledger');
                                 localStorage.removeItem('wm_pending_secret_wingle_url');
