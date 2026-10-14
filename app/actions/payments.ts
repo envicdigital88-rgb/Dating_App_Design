@@ -9,22 +9,10 @@ import { sendInvoiceEmail } from '@/app/actions/email';
 const DEFAULT_GENIE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBJZCI6IjM2YmFmY2U3LWEyMDEtNDI5Yi1hOWUyLWM1Yjc4NTQ2Njc3YyIsImNvbXBhbnlJZCI6IjYzOTdmMzlkZjA3ZmJhMDAwODQyYTkwYiIsImlhdCI6MTY3MDkwMjY4NSwiZXhwIjo0ODI2NTc2Mjg1fQ.fy12dgFhA3iB_RCjD7y8j5HClNRZUiBZgAg-QzFpxaE";
 
 async function getAppUrl(): Promise<string> {
-  try {
-    const headerList = await headers();
-    const host = headerList.get('x-forwarded-host') || headerList.get('host');
-    const forwardedProto = headerList.get('x-forwarded-proto');
-    if (host) {
-      const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
-      const proto = forwardedProto || (isLocal ? 'http' : 'https');
-      return `${proto}://${host}`;
-    }
-  } catch {}
-
-  const rawAppUrl = (process.env.NEXT_PUBLIC_APP_URL || '').trim();
-  if (rawAppUrl) {
-    return rawAppUrl;
-  }
-  return 'https://www.winglemingle.com';
+  const headersList = await headers();
+  const host = headersList.get('host') || "www.winglemingle.com";
+  const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
+  return process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
 }
 
 export async function buyWingitsAction(packageAmountLKR: number, wingitsAmount: number) {
@@ -35,7 +23,10 @@ export async function buyWingitsAction(packageAmountLKR: number, wingitsAmount: 
   const GENIE_API_URL = (process.env.GENIE_API_URL || "https://api.uat.geniebiz.lk").trim();
   const GENIE_APP_KEY = (process.env.GENIE_APP_KEY || "").trim() || DEFAULT_GENIE_KEY;
 
-  const APP_URL = await getAppUrl();
+  const headersList = await headers();
+  const host = headersList.get('host') || "www.winglemingle.com";
+  const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
 
   // 1. Insert PENDING record into TransactionLedger
   const ledger = await db.orm.public.TransactionLedger.create({
@@ -69,7 +60,6 @@ export async function buyWingitsAction(packageAmountLKR: number, wingitsAmount: 
     const res = await fetch(`${GENIE_API_URL}/public/transactions`, {
       method: 'POST',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'Authorization': GENIE_APP_KEY
@@ -177,7 +167,6 @@ export async function initiateSecretWinglePaymentAction(
     const res = await fetch(`${GENIE_API_URL}/public/transactions`, {
       method: 'POST',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'Authorization': GENIE_APP_KEY
