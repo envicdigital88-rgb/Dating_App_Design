@@ -441,41 +441,36 @@ export function SecretWingleTab() {
                 {/* Submit Action */}
                 <div className="pt-2 space-y-3">
                   {pendingLedgerId && (
-                    <div className="bg-gradient-to-r from-purple-500/15 via-pink-500/15 to-blue-500/15 border-2 border-pink-500/30 rounded-3xl p-5 text-xs space-y-3 shadow-lg">
+                    <div className="bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-blue-500/10 border border-pink-500/25 rounded-2xl p-4 text-xs space-y-3 shadow-md backdrop-blur-sm">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+                        <span className="font-semibold text-sm text-gray-900 dark:text-white flex items-center gap-2">
                           <Clock className="w-4 h-4 text-pink-500 animate-spin" />
                           <span>Dialog Genie Payment in Progress...</span>
                         </span>
-                        <span className="text-[10px] bg-pink-500/20 text-pink-600 dark:text-pink-300 font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
+                        <span className="text-[10px] bg-pink-500/15 text-pink-600 dark:text-pink-300 font-semibold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                           Auto-Verifying
                         </span>
                       </div>
 
-                      <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-3 text-[11px] text-amber-700 dark:text-amber-300 space-y-1">
-                        <p className="font-semibold flex items-center gap-1.5">
-                          <span>💡 Dialog Test Mode Notice:</span>
-                        </p>
-                        <p className="leading-relaxed">
-                          Dialog test window එකේ OTP දැමීමෙන් පසු <code>{`{"message": "Forbidden"}`}</code> ලෙස දිස්වුවද ගෙවීම සාර්ථකව සම්පූර්ණ වී ඇත! පහත <b>&quot;Verify &amp; Send Secret Wingle&quot;</b> button එක click කරන්න.
-                        </p>
-                      </div>
+                      <p className="text-[12px] text-gray-600 dark:text-gray-300 leading-relaxed">
+                        Completing payment in the Dialog gateway window. This page will automatically update once verified.
+                      </p>
 
-                      <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                      <div className="flex flex-col sm:flex-row items-center gap-2 pt-0.5">
                         <Button
                           size="sm"
                           onClick={async () => {
                             if (!pendingLedgerId) return;
                             const ok = await verifyAndCompletePending(pendingLedgerId);
                             if (!ok) {
-                              toast.info('Payment is still pending on Dialog. Please finish the payment window or try again in a few seconds.');
+                              toast.info('Payment is still pending on Dialog. Please complete the payment window or try again.');
                             }
                           }}
                           loading={isCheckingPayment}
-                          className="w-full py-3 bg-gradient-to-r from-[#ec4899] to-[#8b2fc9] text-white font-semibold text-xs shadow-md hover:opacity-95"
+                          className="w-full sm:w-auto py-2.5 px-4 bg-gradient-to-r from-[#ec4899] to-[#8b2fc9] text-white font-medium text-xs shadow-sm hover:opacity-95"
                         >
-                          <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                          Verify &amp; Send Secret Wingle Now
+                          <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
+                          Check Status Now
                         </Button>
 
                         <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -489,7 +484,7 @@ export function SecretWingleTab() {
                               }}
                               className="w-full sm:w-auto text-xs py-2 whitespace-nowrap"
                             >
-                              Open Dialog Tab
+                              Reopen Payment Window
                             </Button>
                           )}
                           <Button
