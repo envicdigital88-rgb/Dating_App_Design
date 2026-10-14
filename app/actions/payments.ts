@@ -12,15 +12,17 @@ async function getAppUrl(): Promise<string> {
   try {
     const headerList = await headers();
     const host = headerList.get('x-forwarded-host') || headerList.get('host');
-    const proto = headerList.get('x-forwarded-proto') || 'https';
+    const forwardedProto = headerList.get('x-forwarded-proto');
     if (host) {
+      const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
+      const proto = forwardedProto || (isLocal ? 'http' : 'https');
       return `${proto}://${host}`;
     }
   } catch {}
 
   const rawAppUrl = (process.env.NEXT_PUBLIC_APP_URL || '').trim();
   if (rawAppUrl) {
-    return rawAppUrl.replace(/^http:\/\//, 'https://');
+    return rawAppUrl;
   }
   return 'https://www.winglemingle.com';
 }
@@ -89,7 +91,7 @@ export async function buyWingitsAction(packageAmountLKR: number, wingitsAmount: 
     // 4. Redirect user to Dialog payment gateway URL
     const paymentUrl = data.url || data.redirectUrl || data.shortUrl || data.paymentUrl;
     if (paymentUrl) {
-      return { ok: true, redirectUrl: paymentUrl };
+      return { ok: true, redirectUrl: paymentUrl, ledgerId: ledger.id };
     }
 
     return { ok: false, error: 'Failed to initialize payment gateway' };

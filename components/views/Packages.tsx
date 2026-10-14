@@ -8,13 +8,107 @@ import { Input } from '@/components/ui/Field';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { faqs } from '@/lib/data/seed';
 import { money } from '@/lib/utils/format';
-import { buyWingitsAction } from '@/app/actions/payments';
+import { buyWingitsAction, checkAndVerifyPendingPaymentAction } from '@/app/actions/payments';
 import { toast } from 'sonner';
 
 export function Packages() {
   const { entitlements } = useStore();
   const [customAmount, setCustomAmount] = useState<number | ''>('');
   const [loadingAmount, setLoadingAmount] = useState<number | null>(null);
+  const [pendingLedgerId, setPendingLedgerId] = useState<string | null>(null);
+  const [pendingAmount, setPendingAmount] = useState<number | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const paymentPopupRef = React.useRef<Window | null>(null);
+
+  const verifyAndComplete = React.useCallback(async (ledgerId: string, amount?: number | null) => {
+    try {
+      setIsVerifying(true);
+      const check = await checkAndVerifyPendingPaymentAction(ledgerId);
+      if (check.ok) {
+        if (paymentPopupRef.current && !paymentPopupRef.current.closed) {
+          try {
+            paymentPopupRef.current.close();
+          } catch {}
+          paymentPopupRef.current = null;
+        }
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('wm_pending_wingits_ledger');
+          localStorage.removeItem('wm_pending_wingits_amount');
+        }
+        setPendingLedgerId(null);
+        setPendingAmount(null);
+        setLoadingAmount(null);
+        toast.success(`🎉 Payment Confirmed! ${amount ? `${amount} ` : ''}Wingits added to your account!`);
+        setTimeout(() => {
+          window.location.reload();
+        }, 1200);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    } finally {
+      setIsVerifying(false);
+    }
+  }, []);
+
+  // Restore pending payment if user refreshed or navigated back
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedLedgerId = localStorage.getItem('wm_pending_wingits_ledger');
+      const savedAmount = localStorage.getItem('wm_pending_wingits_amount');
+      if (savedLedgerId) {
+        const amt = savedAmount ? parseInt(savedAmount, 10) : null;
+        setPendingLedgerId(savedLedgerId);
+        setPendingAmount(amt);
+        verifyAndComplete(savedLedgerId, amt);
+      }
+    }
+  }, [verifyAndComplete]);
+
+  // Window focus listener: immediately verify when user tabs back
+  React.useEffect(() => {
+    if (!pendingLedgerId) return;
+
+    const onFocus = () => {
+      verifyAndComplete(pendingLedgerId, pendingAmount);
+    };
+
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [pendingLedgerId, pendingAmount, verifyAndComplete]);
+
+  // Auto-polling every 3 seconds while payment is pending
+  React.useEffect(() => {
+    if (!pendingLedgerId) return;
+
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 60; // Poll for 3 minutes
+
+    const interval = setInterval(async () => {
+      if (cancelled) return;
+      attempts++;
+      if (attempts > maxAttempts) {
+        clearInterval(interval);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('wm_pending_wingits_ledger');
+          localStorage.removeItem('wm_pending_wingits_amount');
+        }
+        setPendingLedgerId(null);
+        setPendingAmount(null);
+        setLoadingAmount(null);
+        return;
+      }
+
+      await verifyAndComplete(pendingLedgerId, pendingAmount);
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [pendingLedgerId, pendingAmount, verifyAndComplete]);
 
   if (!entitlements) return null;
 
@@ -22,17 +116,33 @@ export function Packages() {
     if (amount < 100) return;
     setLoadingAmount(amount);
     
-    // Use packageId format "wingits-<amount>" so webhook knows what to credit
     const result = await buyWingitsAction(amount, amount);
     
-    if (!result.ok) {
+    if (!result.ok || !result.redirectUrl) {
       toast.error(result.error || 'Payment gateway rejected the request');
       setLoadingAmount(null);
       return;
     }
-    
-    // Redirect to the Dialog Pay payment page
-    window.location.href = result.redirectUrl;
+
+    if (result.ledgerId) {
+      setPendingLedgerId(result.ledgerId);
+      setPendingAmount(amount);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('wm_pending_wingits_ledger', result.ledgerId);
+        localStorage.setItem('wm_pending_wingits_amount', String(amount));
+      }
+    }
+
+    toast.info('Connecting to Dialog payment gateway...');
+    const win = window.open(
+      result.redirectUrl,
+      'GeniePaymentWindow',
+      'width=550,height=750,left=250,top=100'
+    );
+    paymentPopupRef.current = win;
+    if (!win) {
+      window.location.href = result.redirectUrl;
+    }
   };
 
   const presets = [
@@ -43,6 +153,40 @@ export function Packages() {
 
   return (
     <Page>
+      {pendingLedgerId && (
+        <div className="mb-6 rounded-2xl bg-amber-500/10 border border-amber-500/30 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-ink">
+          <div className="flex items-center gap-3">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
+            <span className="text-sm font-medium">
+              Payment in progress with Dialog Genie... {isVerifying ? 'Verifying status...' : 'Waiting for confirmation'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              loading={isVerifying}
+              onClick={() => verifyAndComplete(pendingLedgerId, pendingAmount)}
+            >
+              Check Status
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                if (paymentPopupRef.current && !paymentPopupRef.current.closed) {
+                  paymentPopupRef.current.focus();
+                } else if (typeof window !== 'undefined') {
+                  const saved = localStorage.getItem('wm_pending_wingits_ledger');
+                  if (saved) verifyAndComplete(saved, pendingAmount);
+                }
+              }}
+            >
+              Reopen Gateway
+            </Button>
+          </div>
+        </div>
+      )}
       <PageHeader
         title="Buy Wingits"
         body="Wingits are the currency of WingleMingle. 1 Wingit = Rs. 1. Minimum purchase is 100 Wingits." />

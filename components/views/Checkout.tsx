@@ -9,6 +9,7 @@ import { FieldError } from '@/components/ui/Field';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { money, shortDate } from '@/lib/utils/format';
 import { createIpgTransaction } from '@/app/actions/ipg';
+import { checkAndVerifyPendingPaymentAction } from '@/app/actions/payments';
 
 type Stage = 'form' | 'verifying' | 'done';
 
@@ -20,10 +21,39 @@ export function Checkout() {
 
   const [error, setError] = useState('');
   const [stage, setStage] = useState<Stage>('form');
-  const [reference] = useState('');
+  const [reference, setReference] = useState('');
+  const [pendingLedgerId, setPendingLedgerId] = useState<string | null>(null);
+  const paymentPopupRef = React.useRef<Window | null>(null);
 
   const pkg = db.packages.find((p) => p.id === packageId);
   if (!pkg || !entitlements) { redirect("/packages"); return null as any; }
+
+  // Background verification poller
+  React.useEffect(() => {
+    if (!pendingLedgerId || stage !== 'verifying') return;
+
+    let cancelled = false;
+    const interval = setInterval(async () => {
+      if (cancelled) return;
+      try {
+        const check = await checkAndVerifyPendingPaymentAction(pendingLedgerId);
+        if (check.ok) {
+          if (paymentPopupRef.current && !paymentPopupRef.current.closed) {
+            try { paymentPopupRef.current.close(); } catch {}
+            paymentPopupRef.current = null;
+          }
+          setPendingLedgerId(null);
+          setReference(pendingLedgerId);
+          setStage('done');
+        }
+      } catch {}
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [pendingLedgerId, stage]);
 
   const pay = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,14 +63,26 @@ export function Checkout() {
     // Call server action for IPG
     const result = await createIpgTransaction(pkg.id, pkg.price);
     
-    if (!result.ok) {
+    if (!result.ok || !result.redirectUrl) {
       setStage('form');
       setError(result.error || 'Payment gateway rejected the request');
       return;
     }
+
+    if (result.ledgerId) {
+      setPendingLedgerId(result.ledgerId);
+    }
     
-    // Redirect to the Dialog Pay payment page
-    window.location.href = result.redirectUrl;
+    // Open Dialog Pay in dedicated window
+    const win = window.open(
+      result.redirectUrl,
+      'GeniePaymentWindow',
+      'width=550,height=750,left=250,top=100'
+    );
+    paymentPopupRef.current = win;
+    if (!win) {
+      window.location.href = result.redirectUrl;
+    }
   };
 
   if (stage === 'done') {

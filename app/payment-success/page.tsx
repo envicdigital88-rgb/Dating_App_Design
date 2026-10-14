@@ -1,5 +1,5 @@
 import React from 'react';
-import { verifyPaymentAction } from '@/app/actions/payments';
+import { verifyPaymentAction, checkAndVerifyPendingPaymentAction } from '@/app/actions/payments';
 import { CheckCircle2Icon, XCircleIcon, ArrowRightIcon, CoinsIcon } from 'lucide-react';
 import Link from 'next/link';
 
@@ -12,8 +12,8 @@ export default async function PaymentSuccessPage({
   const ledgerId = params.ledgerId as string | undefined;
   const transactionId = params.transactionId as string | undefined;
 
-  // Dialog redirects with transactionId
-  if (!ledgerId || !transactionId) {
+  // Ledger ID is required
+  if (!ledgerId) {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
         <div className="relative w-full max-w-lg rounded-4xl bg-cream-deep border border-sand/80 p-8 sm:p-10 text-center shadow-card overflow-hidden">
@@ -35,8 +35,16 @@ export default async function PaymentSuccessPage({
     );
   }
 
-  // Verify the payment
-  const result = await verifyPaymentAction(ledgerId, transactionId);
+  // Verify the payment (supports direct transactionId or localId lookup)
+  const result = (transactionId
+    ? await verifyPaymentAction(ledgerId, transactionId)
+    : await checkAndVerifyPendingPaymentAction(ledgerId)) as {
+    ok: boolean;
+    isSecretWingle?: boolean;
+    targetPhone?: string;
+    error?: string;
+    message?: string;
+  };
 
   if (!result.ok) {
     return (
@@ -47,7 +55,7 @@ export default async function PaymentSuccessPage({
           </div>
           <h1 className="font-display text-3xl font-bold text-ink mb-3">Payment Failed</h1>
           <p className="text-[15px] leading-relaxed text-ink-soft mb-8">
-            {result.error || 'Your payment could not be verified by Dialog Pay.'}
+            {result.error || result.message || 'Your payment could not be verified by Dialog Pay.'}
           </p>
           <div className="space-y-3">
             <Link
