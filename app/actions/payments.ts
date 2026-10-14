@@ -9,6 +9,12 @@ import { sendInvoiceEmail } from '@/app/actions/email';
 const DEFAULT_GENIE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBJZCI6IjM2YmFmY2U3LWEyMDEtNDI5Yi1hOWUyLWM1Yjc4NTQ2Njc3YyIsImNvbXBhbnlJZCI6IjYzOTdmMzlkZjA3ZmJhMDAwODQyYTkwYiIsImlhdCI6MTY3MDkwMjY4NSwiZXhwIjo0ODI2NTc2Mjg1fQ.fy12dgFhA3iB_RCjD7y8j5HClNRZUiBZgAg-QzFpxaE";
 
 async function getAppUrl(): Promise<string> {
+  // Dialog Genie IPG strictly rejects any URL containing 'localhost' or '127.0.0.1' with 403 Forbidden.
+  // In development mode, or whenever running locally, ALWAYS use the registered live domain.
+  if (process.env.NODE_ENV === 'development') {
+    return 'https://www.winglemingle.com';
+  }
+
   const rawAppUrl = (process.env.NEXT_PUBLIC_APP_URL || '').trim();
   if (rawAppUrl && !rawAppUrl.includes('localhost') && !rawAppUrl.includes('127.0.0.1')) {
     return rawAppUrl;
@@ -18,13 +24,11 @@ async function getAppUrl(): Promise<string> {
     const headersList = await headers();
     const host = headersList.get('x-forwarded-host') || headersList.get('host') || '';
     if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
-      const proto = headersList.get('x-forwarded-proto') || (process.env.NODE_ENV === 'development' ? 'http' : 'https');
+      const proto = headersList.get('x-forwarded-proto') || 'https';
       return `${proto}://${host}`;
     }
   } catch {}
 
-  // Dialog IPG strictly rejects 'localhost' with 403 Forbidden.
-  // When testing locally, fall back to the registered public domain so Dialog API accepts the transaction.
   return 'https://www.winglemingle.com';
 }
 
@@ -82,6 +86,7 @@ export async function buyWingitsAction(packageAmountLKR: number, wingitsAmount: 
       console.log("\n==========================================");
       console.log("IPG ERROR STATUS:", res.status);
       console.log("IPG ERROR BODY:", text);
+      console.log("IPG SENT PAYLOAD:", JSON.stringify({ ...payload, signature: '***' }, null, 2));
       console.log("==========================================\n");
       return { ok: false, error: `IPG Rejected (Status ${res.status}): ${text.substring(0, 100)}` };
     }
@@ -189,6 +194,7 @@ export async function initiateSecretWinglePaymentAction(
       console.log("\n==========================================");
       console.log("GENIE IPG ERROR STATUS:", res.status);
       console.log("GENIE IPG ERROR BODY:", text);
+      console.log("GENIE IPG SENT PAYLOAD:", JSON.stringify({ ...payload, signature: '***' }, null, 2));
       console.log("==========================================\n");
       return { ok: false, error: `Payment gateway error (Status ${res.status}): ${text.substring(0, 100)}` };
     }
