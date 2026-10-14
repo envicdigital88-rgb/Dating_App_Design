@@ -9,10 +9,23 @@ import { sendInvoiceEmail } from '@/app/actions/email';
 const DEFAULT_GENIE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBJZCI6IjM2YmFmY2U3LWEyMDEtNDI5Yi1hOWUyLWM1Yjc4NTQ2Njc3YyIsImNvbXBhbnlJZCI6IjYzOTdmMzlkZjA3ZmJhMDAwODQyYTkwYiIsImlhdCI6MTY3MDkwMjY4NSwiZXhwIjo0ODI2NTc2Mjg1fQ.fy12dgFhA3iB_RCjD7y8j5HClNRZUiBZgAg-QzFpxaE";
 
 async function getAppUrl(): Promise<string> {
-  const headersList = await headers();
-  const host = headersList.get('host') || "www.winglemingle.com";
-  const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
-  return process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
+  const rawAppUrl = (process.env.NEXT_PUBLIC_APP_URL || '').trim();
+  if (rawAppUrl && !rawAppUrl.includes('localhost') && !rawAppUrl.includes('127.0.0.1')) {
+    return rawAppUrl;
+  }
+
+  try {
+    const headersList = await headers();
+    const host = headersList.get('x-forwarded-host') || headersList.get('host') || '';
+    if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
+      const proto = headersList.get('x-forwarded-proto') || (process.env.NODE_ENV === 'development' ? 'http' : 'https');
+      return `${proto}://${host}`;
+    }
+  } catch {}
+
+  // Dialog IPG strictly rejects 'localhost' with 403 Forbidden.
+  // When testing locally, fall back to the registered public domain so Dialog API accepts the transaction.
+  return 'https://www.winglemingle.com';
 }
 
 export async function buyWingitsAction(packageAmountLKR: number, wingitsAmount: number) {
@@ -23,10 +36,7 @@ export async function buyWingitsAction(packageAmountLKR: number, wingitsAmount: 
   const GENIE_API_URL = (process.env.GENIE_API_URL || "https://api.uat.geniebiz.lk").trim();
   const GENIE_APP_KEY = (process.env.GENIE_APP_KEY || "").trim() || DEFAULT_GENIE_KEY;
 
-  const headersList = await headers();
-  const host = headersList.get('host') || "www.winglemingle.com";
-  const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
-  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
+  const APP_URL = await getAppUrl();
 
   // 1. Insert PENDING record into TransactionLedger
   const ledger = await db.orm.public.TransactionLedger.create({
