@@ -132,11 +132,6 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
           <div className="absolute left-1/2 top-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#ec4899] opacity-10 blur-[80px]" />
         </div>
 
-        {/* Watermark logo */}
-        <div className="pointer-events-none absolute -right-16 top-1/2 -translate-y-1/2 select-none opacity-[0.06]">
-          <Image src="/logo.png" alt="" width={380} height={380} className="object-contain" />
-        </div>
-
         {/* Back to home */}
         <div className="relative z-10">
           <Link

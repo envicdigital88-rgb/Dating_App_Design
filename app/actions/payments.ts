@@ -6,7 +6,7 @@ import { getSession } from '@/lib/session';
 import { db } from '@/lib/db';
 import { sendInvoiceEmail } from '@/app/actions/email';
 
-const DEFAULT_GENIE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBJZCI6IjM2YmFmY2U3LWEyMDEtNDI5Yi1hOWUyLWM1Yjc4NTQ2Njc3YyIsImNvbXBhbnlJZCI6IjYzOTdmMzlkZjA3ZmJhMDAwODQyYTkwYiIsImlhdCI6MTY3MDkwMjY4NSwiZXhwIjo0ODI2NTc2Mjg1fQ.fy12dgFhA3iB_RCjD7y8j5HClNRZUiBZgAg-QzFpxaE";
+const DEFAULT_GENIE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBJZCI6ImQyMzViOTAwLWUxMDctNDhiYS1iMmQ3LWI4NjYzMTkzOTQ3NyIsImNvbXBhbnlJZCI6IjZhYzMzYWYwYWEzMTE4ZmYxNzM4NGFmZiIsImlhdCI6MTc5MTE4MDc0OSwiZXhwIjoxOTQ2ODU0MzQ5fQ.PLNALodMWsrjzlNa7yOfpDK0YFfcmNV6BuMKIM_8Drk";
 
 async function getAppUrl(): Promise<string> {
   // Dialog Genie IPG strictly rejects any URL containing 'localhost' or '127.0.0.1' with 403 Forbidden.
@@ -37,7 +37,7 @@ export async function buyWingitsAction(packageAmountLKR: number, wingitsAmount: 
   if (!session?.userId) return { ok: false, error: 'Unauthorized' };
   const userId = session.userId as string;
 
-  const GENIE_API_URL = (process.env.GENIE_API_URL || "https://api.uat.geniebiz.lk").trim();
+  const GENIE_API_URL = (process.env.GENIE_API_URL || "https://api.geniebiz.lk").trim();
   const GENIE_APP_KEY = (process.env.GENIE_APP_KEY || "").trim() || DEFAULT_GENIE_KEY;
 
   const APP_URL = await getAppUrl();
@@ -136,7 +136,7 @@ export async function initiateSecretWinglePaymentAction(
     return { ok: false, error: 'You cannot send a Secret Wingle to your own phone number!' };
   }
 
-  const GENIE_API_URL = (process.env.GENIE_API_URL || "https://api.uat.geniebiz.lk").trim();
+  const GENIE_API_URL = (process.env.GENIE_API_URL || "https://api.geniebiz.lk").trim();
   const GENIE_APP_KEY = (process.env.GENIE_APP_KEY || "").trim() || DEFAULT_GENIE_KEY;
 
   const APP_URL = await getAppUrl();
@@ -212,7 +212,7 @@ export async function initiateSecretWinglePaymentAction(
 }
 
 export async function checkAndVerifyPendingPaymentAction(ledgerId: string) {
-  const GENIE_API_URL = (process.env.GENIE_API_URL || "https://api.uat.geniebiz.lk").trim();
+  const GENIE_API_URL = (process.env.GENIE_API_URL || "https://api.geniebiz.lk").trim();
   const GENIE_APP_KEY = (process.env.GENIE_APP_KEY || "").trim() || DEFAULT_GENIE_KEY;
 
   try {
@@ -247,7 +247,7 @@ export async function checkAndVerifyPendingPaymentAction(ledgerId: string) {
 }
 
 export async function verifyPaymentAction(ledgerId: string, transactionId: string) {
-  const GENIE_API_URL = (process.env.GENIE_API_URL || "https://api.uat.geniebiz.lk").trim();
+  const GENIE_API_URL = (process.env.GENIE_API_URL || "https://api.geniebiz.lk").trim();
   const GENIE_APP_KEY = (process.env.GENIE_APP_KEY || "").trim() || DEFAULT_GENIE_KEY;
 
   try {
