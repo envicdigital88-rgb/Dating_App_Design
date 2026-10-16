@@ -120,7 +120,13 @@ export async function buyWingitsAction(packageAmountLKR: number, wingitsAmount: 
       return { ok: false, error: errorMsg };
     }
 
-    const data = await res.json();
+    const text = await res.text();
+    let data: any = {};
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return { ok: false, error: `Invalid response from payment gateway: ${text.substring(0, 80)}` };
+    }
 
     // 4. Redirect user to Dialog payment gateway URL
     const paymentUrl = data.url || data.redirectUrl || data.shortUrl || data.paymentUrl;
@@ -232,7 +238,14 @@ export async function initiateSecretWinglePaymentAction(
       return { ok: false, error: errorMsg };
     }
 
-    const data = await res.json();
+    const text = await res.text();
+    let data: any = {};
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return { ok: false, error: `Invalid response from payment gateway: ${text.substring(0, 80)}` };
+    }
+
     const paymentUrl = data.url || data.redirectUrl || data.shortUrl || data.paymentUrl;
     if (paymentUrl) {
       return { ok: true, redirectUrl: paymentUrl, ledgerId: ledger.id };
@@ -261,7 +274,13 @@ export async function checkAndVerifyPendingPaymentAction(ledgerId: string) {
       return { ok: false, error: 'Failed to query Dialog API' };
     }
 
-    const data = await res.json();
+    const text = await res.text();
+    let data: any = {};
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return { ok: false, error: 'Invalid response from Dialog API' };
+    }
     const tx = data?.items?.[0];
     if (!tx) {
       return { ok: false, pending: true, message: 'Transaction pending on Dialog Pay' };
@@ -295,7 +314,13 @@ export async function verifyPaymentAction(ledgerId: string, transactionId: strin
       return { ok: false, error: 'Failed to verify transaction' };
     }
 
-    const data = await res.json();
+    const text = await res.text();
+    let data: any = {};
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return { ok: false, error: 'Invalid response from Dialog API' };
+    }
     const status = (data.status || data.state || '').toUpperCase();
 
     if (status !== 'SUCCESS' && status !== 'COMPLETED' && status !== 'CONFIRMED') {

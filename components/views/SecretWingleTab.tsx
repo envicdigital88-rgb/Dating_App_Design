@@ -224,7 +224,18 @@ export function SecretWingleTab() {
         toast.error(res.error || 'Failed to connect to Genie payment gateway');
       }
     } catch (err: any) {
-      toast.error(err?.message || 'An unexpected error occurred');
+      const msg = err?.message || '';
+      if (
+        msg.includes('Server Action') ||
+        msg.includes('deployment') ||
+        msg.includes('Unexpected token') ||
+        msg.includes('not valid JSON')
+      ) {
+        toast.info('New deployment detected! Refreshing page...');
+        setTimeout(() => window.location.reload(), 500);
+        return;
+      }
+      toast.error(msg || 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }

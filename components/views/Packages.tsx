@@ -116,32 +116,49 @@ export function Packages() {
     if (amount < 100) return;
     setLoadingAmount(amount);
     
-    const result = await buyWingitsAction(amount, amount);
-    
-    if (!result.ok || !result.redirectUrl) {
-      toast.error(result.error || 'Payment gateway rejected the request');
-      setLoadingAmount(null);
-      return;
-    }
-
-    if (result.ledgerId) {
-      setPendingLedgerId(result.ledgerId);
-      setPendingAmount(amount);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('wm_pending_wingits_ledger', result.ledgerId);
-        localStorage.setItem('wm_pending_wingits_amount', String(amount));
+    try {
+      const result = await buyWingitsAction(amount, amount);
+      
+      if (!result.ok || !result.redirectUrl) {
+        toast.error(result.error || 'Payment gateway rejected the request');
+        setLoadingAmount(null);
+        return;
       }
-    }
 
-    toast.info('Connecting to Dialog payment gateway...');
-    const win = window.open(
-      result.redirectUrl,
-      'GeniePaymentWindow',
-      'width=550,height=750,left=250,top=100'
-    );
-    paymentPopupRef.current = win;
-    if (!win) {
-      window.location.href = result.redirectUrl;
+      if (result.ledgerId) {
+        setPendingLedgerId(result.ledgerId);
+        setPendingAmount(amount);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('wm_pending_wingits_ledger', result.ledgerId);
+          localStorage.setItem('wm_pending_wingits_amount', String(amount));
+        }
+      }
+
+      toast.info('Connecting to Dialog payment gateway...');
+      const win = window.open(
+        result.redirectUrl,
+        'GeniePaymentWindow',
+        'width=550,height=750,left=250,top=100'
+      );
+      paymentPopupRef.current = win;
+      if (!win) {
+        window.location.href = result.redirectUrl;
+      }
+    } catch (err: any) {
+      const msg = err?.message || '';
+      if (
+        msg.includes('Server Action') ||
+        msg.includes('deployment') ||
+        msg.includes('Unexpected token') ||
+        msg.includes('not valid JSON')
+      ) {
+        toast.info('New deployment detected! Refreshing page...');
+        setTimeout(() => window.location.reload(), 500);
+        return;
+      }
+      toast.error(msg || 'Failed to connect to payment gateway');
+    } finally {
+      setLoadingAmount(null);
     }
   };
 
