@@ -32,13 +32,37 @@ async function getAppUrl(): Promise<string> {
   return 'https://www.winglemingle.com';
 }
 
+function getGenieConfig() {
+  const envKey = (process.env.GENIE_APP_KEY || '').trim();
+  const appKey = envKey || DEFAULT_GENIE_KEY;
+
+  // Detect if key is Sandbox/UAT (by checking for known UAT app ID or explicit env setting)
+  const isSandbox =
+    appKey.includes('36bafce7-a201-429b-a9e2-c5b78546677c') ||
+    process.env.GENIE_ENV === 'sandbox' ||
+    process.env.GENIE_ENV === 'uat';
+
+  let apiUrl = (process.env.GENIE_API_URL || '').trim();
+
+  // Guard against misconfiguration:
+  // If someone accidentally set their website domain (e.g. winglemingle.com or localhost) or empty/invalid as GENIE_API_URL
+  if (!apiUrl || apiUrl.includes('winglemingle.com') || apiUrl.includes('localhost') || !apiUrl.startsWith('http')) {
+    apiUrl = isSandbox ? 'https://api.uat.geniebiz.lk' : 'https://api.geniebiz.lk';
+  }
+
+  return {
+    apiUrl: apiUrl.replace(/\/+$/, ''),
+    appKey,
+    isSandbox
+  };
+}
+
 export async function buyWingitsAction(packageAmountLKR: number, wingitsAmount: number) {
   const session = await getSession();
   if (!session?.userId) return { ok: false, error: 'Unauthorized' };
   const userId = session.userId as string;
 
-  const GENIE_API_URL = (process.env.GENIE_API_URL || "https://api.geniebiz.lk").trim();
-  const GENIE_APP_KEY = (process.env.GENIE_APP_KEY || "").trim() || DEFAULT_GENIE_KEY;
+  const { apiUrl: GENIE_API_URL, appKey: GENIE_APP_KEY } = getGenieConfig();
 
   const APP_URL = await getAppUrl();
 
@@ -88,7 +112,12 @@ export async function buyWingitsAction(packageAmountLKR: number, wingitsAmount: 
       console.log("IPG ERROR BODY:", text);
       console.log("IPG SENT PAYLOAD:", JSON.stringify({ ...payload, signature: '***' }, null, 2));
       console.log("==========================================\n");
-      return { ok: false, error: `IPG Rejected (Status ${res.status}): ${text.substring(0, 100)}` };
+
+      let errorMsg = `IPG Rejected (Status ${res.status}): ${text.substring(0, 100)}`;
+      if (res.status === 401 && text.includes('PP-C-004')) {
+        errorMsg = 'Dialog IPG Live Authorization Error (401 - PP-C-004): Your live merchant credentials have not been activated for production payments by Dialog Genie yet. Please verify merchant activation with Dialog or switch to Sandbox mode.';
+      }
+      return { ok: false, error: errorMsg };
     }
 
     const data = await res.json();
@@ -136,8 +165,7 @@ export async function initiateSecretWinglePaymentAction(
     return { ok: false, error: 'You cannot send a Secret Wingle to your own phone number!' };
   }
 
-  const GENIE_API_URL = (process.env.GENIE_API_URL || "https://api.geniebiz.lk").trim();
-  const GENIE_APP_KEY = (process.env.GENIE_APP_KEY || "").trim() || DEFAULT_GENIE_KEY;
+  const { apiUrl: GENIE_API_URL, appKey: GENIE_APP_KEY } = getGenieConfig();
 
   const APP_URL = await getAppUrl();
 
@@ -196,7 +224,12 @@ export async function initiateSecretWinglePaymentAction(
       console.log("GENIE IPG ERROR BODY:", text);
       console.log("GENIE IPG SENT PAYLOAD:", JSON.stringify({ ...payload, signature: '***' }, null, 2));
       console.log("==========================================\n");
-      return { ok: false, error: `Payment gateway error (Status ${res.status}): ${text.substring(0, 100)}` };
+
+      let errorMsg = `Payment gateway error (Status ${res.status}): ${text.substring(0, 100)}`;
+      if (res.status === 401 && text.includes('PP-C-004')) {
+        errorMsg = 'Dialog IPG Live Authorization Error (401 - PP-C-004): Your live merchant credentials have not been activated for production payments by Dialog Genie yet. Please verify merchant activation with Dialog or switch to Sandbox mode.';
+      }
+      return { ok: false, error: errorMsg };
     }
 
     const data = await res.json();
@@ -212,8 +245,7 @@ export async function initiateSecretWinglePaymentAction(
 }
 
 export async function checkAndVerifyPendingPaymentAction(ledgerId: string) {
-  const GENIE_API_URL = (process.env.GENIE_API_URL || "https://api.geniebiz.lk").trim();
-  const GENIE_APP_KEY = (process.env.GENIE_APP_KEY || "").trim() || DEFAULT_GENIE_KEY;
+  const { apiUrl: GENIE_API_URL, appKey: GENIE_APP_KEY } = getGenieConfig();
 
   try {
     const res = await fetch(`${GENIE_API_URL}/public/transactions?localId=${encodeURIComponent(ledgerId)}`, {
@@ -247,8 +279,7 @@ export async function checkAndVerifyPendingPaymentAction(ledgerId: string) {
 }
 
 export async function verifyPaymentAction(ledgerId: string, transactionId: string) {
-  const GENIE_API_URL = (process.env.GENIE_API_URL || "https://api.geniebiz.lk").trim();
-  const GENIE_APP_KEY = (process.env.GENIE_APP_KEY || "").trim() || DEFAULT_GENIE_KEY;
+  const { apiUrl: GENIE_API_URL, appKey: GENIE_APP_KEY } = getGenieConfig();
 
   try {
     // 1. Verify with Dialog API
