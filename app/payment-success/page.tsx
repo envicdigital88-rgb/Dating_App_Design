@@ -44,6 +44,7 @@ export default async function PaymentSuccessPage({
     targetPhone?: string;
     error?: string;
     message?: string;
+    invoiceSent?: boolean;
   };
 
   if (!result.ok) {
@@ -94,6 +95,13 @@ export default async function PaymentSuccessPage({
           <p className="text-[15px] leading-relaxed text-ink-soft mb-6 max-w-sm mx-auto">
             Your payment of <strong>Rs. 50</strong> was successful! Your anonymous SMS is on its way, and both of you have received bonus Wingits!
           </p>
+          {typeof result.invoiceSent === 'boolean' && (
+            <p className="text-sm leading-relaxed text-ink-soft mb-6">
+              {result.invoiceSent
+                ? 'Your payment invoice has been emailed to your account email address.'
+                : 'Your payment is confirmed, but we could not email your invoice. Keep your payment reference and contact support for a copy.'}
+            </p>
+          )}
 
           {/* Rewards Callout Card */}
           <div className="rounded-2xl bg-white/60 dark:bg-white/5 border border-sand/80 p-4 mb-6 text-left space-y-3">
@@ -167,7 +175,12 @@ export default async function PaymentSuccessPage({
           Payment Confirmed!
         </h1>
         <p className="text-[15px] leading-relaxed text-ink-soft mb-8 max-w-sm mx-auto">
-          Your Wingits have been successfully credited to your account. A payment invoice has been sent to your email.
+          Your Wingits have been successfully credited to your account.{' '}
+          {result.invoiceSent === true
+            ? 'Your payment invoice has been emailed to your account email address.'
+            : result.invoiceSent === false
+              ? 'We could not email your invoice. Keep your payment reference and contact support for a copy.'
+              : 'Keep your payment reference for your records.'}
         </p>
 
         {/* Transaction Summary Card */}

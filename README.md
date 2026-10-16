@@ -54,6 +54,34 @@ take effect. A 401/403 means the key/environment or merchant access needs checki
 response means the API did not return its transaction JSON; sanitized server logs
 record the API endpoint, HTTP status and content type.
 
+### Payment invoice emails
+
+After a verified payment is committed, Wingits purchases and Secret Wingle
+payments send an HTML invoice and a plain-text copy to the paying user's saved
+account email. The receipt includes the purchase, amount in LKR, receipt number,
+gateway transaction reference, and Sri Lanka date/time. Secret recipient details
+and message contents are not included.
+
+Set `RESEND_API_KEY` in Vercel's **Production** server environment. The sender
+domain must be verified in that Resend account. The default sender is
+`Wingle Mingle <no-reply@winglemingle.com>`; optional `RESEND_FROM_EMAIL` overrides
+it, and optional `RESEND_REPLY_TO` sets a monitored reply address.
+
+Only the request that newly settles the payment sends an invoice. Transient
+provider/network failures retry up to three times with an identical payload and
+a stable Resend idempotency key. Email failure never rolls back the payment or
+Wingits credit. Permanent failures are logged with safe provider error codes;
+delivery is not retried in the background after those attempts are exhausted.
+The confirmation page reports a send failure rather than claiming an invoice
+was sent. There is no database migration for this change.
+
+Run the isolated checks without contacting payment or email services:
+
+```bash
+node --test scripts/payment-gateway.test.cjs scripts/invoice-email.test.cjs
+node --experimental-strip-types scripts/payment-verification.test.ts
+```
+
 ## 📁 Project Structure
 
 - `/app` - Next.js App Router pages and layouts

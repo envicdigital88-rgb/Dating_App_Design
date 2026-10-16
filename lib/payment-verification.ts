@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import { db } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { genieRequest } from '@/lib/genie';
-import { sendInvoiceEmail } from '@/app/actions/email';
+import { sendInvoiceEmail } from '@/lib/invoice-email';
 
 type Ledger = NonNullable<Awaited<ReturnType<typeof db.orm.public.TransactionLedger.first>>>;
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -27,6 +27,7 @@ export type PaymentVerificationResult = {
   retryable?: boolean;
   isSecretWingle?: boolean;
   targetPhone?: string;
+  invoiceSent?: boolean;
 };
 
 class PaymentMismatch extends Error {}
@@ -190,11 +191,30 @@ async function settlePayment(ledgerId: string, transactionId: string, transactio
       metadata,
       existingRecipientId,
       customerEmail: sender.email,
+      customerName: sender.name,
     };
   });
 
   // External notifications run once, after the atomic credit has committed.
   if (outcome.newlySettled && outcome.ledger) {
+    outcome.result.invoiceSent = false;
+    try {
+      const invoice = await sendInvoiceEmail({
+        receiptNumber: outcome.ledger.id,
+        transactionId,
+        customerEmail: outcome.customerEmail,
+        customerName: outcome.customerName,
+        amount: outcome.ledger.amountLKR,
+        wingitsCredited: outcome.ledger.wingitsCredited,
+        date: outcome.ledger.createdAt.toString(),
+        purchaseType: outcome.metadata ? 'secret_wingle' : 'wingits',
+      });
+      outcome.result.invoiceSent = invoice.ok;
+      if (!invoice.ok) console.error('Payment receipt could not be delivered.');
+    } catch {
+      console.error('Payment receipt could not be delivered.');
+    }
+
     if (outcome.metadata) {
       const metadata = outcome.metadata;
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.winglemingle.com';
@@ -223,18 +243,6 @@ async function settlePayment(ledgerId: string, transactionId: string, transactio
         } catch {
           console.error('Secret Wingle recipient notification could not be delivered.');
         }
-      }
-    } else if (outcome.customerEmail) {
-      try {
-        await sendInvoiceEmail(
-          outcome.ledger.id,
-          outcome.ledger.amountLKR,
-          outcome.ledger.wingitsCredited,
-          transaction.date || transaction.createdAt || new Date().toISOString(),
-          outcome.customerEmail,
-        );
-      } catch {
-        console.error('Payment receipt could not be delivered.');
       }
     }
   }
