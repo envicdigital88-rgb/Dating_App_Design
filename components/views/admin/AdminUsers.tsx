@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { 
@@ -13,7 +13,8 @@ import {
   ArrowUpDownIcon,
   ArrowDownIcon,
   ArrowUpIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  Loader2Icon
 } from 'lucide-react';
 import { AdminHeader } from './AdminShell';
 import { Button } from '@/components/ui/Button';
@@ -33,7 +34,11 @@ export function AdminUsers() {
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [detail, setDetail] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [busyIds, setBusyIds] = useState<Record<string, 'unlimited' | 'verify' | 'suspend' | null>>({});
   const itemsPerPage = 50;
+
+  // Track recent local overrides with a timestamp to avoid background polling reverts
+  const recentOverridesRef = useRef<Map<string, { isUnlimited?: boolean; verified?: boolean; suspended?: boolean; timestamp: number }>>(new Map());
 
   useEffect(() => {
     setPage(1);
@@ -46,7 +51,29 @@ export function AdminUsers() {
     const fetchUsers = async () => {
       const res = await getAdminUsersAction();
       if (res.ok && res.data && mounted) {
-        setRealUsers(res.data as unknown as AdminUser[]);
+        const now = Date.now();
+        // Clean up overrides older than 30 seconds
+        for (const [id, override] of recentOverridesRef.current.entries()) {
+          if (now - override.timestamp > 30000) {
+            recentOverridesRef.current.delete(id);
+          }
+        }
+
+        const incoming = res.data as unknown as AdminUser[];
+        const merged = incoming.map((u) => {
+          const override = recentOverridesRef.current.get(u.id);
+          if (override) {
+            return {
+              ...u,
+              ...(override.isUnlimited !== undefined ? { isUnlimited: override.isUnlimited } : {}),
+              ...(override.verified !== undefined ? { verified: override.verified } : {}),
+              ...(override.suspended !== undefined ? { suspended: override.suspended } : {}),
+            };
+          }
+          return u;
+        });
+
+        setRealUsers(merged);
       }
     };
     fetchUsers();
@@ -90,6 +117,110 @@ export function AdminUsers() {
 
   const totalPages = Math.ceil(users.length / itemsPerPage);
   const paginatedUsers = users.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+
+  const handleToggleUnlimited = async (user: AdminUser) => {
+    if (busyIds[user.id]) return;
+    const targetUnlimited = !user.isUnlimited;
+
+    setBusyIds(prev => ({ ...prev, [user.id]: 'unlimited' }));
+    recentOverridesRef.current.set(user.id, {
+      ...(recentOverridesRef.current.get(user.id) || {}),
+      isUnlimited: targetUnlimited,
+      timestamp: Date.now()
+    });
+
+    setRealUsers(prev => prev ? prev.map(u => u.id === user.id ? { ...u, isUnlimited: targetUnlimited } : u) : null);
+
+    try {
+      const apiRes = await fetch('/api/admin/users/unlimited', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, isUnlimited: targetUnlimited })
+      }).then(r => r.json()).catch(() => null);
+
+      let success = apiRes?.ok;
+      if (!success) {
+        const actionRes = await setUserUnlimitedAction(user.id, targetUnlimited);
+        success = actionRes?.ok;
+      }
+
+      if (!success) {
+        recentOverridesRef.current.delete(user.id);
+        setRealUsers(prev => prev ? prev.map(u => u.id === user.id ? { ...u, isUnlimited: user.isUnlimited } : u) : null);
+        toast.error('Failed to update unlimited status');
+      } else {
+        toast.success(targetUnlimited ? 'Unlimited granted' : 'Unlimited removed');
+      }
+    } catch (err: any) {
+      recentOverridesRef.current.delete(user.id);
+      setRealUsers(prev => prev ? prev.map(u => u.id === user.id ? { ...u, isUnlimited: user.isUnlimited } : u) : null);
+      toast.error(err?.message || 'Failed to update unlimited status');
+    } finally {
+      setBusyIds(prev => ({ ...prev, [user.id]: null }));
+    }
+  };
+
+  const handleToggleVerified = async (user: AdminUser) => {
+    if (busyIds[user.id]) return;
+    const targetVerified = !user.verified;
+
+    setBusyIds(prev => ({ ...prev, [user.id]: 'verify' }));
+    recentOverridesRef.current.set(user.id, {
+      ...(recentOverridesRef.current.get(user.id) || {}),
+      verified: targetVerified,
+      timestamp: Date.now()
+    });
+
+    setRealUsers(prev => prev ? prev.map(u => u.id === user.id ? { ...u, verified: targetVerified } : u) : null);
+
+    try {
+      const res = await setUserVerifiedAction(user.id, targetVerified);
+      if (!res.ok) {
+        recentOverridesRef.current.delete(user.id);
+        setRealUsers(prev => prev ? prev.map(u => u.id === user.id ? { ...u, verified: user.verified } : u) : null);
+        toast.error('Failed to update verification');
+      } else {
+        toast.success(targetVerified ? 'Member verified' : 'Verification removed');
+      }
+    } catch (err) {
+      recentOverridesRef.current.delete(user.id);
+      setRealUsers(prev => prev ? prev.map(u => u.id === user.id ? { ...u, verified: user.verified } : u) : null);
+      toast.error('Failed to update verification');
+    } finally {
+      setBusyIds(prev => ({ ...prev, [user.id]: null }));
+    }
+  };
+
+  const handleToggleSuspended = async (user: AdminUser) => {
+    if (busyIds[user.id]) return;
+    const targetSuspended = !user.suspended;
+
+    setBusyIds(prev => ({ ...prev, [user.id]: 'suspend' }));
+    recentOverridesRef.current.set(user.id, {
+      ...(recentOverridesRef.current.get(user.id) || {}),
+      suspended: targetSuspended,
+      timestamp: Date.now()
+    });
+
+    setRealUsers(prev => prev ? prev.map(u => u.id === user.id ? { ...u, suspended: targetSuspended } : u) : null);
+
+    try {
+      const res = await setUserSuspendedAction(user.id, targetSuspended);
+      if (!res.ok) {
+        recentOverridesRef.current.delete(user.id);
+        setRealUsers(prev => prev ? prev.map(u => u.id === user.id ? { ...u, suspended: user.suspended } : u) : null);
+        toast.error('Failed to update suspension');
+      } else {
+        toast.success(targetSuspended ? 'Member suspended' : 'Member reinstated');
+      }
+    } catch (err) {
+      recentOverridesRef.current.delete(user.id);
+      setRealUsers(prev => prev ? prev.map(u => u.id === user.id ? { ...u, suspended: user.suspended } : u) : null);
+      toast.error('Failed to update suspension');
+    } finally {
+      setBusyIds(prev => ({ ...prev, [user.id]: null }));
+    }
+  };
 
   const detailUser = (realUsers || []).find((u) => u.id === detail);
 
@@ -244,45 +375,49 @@ export function AdminUsers() {
                 <td className="px-5 py-3.5">
                   <div className="flex justify-end gap-1.5">
                     <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setUserVerifiedAction(user.id, !user.verified).catch(console.error);
-                      setRealUsers(prev => prev ? prev.map(u => u.id === user.id ? { ...u, verified: !user.verified } : u) : null);
-                      toast.success(user.verified ? 'Verification removed' : 'Member verified');
-                    }}>
-                    
-                      <CheckCircle2Icon className="h-3.5 w-3.5" />
+                      size="sm"
+                      variant="outline"
+                      disabled={Boolean(busyIds[user.id])}
+                      onClick={() => handleToggleVerified(user)}
+                    >
+                      {busyIds[user.id] === 'verify' ? (
+                        <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <CheckCircle2Icon className="h-3.5 w-3.5" />
+                      )}
                       {user.verified ? 'Unverify' : 'Verify'}
                     </Button>
                     <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setUserUnlimitedAction(user.id, !user.isUnlimited).catch(console.error);
-                      setRealUsers(prev => prev ? prev.map(u => u.id === user.id ? { ...u, isUnlimited: !user.isUnlimited } : u) : null);
-                      toast.success(user.isUnlimited ? 'Unlimited removed' : 'Unlimited granted');
-                    }}>
-                      <InfinityIcon className="h-3.5 w-3.5" />
+                      size="sm"
+                      variant="outline"
+                      disabled={Boolean(busyIds[user.id])}
+                      onClick={() => handleToggleUnlimited(user)}
+                    >
+                      {busyIds[user.id] === 'unlimited' ? (
+                        <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <InfinityIcon className="h-3.5 w-3.5" />
+                      )}
                       {user.isUnlimited ? 'Remove Unltd' : 'Make Unltd'}
                     </Button>
                     <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setUserSuspendedAction(user.id, !user.suspended).catch(console.error);
-                      setRealUsers(prev => prev ? prev.map(u => u.id === user.id ? { ...u, suspended: !user.suspended } : u) : null);
-                      toast.success(user.suspended ? 'Member reinstated' : 'Member suspended');
-                    }}>
-                    
+                      size="sm"
+                      variant="outline"
+                      disabled={Boolean(busyIds[user.id])}
+                      onClick={() => handleToggleSuspended(user)}
+                    >
+                      {busyIds[user.id] === 'suspend' ? (
+                        <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
+                      ) : null}
                       {user.suspended ? 'Reinstate' : 'Suspend'}
                     </Button>
                     <Button
-                    size="sm"
-                    variant="danger"
-                    aria-label={`Delete ${user.name}`}
-                    onClick={() => setPendingDelete(user.id)}>
-                    
+                      size="sm"
+                      variant="danger"
+                      aria-label={`Delete ${user.name}`}
+                      disabled={Boolean(busyIds[user.id])}
+                      onClick={() => setPendingDelete(user.id)}
+                    >
                       <Trash2Icon className="h-3.5 w-3.5" />
                     </Button>
                   </div>
@@ -372,14 +507,24 @@ export function AdminUsers() {
               Cancel
             </Button>
             <Button
-            variant="danger"
-            onClick={() => {
-              deleteUserAction(pendingDelete as string).catch(console.error);
-              setRealUsers(prev => prev ? prev.filter(u => u.id !== pendingDelete) : null);
-              setPendingDelete(null);
-              toast.success('Member deleted');
-            }}>
-            
+              variant="danger"
+              onClick={async () => {
+                const toDelete = pendingDelete;
+                setPendingDelete(null);
+                if (!toDelete) return;
+                setRealUsers(prev => prev ? prev.filter(u => u.id !== toDelete) : null);
+                try {
+                  const res = await deleteUserAction(toDelete);
+                  if (res.ok) {
+                    toast.success('Member deleted');
+                  } else {
+                    toast.error(res.error || 'Failed to delete member');
+                  }
+                } catch (err: any) {
+                  toast.error(err?.message || 'Failed to delete member');
+                }
+              }}
+            >
               Delete member
             </Button>
           </>

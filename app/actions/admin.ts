@@ -231,11 +231,11 @@ export async function setUserUnlimitedAction(userId: string, isUnlimited: boolea
     const admin = await db.orm.public.User.where({ id: session.userId as string }).first();
     if (admin?.role !== 'admin') return { ok: false, error: 'Forbidden' };
 
-    await db.orm.public.User.where({ id: userId }).update({ isUnlimited });
-    return { ok: true };
-  } catch (err) {
+    await db.orm.public.User.where({ id: userId }).update({ isUnlimited: Boolean(isUnlimited) });
+    return { ok: true, isUnlimited: Boolean(isUnlimited) };
+  } catch (err: any) {
     console.error('setUserUnlimitedAction error:', err);
-    return { ok: false, error: 'Failed to set unlimited wingits' };
+    return { ok: false, error: err?.message || 'Failed to set unlimited status' };
   }
 }
 
