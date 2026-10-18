@@ -28,7 +28,7 @@ type AdminUser = User & { photos: Photo[] };
 
 export function AdminUsers() {
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<'all' | 'verified' | 'unverified' | 'suspended'>('all');
+  const [filter, setFilter] = useState<'all' | 'verified' | 'unverified' | 'suspended' | 'unlimited' | 'non-unlimited'>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'active' | 'oldest' | 'name'>('newest');
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [detail, setDetail] = useState<string | null>(null);
@@ -63,15 +63,15 @@ export function AdminUsers() {
   filter((u) =>
     `${u.name} ${u.email} ${u.location}`.toLowerCase().includes(query.trim().toLowerCase())
   ).
-  filter((u) =>
-    filter === 'all' ?
-    true :
-    filter === 'verified' ?
-    u.verified :
-    filter === 'unverified' ?
-    !u.verified :
-    u.suspended
-  ).
+  filter((u) => {
+    if (filter === 'all') return true;
+    if (filter === 'verified') return u.verified;
+    if (filter === 'unverified') return !u.verified;
+    if (filter === 'suspended') return u.suspended;
+    if (filter === 'unlimited') return Boolean(u.isUnlimited);
+    if (filter === 'non-unlimited') return !u.isUnlimited;
+    return true;
+  }).
   sort((a, b) => {
     if (sortBy === 'newest') {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -135,16 +135,23 @@ export function AdminUsers() {
               aria-label="Search users" />
           </div>
 
-          <div className="inline-flex rounded-full bg-cream-deep p-1 border border-sand/40">
-            {(['all', 'verified', 'unverified', 'suspended'] as const).map((key) =>
+          <div className="inline-flex flex-wrap rounded-full bg-cream-deep p-1 border border-sand/40">
+            {([
+              { key: 'all', label: 'All' },
+              { key: 'verified', label: 'Verified' },
+              { key: 'unverified', label: 'Unverified' },
+              { key: 'suspended', label: 'Suspended' },
+              { key: 'unlimited', label: 'Unlimited' },
+              { key: 'non-unlimited', label: 'Non-Unlimited' },
+            ] as const).map(({ key, label }) =>
               <button
                 key={key}
                 onClick={() => setFilter(key)}
-                className={`rounded-full px-3.5 py-1.5 text-[13px] capitalize transition-colors duration-150 ease-soft ${
+                className={`rounded-full px-3.5 py-1.5 text-[13px] transition-colors duration-150 ease-soft ${
                   filter === key ? 'bg-sand text-ink shadow-sm font-medium' : 'text-ink-soft hover:text-ink'
                 }`}
               >
-                {key}
+                {label}
               </button>
             )}
           </div>
@@ -337,18 +344,18 @@ export function AdminUsers() {
             <p className="text-[14px] leading-relaxed text-ink-soft">{detailUser.bio}</p>
             <dl className="divide-y divide-sand border-y border-sand text-[13px]">
               {[
-            ['Location', detailUser.location],
-            ['Intention', detailUser.intention],
-            ['Wingles sent', 'N/A'],
-            ['Wingles received', 'N/A'],
-            ['Mingles sent', 'N/A'],
-            ['Reports against', 'N/A']].
-            map(([label, value]) =>
-            <div key={label} className="flex justify-between gap-4 py-2.5">
+                ['Location', detailUser.location],
+                ['Intention', detailUser.intention],
+                ['Unlimited access', detailUser.isUnlimited ? 'Active (Unlimited)' : 'No (Standard)'],
+                ['Wingits balance', detailUser.wingitsBalance?.toString() || '0'],
+                ['Verification', detailUser.verified ? 'Verified' : 'Unverified'],
+                ['Account state', detailUser.suspended ? 'Suspended' : 'Active']
+              ].map(([label, value]) =>
+                <div key={label} className="flex justify-between gap-4 py-2.5">
                   <dt className="text-ink-muted">{label}</dt>
                   <dd className="font-medium text-ink">{value}</dd>
                 </div>
-            )}
+              )}
             </dl>
           </div>
         }
