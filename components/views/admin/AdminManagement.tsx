@@ -10,7 +10,8 @@ import {
   Trash2Icon, 
   KeyIcon,
   RefreshCwIcon,
-  SparklesIcon
+  SparklesIcon,
+  LockIcon
 } from 'lucide-react';
 import { AdminHeader, StatTile } from './AdminShell';
 import { Button } from '@/components/ui/Button';
@@ -41,9 +42,12 @@ interface AdminMember {
 export function AdminManagement() {
   const { currentUser } = useStore();
   const [admins, setAdmins] = useState<AdminMember[] | null>(null);
+  const [isCallerSuperAdmin, setIsCallerSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const isSuperAdmin = currentUser?.email === 'envicdigital88@gmail.com' || isCallerSuperAdmin;
   
   // Modal states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -66,6 +70,9 @@ export function AdminManagement() {
       const res = await getAdminListAction();
       if (res.ok && res.data) {
         setAdmins(res.data as AdminMember[]);
+        if (res.isCallerSuperAdmin !== undefined) {
+          setIsCallerSuperAdmin(Boolean(res.isCallerSuperAdmin));
+        }
       } else {
         if (isManual) toast.error('Failed to load administrators');
       }
@@ -201,10 +208,17 @@ export function AdminManagement() {
               <RefreshCwIcon className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
               Refresh
             </button>
-            <Button onClick={() => setIsAddModalOpen(true)}>
-              <UserPlusIcon className="h-4 w-4" />
-              Add new admin
-            </Button>
+            {isSuperAdmin ? (
+              <Button onClick={() => setIsAddModalOpen(true)}>
+                <UserPlusIcon className="h-4 w-4" />
+                Add new admin
+              </Button>
+            ) : (
+              <div className="flex items-center gap-1.5 rounded-full bg-cream-deep px-3.5 py-2 text-xs font-medium text-ink-muted border border-sand/60">
+                <LockIcon className="h-3.5 w-3.5 text-berry-400" />
+                Super Admin Only
+              </div>
+            )}
           </div>
         }
       />
@@ -226,6 +240,21 @@ export function AdminManagement() {
           emphasis
         />
       </div>
+
+      {/* Delegated Admin View Notice */}
+      {!isSuperAdmin && (
+        <div className="mt-6 rounded-3xl bg-cream-deep border border-sand/60 p-4 flex items-start gap-3 text-xs text-ink-muted shadow-card">
+          <div className="p-2 rounded-xl bg-berry-500/10 text-berry-400 shrink-0 mt-0.5">
+            <LockIcon className="h-4 w-4" />
+          </div>
+          <div>
+            <p className="font-semibold text-ink text-[13px]">Delegated Administrator Mode</p>
+            <p className="mt-0.5 leading-relaxed">
+              You are signed in as a delegated administrator. You have viewing privileges for the administrator team, but only the Super Administrator (<strong className="text-berry-400">envicdigital88@gmail.com</strong>) has authorization to add, remove, or modify administrator accounts.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Admins Table Section */}
       <section className="mt-8 overflow-hidden rounded-4xl bg-cream-deep shadow-card border border-sand/40">
@@ -314,27 +343,33 @@ export function AdminManagement() {
                         Active {relativeTime(admin.lastActiveAt)}
                       </td>
                       <td className="px-5 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => handleResendInvite(admin)}
-                            disabled={isResending}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full bg-sand/60 text-ink-soft hover:bg-sand hover:text-ink transition-colors disabled:opacity-50"
-                            title="Resend login credentials via email"
-                          >
-                            <MailIcon className={`h-3.5 w-3.5 ${isResending ? 'animate-bounce text-berry-400' : ''}`} />
-                            Resend Access
-                          </button>
-
-                          {!isPrimary && !isCurrent && (
+                        {isSuperAdmin ? (
+                          <div className="flex items-center justify-end gap-2">
                             <button
-                              onClick={() => setPendingRevoke(admin)}
-                              className="inline-flex items-center p-1.5 text-xs rounded-full text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
-                              title="Revoke administrator privileges"
+                              onClick={() => handleResendInvite(admin)}
+                              disabled={isResending}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full bg-sand/60 text-ink-soft hover:bg-sand hover:text-ink transition-colors disabled:opacity-50"
+                              title="Resend login credentials via email"
                             >
-                              <Trash2Icon className="h-4 w-4" />
+                              <MailIcon className={`h-3.5 w-3.5 ${isResending ? 'animate-bounce text-berry-400' : ''}`} />
+                              Resend Access
                             </button>
-                          )}
-                        </div>
+
+                            {!isPrimary && !isCurrent && (
+                              <button
+                                onClick={() => setPendingRevoke(admin)}
+                                className="inline-flex items-center p-1.5 text-xs rounded-full text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                                title="Revoke administrator privileges"
+                              >
+                                <Trash2Icon className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-ink-muted italic font-medium">
+                            {isPrimary ? 'Super Admin' : 'View only'}
+                          </span>
+                        )}
                       </td>
                     </tr>
                   );

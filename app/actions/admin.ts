@@ -466,6 +466,7 @@ export async function getAdminListAction() {
 
     return {
       ok: true,
+      isCallerSuperAdmin: caller.email === 'envicdigital88@gmail.com',
       data: sortedAdmins.map(u => ({
         id: u.id,
         name: u.name,
@@ -490,6 +491,11 @@ export async function addAdminAction(input: { name: string; email: string; passw
     if (!session?.userId) return { ok: false, error: 'Unauthorized' };
     const caller = await db.orm.public.User.where({ id: session.userId as string }).first();
     if (caller?.role !== 'admin') return { ok: false, error: 'Forbidden' };
+
+    // Only the Super Admin (envicdigital88@gmail.com) can add new admins
+    if (caller.email !== 'envicdigital88@gmail.com') {
+      return { ok: false, error: 'Only the Super Administrator (envicdigital88@gmail.com) can add new administrators.' };
+    }
 
     const name = input.name?.trim();
     const email = input.email?.trim().toLowerCase();
@@ -564,6 +570,11 @@ export async function removeAdminAction(targetUserId: string) {
     const caller = await db.orm.public.User.where({ id: session.userId as string }).first();
     if (caller?.role !== 'admin') return { ok: false, error: 'Forbidden' };
 
+    // Only the Super Admin (envicdigital88@gmail.com) can remove admins
+    if (caller.email !== 'envicdigital88@gmail.com') {
+      return { ok: false, error: 'Only the Super Administrator (envicdigital88@gmail.com) can remove administrators.' };
+    }
+
     if (targetUserId === caller.id) {
       return { ok: false, error: 'You cannot revoke your own administrator privileges.' };
     }
@@ -594,6 +605,11 @@ export async function resendAdminInviteAction(targetUserId: string) {
     if (!session?.userId) return { ok: false, error: 'Unauthorized' };
     const caller = await db.orm.public.User.where({ id: session.userId as string }).first();
     if (caller?.role !== 'admin') return { ok: false, error: 'Forbidden' };
+
+    // Only the Super Admin (envicdigital88@gmail.com) can resend admin credentials
+    if (caller.email !== 'envicdigital88@gmail.com') {
+      return { ok: false, error: 'Only the Super Administrator can resend admin access credentials.' };
+    }
 
     const targetUser = await db.orm.public.User.where({ id: targetUserId }).first();
     if (!targetUser || targetUser.role !== 'admin') {
