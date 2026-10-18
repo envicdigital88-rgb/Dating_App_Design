@@ -168,8 +168,8 @@ export async function getAdminUsersAction() {
     const admin = await db.orm.public.User.where({ id: session.userId as string }).first();
     if (admin?.role !== 'admin') return { ok: false, error: 'Forbidden' };
 
-    const users = await db.orm.public.User.where({ role: 'member' }).limit(500).all();
-    const photos = await db.orm.public.Photo.limit(500).all();
+    const users = await db.orm.public.User.where({ role: 'member' }).limit(2500).all();
+    const photos = await db.orm.public.Photo.limit(10000).all();
     
     const sortedUsers = [...users].sort((a: any, b: any) =>
       Temporal.Instant.compare(b.createdAt, a.createdAt)

@@ -35,14 +35,14 @@ export function AdminUsers() {
   const [detail, setDetail] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [busyIds, setBusyIds] = useState<Record<string, 'unlimited' | 'verify' | 'suspend' | null>>({});
-  const itemsPerPage = 50;
+  const [itemsPerPage, setItemsPerPage] = useState<number>(50);
 
   // Track recent local overrides with a timestamp to avoid background polling reverts
   const recentOverridesRef = useRef<Map<string, { isUnlimited?: boolean; verified?: boolean; suspended?: boolean; timestamp: number }>>(new Map());
 
   useEffect(() => {
     setPage(1);
-  }, [query, filter, sortBy]);
+  }, [query, filter, sortBy, itemsPerPage]);
 
   const [realUsers, setRealUsers] = useState<AdminUser[] | null>(null);
 
@@ -432,11 +432,35 @@ export function AdminUsers() {
           </p>
         }
         {users.length > 0 && (
-          <div className="flex items-center justify-between border-t border-sand px-5 py-3">
-            <p className="text-[13px] text-ink-muted">
-              Showing {(page - 1) * itemsPerPage + 1} to {Math.min(page * itemsPerPage, users.length)} of {users.length}
-            </p>
-            <div className="flex gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-sand px-5 py-3">
+            <div className="flex flex-wrap items-center gap-4">
+              <p className="text-[13px] text-ink-muted">
+                Showing {(page - 1) * itemsPerPage + 1} to {Math.min(page * itemsPerPage, users.length)} of {users.length}
+              </p>
+              <div className="flex items-center gap-2 text-[13px] text-ink-muted">
+                <span>Per page:</span>
+                <div className="inline-flex rounded-lg bg-cream-deep p-0.5 border border-sand/40">
+                  {[50, 100, 1000].map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => setItemsPerPage(size)}
+                      className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-all ${
+                        itemsPerPage === size
+                          ? 'bg-ink text-cream shadow-sm'
+                          : 'text-ink-soft hover:text-ink hover:bg-sand/40'
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[12px] text-ink-muted hidden sm:inline">
+                Page {page} of {Math.max(1, totalPages)}
+              </span>
               <Button
                 variant="outline"
                 size="sm"
