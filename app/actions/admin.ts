@@ -168,9 +168,13 @@ export async function getAdminUsersAction() {
     const users = await db.orm.public.User.where({ role: 'member' }).limit(500).all();
     const photos = await db.orm.public.Photo.limit(500).all();
     
+    const sortedUsers = [...users].sort((a: any, b: any) =>
+      Temporal.Instant.compare(b.createdAt, a.createdAt)
+    );
+    
     return { 
       ok: true, 
-      data: users.map(u => ({
+      data: sortedUsers.map(u => ({
         ...u,
         createdAt: u.createdAt.toString(),
         lastActiveAt: u.lastActiveAt?.toString() || u.createdAt.toString(),

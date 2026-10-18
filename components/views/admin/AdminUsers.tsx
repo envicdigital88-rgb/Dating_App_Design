@@ -2,7 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { CheckCircle2Icon, SearchIcon, Trash2Icon, ChevronLeftIcon, ChevronRightIcon, InfinityIcon } from 'lucide-react';
+import { 
+  CheckCircle2Icon, 
+  SearchIcon, 
+  Trash2Icon, 
+  ChevronLeftIcon, 
+  ChevronRightIcon, 
+  InfinityIcon,
+  ArrowUpDownIcon,
+  ArrowDownIcon,
+  ArrowUpIcon
+} from 'lucide-react';
 import { AdminHeader } from './AdminShell';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Field';
@@ -17,6 +27,7 @@ type AdminUser = User & { photos: Photo[] };
 export function AdminUsers() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'verified' | 'unverified' | 'suspended'>('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'active' | 'oldest' | 'name'>('newest');
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [detail, setDetail] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -24,7 +35,7 @@ export function AdminUsers() {
 
   useEffect(() => {
     setPage(1);
-  }, [query, filter]);
+  }, [query, filter, sortBy]);
 
   const [realUsers, setRealUsers] = useState<AdminUser[] | null>(null);
 
@@ -48,17 +59,32 @@ export function AdminUsers() {
 
   const users = (realUsers || []).
   filter((u) =>
-  `${u.name} ${u.email} ${u.location}`.toLowerCase().includes(query.trim().toLowerCase())
+    `${u.name} ${u.email} ${u.location}`.toLowerCase().includes(query.trim().toLowerCase())
   ).
   filter((u) =>
-  filter === 'all' ?
-  true :
-  filter === 'verified' ?
-  u.verified :
-  filter === 'unverified' ?
-  !u.verified :
-  u.suspended
-  );
+    filter === 'all' ?
+    true :
+    filter === 'verified' ?
+    u.verified :
+    filter === 'unverified' ?
+    !u.verified :
+    u.suspended
+  ).
+  sort((a, b) => {
+    if (sortBy === 'newest') {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    }
+    if (sortBy === 'oldest') {
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    }
+    if (sortBy === 'active') {
+      return new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime();
+    }
+    if (sortBy === 'name') {
+      return a.name.localeCompare(b.name);
+    }
+    return 0;
+  });
 
   const totalPages = Math.ceil(users.length / itemsPerPage);
   const paginatedUsers = users.slice((page - 1) * itemsPerPage, page * itemsPerPage);
@@ -85,39 +111,78 @@ export function AdminUsers() {
         body="Search, review, verify and suspend members. Suspended members cannot sign in and are hidden from Discover." />
       
 
-      <div className="mb-5 flex flex-wrap items-center gap-3">
-        <div className="relative min-w-[240px] flex-1">
-          <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by name, email or area"
-            className="pl-11"
-            aria-label="Search users" />
-          
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
+          <div className="relative min-w-[220px] flex-1 max-w-md">
+            <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by name, email or area"
+              className="pl-11"
+              aria-label="Search users" />
+          </div>
+
+          <div className="inline-flex rounded-full bg-cream-deep p-1 border border-sand/40">
+            {(['all', 'verified', 'unverified', 'suspended'] as const).map((key) =>
+              <button
+                key={key}
+                onClick={() => setFilter(key)}
+                className={`rounded-full px-3.5 py-1.5 text-[13px] capitalize transition-colors duration-150 ease-soft ${
+                  filter === key ? 'bg-sand text-ink shadow-sm font-medium' : 'text-ink-soft hover:text-ink'
+                }`}
+              >
+                {key}
+              </button>
+            )}
+          </div>
         </div>
-        <div className="inline-flex rounded-full bg-cream-deep p-1">
-          {(['all', 'verified', 'unverified', 'suspended'] as const).map((key) =>
-          <button
-            key={key}
-            onClick={() => setFilter(key)}
-            className={`rounded-full px-3.5 py-1.5 text-[13px] capitalize transition-colors duration-150 ease-soft ${
-            filter === key ? 'bg-sand text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`
-            }>
-            
-              {key}
-            </button>
-          )}
+
+        {/* Sort Selector */}
+        <div className="flex items-center gap-2 bg-cream-deep rounded-full px-3.5 py-1.5 border border-sand/40">
+          <ArrowUpDownIcon className="h-3.5 w-3.5 text-berry-400" />
+          <span className="text-[12px] text-ink-muted font-medium">Sort:</span>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            className="bg-transparent text-[13px] text-ink font-medium focus:outline-none cursor-pointer pr-1"
+          >
+            <option value="newest" className="bg-cream-deep text-ink">Newest first</option>
+            <option value="active" className="bg-cream-deep text-ink">Recently active</option>
+            <option value="oldest" className="bg-cream-deep text-ink">Oldest first</option>
+            <option value="name" className="bg-cream-deep text-ink">Name (A-Z)</option>
+          </select>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-4xl bg-cream-deep shadow-card">
+      <div className="overflow-hidden rounded-4xl bg-cream-deep shadow-card border border-sand/40">
         <table className="w-full text-left text-[14px]">
-          <thead className="border-b border-sand text-[12px] uppercase tracking-[0.06em] text-ink-muted">
+          <thead className="border-b border-sand text-[12px] uppercase tracking-[0.06em] text-ink-muted bg-cream/40">
             <tr>
               <th scope="col" className="px-5 py-3 font-semibold">Member</th>
-              <th scope="col" className="hidden px-5 py-3 font-semibold md:table-cell">Joined</th>
-              <th scope="col" className="hidden px-5 py-3 font-semibold lg:table-cell">Last active</th>
+              <th 
+                scope="col" 
+                onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
+                className="hidden px-5 py-3 font-semibold md:table-cell cursor-pointer hover:text-ink transition-colors select-none"
+                title="Click to sort by Joined date"
+              >
+                <div className="flex items-center gap-1.5">
+                  Joined
+                  {sortBy === 'newest' && <ArrowDownIcon className="h-3.5 w-3.5 text-berry-400" />}
+                  {sortBy === 'oldest' && <ArrowUpIcon className="h-3.5 w-3.5 text-berry-400" />}
+                </div>
+              </th>
+              <th 
+                scope="col" 
+                onClick={() => setSortBy(sortBy === 'active' ? 'newest' : 'active')}
+                className="hidden px-5 py-3 font-semibold lg:table-cell cursor-pointer hover:text-ink transition-colors select-none"
+                title="Click to sort by Last active"
+              >
+                <div className="flex items-center gap-1.5">
+                  Last active
+                  {sortBy === 'active' && <ArrowDownIcon className="h-3.5 w-3.5 text-berry-400" />}
+                </div>
+              </th>
               <th scope="col" className="px-5 py-3 font-semibold">Status</th>
               <th scope="col" className="px-5 py-3 text-right font-semibold">Actions</th>
             </tr>
