@@ -1,15 +1,19 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 import { toast } from 'sonner';
 import { ArrowLeftIcon, ArrowRightIcon, EyeIcon, EyeOffIcon, LockIcon, MailIcon, PhoneIcon, UserIcon, XCircleIcon, CheckCircle2Icon } from 'lucide-react';
 import { heroImage } from '@/lib/data/seed';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+import { useStore } from '@/lib/contexts/StoreContext';
 
 export function Auth({ mode }: {mode: 'signin' | 'register';}) {
   const isRegister = mode === 'register';
+  const { currentUser, isHydrated } = useStore();
+  const router = useRouter();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -22,6 +26,30 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
   const [isConfirmPasswordFocused, setIsConfirmPasswordFocused] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!isHydrated || !currentUser || currentUser.suspended) return;
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const from = params.get('from');
+      if (from && from.startsWith('/') && !from.startsWith('/sign-')) {
+        router.replace(from);
+        return;
+      }
+    }
+
+    if (currentUser.role === 'admin') {
+      const saved = localStorage.getItem('winglemingle_last_path');
+      router.replace(saved && saved.startsWith('/admin') ? saved : '/admin');
+    } else if (!currentUser.onboarded) {
+      router.replace('/onboarding');
+    } else {
+      const saved = localStorage.getItem('winglemingle_last_path');
+      const validSaved = saved && !saved.startsWith('/admin') && !saved.startsWith('/sign-') && saved !== '/';
+      router.replace(validSaved ? saved : '/discover');
+    }
+  }, [currentUser, isHydrated, router]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();

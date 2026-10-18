@@ -275,7 +275,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       };
 
       // Fetch the real user via stable /api/auth/me (immune to Server Action deployment hash changes)
-      const userPromise = fetch('/api/auth/me', { cache: 'no-store' })
+      const userPromise = fetch('/api/auth/me', { cache: 'no-store', credentials: 'include' })
         .then(async (res) => {
           if (!res.ok) return null;
           const json = await res.json();
@@ -997,6 +997,10 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     timers.current = [];
     setSessionId(null);
     setDb(initialDb); // Clear local store state
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('winglemingle_last_path');
+      localStorage.removeItem('winglemingle_session');
+    }
     import('@/app/actions/auth').then(({ logoutUser }) => {
       logoutUser().then(() => {
         if (typeof window !== 'undefined') {

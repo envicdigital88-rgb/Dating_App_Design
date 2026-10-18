@@ -16,6 +16,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       router.replace(`/sign-in?from=${pathname}`);
     } else if (!currentUser.onboarded) {
       router.replace('/onboarding');
+    } else if (pathname && !pathname.startsWith('/sign-in') && !pathname.startsWith('/sign-up') && pathname !== '/') {
+      try {
+        localStorage.setItem('winglemingle_last_path', pathname);
+      } catch (e) {}
     }
   }, [currentUser, router, pathname, isHydrated]);
 

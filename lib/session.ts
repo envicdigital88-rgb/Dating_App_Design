@@ -1,7 +1,7 @@
 import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 
-const secretKey = process.env.SESSION_SECRET || 'super-secret-key-that-needs-to-be-changed-in-production'
+const secretKey = process.env.SESSION_SECRET || 'winglemingle_session_jwt_secret_key_2026_super_secure_auth_token_99x'
 const encodedKey = new TextEncoder().encode(secretKey)
 
 export async function encrypt(payload: any) {
@@ -25,7 +25,7 @@ export async function decrypt(session: string | undefined = '') {
 }
 
 export async function createSession(userId: string) {
-  // 30 days
+  // 30 days (persists across browser/tab closes for well over 10 days)
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
   const session = await encrypt({ userId, expiresAt })
   
@@ -41,9 +41,40 @@ export async function createSession(userId: string) {
   })
 }
 
+export async function updateSession() {
+  const cookieStore = await cookies()
+  const session = cookieStore.get('session')?.value
+  const payload = await decrypt(session)
+
+  if (!session || !payload?.userId) {
+    return null
+  }
+
+  // Renew session for another 30 days
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+  const newSession = await encrypt({ userId: payload.userId, expiresAt })
+
+  cookieStore.set('session', newSession, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    expires: expiresAt,
+    maxAge: 30 * 24 * 60 * 60,
+    sameSite: 'lax',
+    path: '/',
+  })
+  return payload
+}
+
 export async function deleteSession() {
   const cookieStore = await cookies()
-  cookieStore.delete('session')
+  cookieStore.set('session', '', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    expires: new Date(0),
+    maxAge: 0,
+    sameSite: 'lax',
+    path: '/',
+  })
 }
 
 export async function getSession() {
