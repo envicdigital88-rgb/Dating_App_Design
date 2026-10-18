@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { 
   CheckCircle2Icon, 
@@ -11,7 +12,8 @@ import {
   InfinityIcon,
   ArrowUpDownIcon,
   ArrowDownIcon,
-  ArrowUpIcon
+  ArrowUpIcon,
+  ShieldCheckIcon
 } from 'lucide-react';
 import { AdminHeader } from './AdminShell';
 import { Button } from '@/components/ui/Button';
@@ -108,7 +110,17 @@ export function AdminUsers() {
     <div>
       <AdminHeader
         title="User management"
-        body="Search, review, verify and suspend members. Suspended members cannot sign in and are hidden from Discover." />
+        body="Search, review, verify and suspend members. Suspended members cannot sign in and are hidden from Discover."
+        action={
+          <Link
+            href="/admin/admins"
+            className="inline-flex items-center gap-2 rounded-full bg-cream-deep px-4 py-2 text-xs font-semibold text-ink border border-sand hover:bg-sand/60 transition-colors"
+          >
+            <ShieldCheckIcon className="h-4 w-4 text-berry-400" />
+            Manage Admins
+          </Link>
+        }
+      />
       
 
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">

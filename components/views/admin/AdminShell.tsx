@@ -11,6 +11,7 @@ import {
   LayersIcon,
   LogOutIcon,
   SendIcon,
+  ShieldCheckIcon,
   UsersIcon } from
 'lucide-react';
 import { BrandMark } from '@/components/BrandMark';
@@ -20,6 +21,7 @@ import { cn } from '@/lib/utils/format';
 const items = [
 { to: '/admin', label: 'Overview', icon: <BarChart3Icon className="h-[18px] w-[18px]" />, end: true },
 { to: '/admin/users', label: 'Users', icon: <UsersIcon className="h-[18px] w-[18px]" /> },
+{ to: '/admin/admins', label: 'Admins', icon: <ShieldCheckIcon className="h-[18px] w-[18px]" /> },
 { to: '/admin/moderation', label: 'Moderation', icon: <ImageIcon className="h-[18px] w-[18px]" /> },
 { to: '/admin/activity', label: 'Wingles & chat', icon: <SendIcon className="h-[18px] w-[18px]" /> },
 { to: '/admin/packages', label: 'Packages', icon: <LayersIcon className="h-[18px] w-[18px]" /> },

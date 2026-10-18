@@ -4,6 +4,9 @@ import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { or } from '@prisma/orm-postgres/orm-client'
 import { Temporal } from 'temporal-polyfill'
+import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
+import { sendAdminInviteEmail } from '@/lib/admin-invite-email'
 
 export async function getAdminOverviewStatsAction() {
   try {
@@ -446,6 +449,179 @@ export async function resetMemberUsageAction(targetUserId: string) {
   } catch (err) {
     console.error('resetMemberUsageAction error:', err);
     return { ok: false, error: 'Failed to reset member usage' };
+  }
+}
+
+export async function getAdminListAction() {
+  try {
+    const session = await getSession();
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
+    const caller = await db.orm.public.User.where({ id: session.userId as string }).first();
+    if (caller?.role !== 'admin') return { ok: false, error: 'Forbidden' };
+
+    const admins = await db.orm.public.User.where({ role: 'admin' }).all();
+    const sortedAdmins = [...admins].sort((a: any, b: any) =>
+      Temporal.Instant.compare(b.createdAt, a.createdAt)
+    );
+
+    return {
+      ok: true,
+      data: sortedAdmins.map(u => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        verified: u.verified,
+        suspended: u.suspended,
+        createdAt: u.createdAt.toString(),
+        lastActiveAt: u.lastActiveAt?.toString() || u.createdAt.toString(),
+        isSuperAdmin: u.email === 'envicdigital88@gmail.com'
+      }))
+    };
+  } catch (err) {
+    console.error('getAdminListAction error:', err);
+    return { ok: false, error: 'Failed to fetch admin team' };
+  }
+}
+
+export async function addAdminAction(input: { name: string; email: string; password?: string }) {
+  try {
+    const session = await getSession();
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
+    const caller = await db.orm.public.User.where({ id: session.userId as string }).first();
+    if (caller?.role !== 'admin') return { ok: false, error: 'Forbidden' };
+
+    const name = input.name?.trim();
+    const email = input.email?.trim().toLowerCase();
+
+    if (!name || name.length < 2) {
+      return { ok: false, error: 'Name must be at least 2 characters long' };
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+      return { ok: false, error: 'Please provide a valid email address' };
+    }
+
+    // Generate secure temporary password if not provided
+    const plainPassword = input.password?.trim() || `WmAdmin#${crypto.randomBytes(4).toString('hex')}!`;
+    const hashedPassword = await bcrypt.hash(plainPassword, 12);
+
+    const existingUser = await db.orm.public.User.where({ email }).first();
+
+    if (existingUser) {
+      // Elevate existing user to admin
+      await db.orm.public.User.where({ id: existingUser.id }).update({
+        role: 'admin',
+        name: name || existingUser.name,
+        password: hashedPassword,
+        verified: true,
+        suspended: false
+      });
+    } else {
+      // Create new admin user
+      await db.orm.public.User.create({
+        name,
+        email,
+        phone: '',
+        password: hashedPassword,
+        role: 'admin',
+        age: 25,
+        gender: 'non-binary',
+        intention: 'Platform Administration',
+        interests: '[]',
+        traits: '[]',
+        lifestyle: JSON.stringify({}),
+        verified: true,
+        suspended: false,
+        onboarded: true
+      });
+    }
+
+    // Send access credentials from noreply@winglemingle.com
+    const emailRes = await sendAdminInviteEmail({
+      name,
+      email,
+      temporaryPassword: plainPassword
+    });
+
+    return {
+      ok: true,
+      message: `Admin access granted to ${email}`,
+      emailSent: emailRes.ok,
+      simulated: emailRes.simulated || false
+    };
+  } catch (err: any) {
+    console.error('addAdminAction error:', err);
+    return { ok: false, error: err?.message || 'Failed to add admin user' };
+  }
+}
+
+export async function removeAdminAction(targetUserId: string) {
+  try {
+    const session = await getSession();
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
+    const caller = await db.orm.public.User.where({ id: session.userId as string }).first();
+    if (caller?.role !== 'admin') return { ok: false, error: 'Forbidden' };
+
+    if (targetUserId === caller.id) {
+      return { ok: false, error: 'You cannot revoke your own administrator privileges.' };
+    }
+
+    const targetUser = await db.orm.public.User.where({ id: targetUserId }).first();
+    if (!targetUser) {
+      return { ok: false, error: 'Target admin user not found' };
+    }
+
+    if (targetUser.email === 'envicdigital88@gmail.com') {
+      return { ok: false, error: 'Primary Super Administrator cannot be removed.' };
+    }
+
+    await db.orm.public.User.where({ id: targetUserId }).update({
+      role: 'member'
+    });
+
+    return { ok: true };
+  } catch (err) {
+    console.error('removeAdminAction error:', err);
+    return { ok: false, error: 'Failed to remove admin' };
+  }
+}
+
+export async function resendAdminInviteAction(targetUserId: string) {
+  try {
+    const session = await getSession();
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
+    const caller = await db.orm.public.User.where({ id: session.userId as string }).first();
+    if (caller?.role !== 'admin') return { ok: false, error: 'Forbidden' };
+
+    const targetUser = await db.orm.public.User.where({ id: targetUserId }).first();
+    if (!targetUser || targetUser.role !== 'admin') {
+      return { ok: false, error: 'Admin user not found' };
+    }
+
+    const newTempPassword = `WmAdmin#${crypto.randomBytes(4).toString('hex')}!`;
+    const hashedPassword = await bcrypt.hash(newTempPassword, 12);
+
+    await db.orm.public.User.where({ id: targetUserId }).update({
+      password: hashedPassword
+    });
+
+    const emailRes = await sendAdminInviteEmail({
+      name: targetUser.name,
+      email: targetUser.email,
+      temporaryPassword: newTempPassword
+    });
+
+    return {
+      ok: true,
+      message: `Access email resent to ${targetUser.email}`,
+      emailSent: emailRes.ok,
+      simulated: emailRes.simulated || false
+    };
+  } catch (err: any) {
+    console.error('resendAdminInviteAction error:', err);
+    return { ok: false, error: err?.message || 'Failed to resend invite' };
   }
 }
 

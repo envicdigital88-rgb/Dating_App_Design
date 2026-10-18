@@ -147,7 +147,7 @@ export async function googleAuthAction(credential: string) {
       return { ok: false, error: "Your account has been suspended due to community reports." }
     }
 
-    const role = email === 'envicdigital88@gmail.com' ? 'admin' : 'member';
+    const role = (user && user.role === 'admin') || email === 'envicdigital88@gmail.com' ? 'admin' : 'member';
 
     if (!user) {
       // Create a new user for Google Sign Up

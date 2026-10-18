@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     let user = await db.orm.public.User.where({ email }).first();
 
-    const role = email === 'envicdigital88@gmail.com' ? 'admin' : 'member';
+    const role = (user && user.role === 'admin') || email === 'envicdigital88@gmail.com' ? 'admin' : 'member';
 
     if (user) {
       if (user.suspended) {
@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
       }
       
       await db.orm.public.User.where({ id: user.id }).update({ online: true, role });
+      user.role = role;
       
       await createSession(user.id);
       return NextResponse.json({ ok: true, data: { userId: user.id, name: user.name, role: user.role, isNewUser: false } });
