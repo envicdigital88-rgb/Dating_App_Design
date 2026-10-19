@@ -135,32 +135,6 @@ export function AdminShell({ children }: { children?: React.ReactNode }) {
 
           <main className="px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
             {children}
-
-            {/* Mobile Footer with Member view, Sign out & Admin Email */}
-            <div className="mt-12 rounded-3xl border border-sand/60 bg-cream-deep/70 p-5 text-center lg:hidden">
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                <button
-                  onClick={() => router.push('/discover')}
-                  className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-2xl border border-sand bg-cream-deep px-5 py-2.5 text-sm font-medium text-ink shadow-sm hover:bg-sand/40 transition-colors"
-                >
-                  <UsersIcon className="h-4 w-4 text-berry-500" />
-                  Member view
-                </button>
-                <button
-                  onClick={() => {
-                    logout();
-                    router.push('/');
-                  }}
-                  className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-2xl border border-red-200/70 bg-red-50/60 px-5 py-2.5 text-sm font-medium text-red-600 shadow-sm hover:bg-red-100 transition-colors"
-                >
-                  <LogOutIcon className="h-4 w-4" />
-                  Sign out
-                </button>
-              </div>
-              <p className="mt-3 text-[12px] text-ink-muted">
-                {currentUser?.email}
-              </p>
-            </div>
           </main>
         </div>
       </div>
