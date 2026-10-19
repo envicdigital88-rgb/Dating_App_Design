@@ -31,14 +31,12 @@ export function NotificationPrompt() {
     }
   }, [installable]);
 
+  const isNotificationPrompt = needsNotification;
+
   const handleAction = async () => {
     setIsVisible(false);
-    
-    if (installable) {
-      promptInstall();
-    }
-    
-    if (needsNotification) {
+
+    if (isNotificationPrompt) {
       try {
         const permission = await Notification.requestPermission();
         if (permission === 'granted' && 'serviceWorker' in navigator) {
@@ -64,10 +62,14 @@ export function NotificationPrompt() {
             await savePushSubscriptionAction(sub.toJSON());
             toast.success('Push notifications enabled!');
           }
+        } else if (permission === 'denied') {
+          toast.error('Notifications blocked in browser settings');
         }
       } catch (err) {
         console.error('Failed to enable notifications:', err);
       }
+    } else if (installable) {
+      promptInstall();
     }
   };
 
@@ -94,27 +96,27 @@ export function NotificationPrompt() {
 
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 shrink-0 rounded-2xl bg-berry-100 dark:bg-berry-900/30 flex items-center justify-center text-berry-600 dark:text-berry-400 shadow-sm border border-berry-200 dark:border-berry-800">
-              {installable ? (
-                <Download className="w-6 h-6 animate-bounce" style={{ animationDuration: '2s' }} />
-              ) : (
+              {isNotificationPrompt ? (
                 <Bell className="w-6 h-6 animate-bounce" style={{ animationDuration: '2s' }} />
+              ) : (
+                <Download className="w-6 h-6 animate-bounce" style={{ animationDuration: '2s' }} />
               )}
             </div>
             <div>
               <h3 className="font-bold text-foreground text-lg mb-1">
-                {installable ? 'Install App & Get Notified' : 'Turn on Notifications'}
+                {isNotificationPrompt ? 'Turn on Notifications' : 'Install Wingle Mingle App'}
               </h3>
               <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-                {installable 
-                  ? 'Add Wingle Mingle to your home screen for the best experience and never miss a match.'
-                  : 'Never miss a message or a new match! Enable notifications to stay connected.'}
+                {isNotificationPrompt 
+                  ? 'Never miss a message, match or wingle! Enable notifications to stay connected even when this tab is closed.'
+                  : 'Add Wingle Mingle to your device for the best full-screen experience and faster access.'}
               </p>
               <div className="flex gap-2">
                 <button
                   onClick={handleAction}
                   className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2.5 px-4 rounded-xl shadow-md transition-all active:scale-95 text-sm"
                 >
-                  {installable ? 'Install Now' : 'Enable Now'}
+                  {isNotificationPrompt ? 'Enable Now' : 'Install Now'}
                 </button>
                 <button
                   onClick={() => setIsVisible(false)}

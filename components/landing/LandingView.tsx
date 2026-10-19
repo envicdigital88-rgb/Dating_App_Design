@@ -18,7 +18,13 @@ import { SiteFooter } from '@/components/landing/SiteFooter';
 export function LandingView() {
   const { currentUser, isHydrated } = useStore();
   const router = useRouter();
-  const [hasLocalSession, setHasLocalSession] = useState(false);
+  const [hasLocalSession, setHasLocalSession] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const isPreview = window.location.search.includes('preview=true');
+      return !isPreview && !!localStorage.getItem('winglemingle_session');
+    }
+    return false;
+  });
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
