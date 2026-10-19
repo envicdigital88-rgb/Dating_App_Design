@@ -85,14 +85,37 @@ export function AdminShell({ children }: { children?: React.ReactNode }) {
         </aside>
 
         <div className="min-w-0 flex-1">
-          <header className="sticky top-0 z-30 border-b border-sand/70 bg-cream/90 px-4 py-3 backdrop-blur lg:hidden">
-            <div className="flex items-center justify-between">
-              <BrandMark />
-              <span className="text-[12px] font-semibold uppercase tracking-[0.08em] text-berry-500">
-                Admin
-              </span>
+          <header className="sticky top-0 z-30 border-b border-sand/70 bg-cream/95 px-4 py-3 backdrop-blur lg:hidden">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <BrandMark />
+                <span className="rounded-full bg-berry-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-berry-600 border border-berry-100">
+                  Admin
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => router.push('/discover')}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-cream-deep border border-sand px-3 py-1.5 text-[12px] font-medium text-ink hover:bg-sand/40 transition-colors shadow-sm"
+                  title="Switch to Member view"
+                >
+                  <UsersIcon className="h-3.5 w-3.5 text-berry-500" />
+                  <span>Member view</span>
+                </button>
+                <button
+                  onClick={() => {
+                    logout();
+                    router.push('/');
+                  }}
+                  className="p-1.5 rounded-full bg-cream-deep border border-sand text-ink-soft hover:text-red-600 hover:border-red-200 transition-colors shadow-sm"
+                  title="Sign out"
+                  aria-label="Sign out"
+                >
+                  <LogOutIcon className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
-            <nav aria-label="Admin" className="k-scroll-hide -mx-1 mt-3 flex gap-1 overflow-x-auto">
+            <nav aria-label="Admin" className="k-scroll-hide -mx-1 mt-3 flex gap-1 overflow-x-auto pb-0.5">
               {items.map((item) => {
                 const isActive = item.end ? pathname === item.to : pathname.startsWith(item.to);
                 return (
@@ -100,8 +123,8 @@ export function AdminShell({ children }: { children?: React.ReactNode }) {
                     key={item.to}
                     href={item.to}
                     className={cn(
-                      'shrink-0 rounded-full px-3.5 py-1.5 text-[13px] transition-colors duration-150 ease-soft',
-                      isActive ? 'bg-plum-500 text-cream' : 'bg-cream-deep text-ink-soft'
+                      'shrink-0 rounded-full px-3.5 py-1.5 text-[13px] transition-colors duration-150 ease-soft font-medium',
+                      isActive ? 'bg-plum-500 text-cream' : 'bg-cream-deep text-ink-soft border border-sand/40'
                     )}>
                       {item.label}
                   </Link>
@@ -112,6 +135,32 @@ export function AdminShell({ children }: { children?: React.ReactNode }) {
 
           <main className="px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
             {children}
+
+            {/* Mobile Footer with Member view, Sign out & Admin Email */}
+            <div className="mt-12 rounded-3xl border border-sand/60 bg-cream-deep/70 p-5 text-center lg:hidden">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <button
+                  onClick={() => router.push('/discover')}
+                  className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-2xl border border-sand bg-cream-deep px-5 py-2.5 text-sm font-medium text-ink shadow-sm hover:bg-sand/40 transition-colors"
+                >
+                  <UsersIcon className="h-4 w-4 text-berry-500" />
+                  Member view
+                </button>
+                <button
+                  onClick={() => {
+                    logout();
+                    router.push('/');
+                  }}
+                  className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-2xl border border-red-200/70 bg-red-50/60 px-5 py-2.5 text-sm font-medium text-red-600 shadow-sm hover:bg-red-100 transition-colors"
+                >
+                  <LogOutIcon className="h-4 w-4" />
+                  Sign out
+                </button>
+              </div>
+              <p className="mt-3 text-[12px] text-ink-muted">
+                {currentUser?.email}
+              </p>
+            </div>
           </main>
         </div>
       </div>
