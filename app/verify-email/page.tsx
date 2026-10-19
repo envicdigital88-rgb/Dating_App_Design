@@ -1,61 +1,107 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MailIcon, ArrowRightIcon, ShieldCheckIcon } from 'lucide-react';
+import { MailIcon, ArrowRightIcon, ShieldCheckIcon, RotateCwIcon } from 'lucide-react';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { verifyEmailAddress, confirmEmailOtp } from '@/app/actions/verify';
+
 export default function VerifyEmailPage() {
-  const { updateProfile, currentUser } = useStore();
+  const { updateProfile, currentUser, isHydrated } = useStore();
   
   const [step, setStep] = useState<'email' | 'otp'>('email');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [busy, setBusy] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  // Auto-redirect if user is already verified
+  useEffect(() => {
+    if (isHydrated && currentUser?.verified) {
+      if (!currentUser.onboarded) {
+        window.location.href = '/onboarding';
+      } else {
+        window.location.href = '/discover';
+      }
+    }
+  }, [currentUser, isHydrated]);
+
+  // Pre-fill email if user has a non-temp email
+  useEffect(() => {
+    if (currentUser?.email && !currentUser.email.includes('@temp.winglemingle.com')) {
+      setEmail(currentUser.email);
+    }
+  }, [currentUser]);
+
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const interval = setInterval(() => {
+      setResendCooldown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [resendCooldown]);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !email.includes('@')) {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
       toast.error('Please enter a valid email address.');
       return;
     }
     setBusy(true);
     
-    const result = await verifyEmailAddress(email);
+    const result = await verifyEmailAddress(cleanEmail);
     setBusy(false);
     
     if (result.ok) {
       setStep('otp');
-      toast.success(`OTP sent to ${email}`);
+      setResendCooldown(60);
+      toast.success(`Verification code sent to ${cleanEmail}`);
     } else {
-      toast.error(result.error);
+      toast.error(result.error || 'Failed to send verification code.');
+    }
+  };
+
+  const handleResend = async () => {
+    if (resendCooldown > 0 || busy) return;
+    setBusy(true);
+    const result = await verifyEmailAddress(email.trim().toLowerCase());
+    setBusy(false);
+
+    if (result.ok) {
+      setResendCooldown(60);
+      setOtp('');
+      toast.success(`New verification code sent to ${email}`);
+    } else {
+      toast.error(result.error || 'Failed to resend verification code.');
     }
   };
 
   const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp.length < 4) {
-      toast.error('Please enter the OTP sent to your phone.');
+    const cleanOtp = otp.trim().replace(/\D/g, '');
+    if (cleanOtp.length !== 6) {
+      toast.error('Please enter the 6-digit code sent to your email.');
       return;
     }
     setBusy(true);
     
-    const result = await confirmEmailOtp(email, otp);
+    const result = await confirmEmailOtp(email.trim().toLowerCase(), cleanOtp);
     setBusy(false);
 
     if (result.ok) {
-      // Still update the local store for UI reactivity if needed, but DB is updated.
-      updateProfile({ email, verified: true });
-      toast.success('Verification complete!');
+      updateProfile({ email: email.trim().toLowerCase(), verified: true });
+      toast.success('Email verified successfully!');
       if (currentUser && !currentUser.onboarded) {
         window.location.href = '/onboarding';
       } else {
         window.location.href = '/discover';
       }
     } else {
-      toast.error(result.error);
+      toast.error(result.error || 'Incorrect code. Please enter the code sent to your email.');
     }
   };
 
@@ -92,10 +138,10 @@ export default function VerifyEmailPage() {
                 {/* Heading */}
                 <div className="mb-7 text-center">
                   <h1 className="font-display text-[30px] font-bold leading-tight text-white">
-                    Verify it's you
+                    Verify your email
                   </h1>
                   <p className="mt-2 text-[13px] leading-relaxed text-white/50">
-                    To keep Wingle Mingle safe, we need to verify your email address before continuing.
+                    To keep Wingle Mingle safe, we will send a 6-digit verification code to your email address.
                   </p>
                 </div>
 
@@ -126,7 +172,7 @@ export default function VerifyEmailPage() {
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                     ) : (
                       <>
-                        Send OTP
+                        Send Verification Code
                         <ArrowRightIcon className="h-4 w-4" />
                       </>
                     )}
@@ -144,10 +190,10 @@ export default function VerifyEmailPage() {
                 {/* Heading */}
                 <div className="mb-7 text-center">
                   <h1 className="font-display text-[30px] font-bold leading-tight text-white">
-                    Enter OTP
+                    Enter Verification Code
                   </h1>
                   <p className="mt-2 text-[13px] leading-relaxed text-white/50">
-                    We just sent a code to <span className="text-white font-medium">{email}</span>. Enter it below to complete setup.
+                    We just sent a 6-digit code to <span className="text-white font-medium break-all">{email}</span>. Enter it below to verify your account.
                   </p>
                 </div>
 
@@ -155,23 +201,25 @@ export default function VerifyEmailPage() {
                 <form onSubmit={handleOtpSubmit} className="space-y-4" noValidate>
                   <div className="relative">
                     <ShieldCheckIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
-                    <div className="absolute left-11 top-2.5 text-[10px] font-semibold uppercase tracking-wide text-white/35">Verification Code</div>
+                    <div className="absolute left-11 top-2.5 text-[10px] font-semibold uppercase tracking-wide text-white/35">6-Digit Code</div>
                     <input
                       id="otp"
                       type="text"
+                      inputMode="numeric"
                       value={otp}
                       onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      placeholder="000000"
+                      placeholder="• • • • • •"
                       autoComplete="one-time-code"
+                      autoFocus
                       required
-                      className="w-full rounded-2xl border border-white/10 pb-3 pl-11 pr-4 pt-7 text-[14px] tracking-widest font-mono text-white placeholder-white/20 outline-none transition-all focus:border-[#0ea5e9]/50 focus:ring-1 focus:ring-[#0ea5e9]/25"
+                      className="w-full rounded-2xl border border-white/10 pb-3 pl-11 pr-4 pt-7 text-[18px] tracking-[6px] font-mono text-center text-white placeholder-white/20 outline-none transition-all focus:border-[#0ea5e9]/50 focus:ring-1 focus:ring-[#0ea5e9]/25"
                       style={{ background: 'rgba(255,255,255,0.06)' }}
                     />
                   </div>
 
                   <button
                     type="submit"
-                    disabled={busy || otp.length < 4}
+                    disabled={busy || otp.length !== 6}
                     className="mt-2 flex w-full items-center justify-center gap-2.5 rounded-2xl py-4 text-[15px] font-semibold text-white shadow-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-[0_0_32px_rgba(236,72,153,0.35)] active:scale-[0.98] disabled:opacity-60"
                     style={{ background: 'linear-gradient(135deg, #ec4899 0%, #8b2fc9 50%, #0ea5e9 100%)' }}>
                     {busy ? (
@@ -184,8 +232,26 @@ export default function VerifyEmailPage() {
                     )}
                   </button>
                   
-                  <div className="text-center mt-6">
-                    <button type="button" onClick={() => setStep('email')} className="text-[12px] text-white/50 hover:text-white transition-colors">
+                  {/* Action links */}
+                  <div className="flex flex-col items-center gap-3 pt-3">
+                    <button
+                      type="button"
+                      onClick={handleResend}
+                      disabled={resendCooldown > 0 || busy}
+                      className="inline-flex items-center gap-1.5 text-[13px] text-white/70 hover:text-white transition-colors disabled:opacity-40"
+                    >
+                      <RotateCwIcon className={`h-3.5 w-3.5 ${busy ? 'animate-spin' : ''}`} />
+                      {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Didn’t receive the code? Resend'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStep('email');
+                        setOtp('');
+                      }}
+                      className="text-[12px] text-white/40 hover:text-white/80 transition-colors"
+                    >
                       Change email address
                     </button>
                   </div>
