@@ -17,7 +17,9 @@ export default async function Landing(props: {
       try {
         const user = await db.orm.public.User.where({ id: session.userId as string }).first();
         if (user && !user.suspended) {
-          if (user.role === 'admin') {
+          if (!user.verified) {
+            redirect('/verify-email');
+          } else if (user.role === 'admin') {
             redirect('/admin');
           } else if (!user.onboarded) {
             redirect('/onboarding');

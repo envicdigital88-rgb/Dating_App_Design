@@ -2,11 +2,18 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MailIcon, ArrowRightIcon, ShieldCheckIcon, RotateCwIcon } from 'lucide-react';
+import { MailIcon, ArrowRightIcon, ShieldCheckIcon, RotateCwIcon, ArrowLeftIcon } from 'lucide-react';
 import { useStore } from '@/lib/contexts/StoreContext';
-import { verifyEmailAddress, confirmEmailOtp } from '@/app/actions/verify';
+import {
+  getPendingRegistrationStatus,
+  resendPendingRegistrationOtp,
+  confirmPendingRegistration,
+  verifyEmailAddress,
+  confirmEmailOtp
+} from '@/app/actions/verify';
 
 export default function VerifyEmailPage() {
   const { updateProfile, currentUser, isHydrated } = useStore();
@@ -16,24 +23,62 @@ export default function VerifyEmailPage() {
   const [otp, setOtp] = useState('');
   const [busy, setBusy] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [isPendingReg, setIsPendingReg] = useState(false);
+  const [checkingPending, setCheckingPending] = useState(true);
 
-  // Auto-redirect if user is already verified
+  // Check pending registration status or existing user on mount
   useEffect(() => {
-    if (isHydrated && currentUser?.verified) {
+    let mounted = true;
+
+    async function checkPending() {
+      try {
+        const pending = await getPendingRegistrationStatus();
+        if (mounted && pending.hasPending && pending.email) {
+          setIsPendingReg(true);
+          setEmail(pending.email);
+          setStep('otp');
+          setResendCooldown(60);
+          setCheckingPending(false);
+          return;
+        }
+      } catch (err) {
+        console.error('Error checking pending registration:', err);
+      }
+
+      if (mounted) {
+        setCheckingPending(false);
+      }
+    }
+
+    checkPending();
+    return () => { mounted = false; };
+  }, []);
+
+  // Handle redirect if user is already verified or if visitor has no session and no pending signup
+  useEffect(() => {
+    if (checkingPending || !isHydrated) return;
+
+    if (currentUser?.verified) {
       if (!currentUser.onboarded) {
         window.location.href = '/onboarding';
       } else {
         window.location.href = '/discover';
       }
+      return;
     }
-  }, [currentUser, isHydrated]);
 
-  // Pre-fill email if user has a non-temp email
+    // If neither pending registration nor a signed-in user exists, redirect to sign-up
+    if (!isPendingReg && !currentUser) {
+      window.location.href = '/sign-up';
+    }
+  }, [currentUser, isHydrated, isPendingReg, checkingPending]);
+
+  // Pre-fill email for signed-in users with non-temp emails
   useEffect(() => {
-    if (currentUser?.email && !currentUser.email.includes('@temp.winglemingle.com')) {
+    if (!isPendingReg && currentUser?.email && !currentUser.email.includes('@temp.winglemingle.com')) {
       setEmail(currentUser.email);
     }
-  }, [currentUser]);
+  }, [currentUser, isPendingReg]);
 
   // Resend cooldown timer
   useEffect(() => {
@@ -68,7 +113,13 @@ export default function VerifyEmailPage() {
   const handleResend = async () => {
     if (resendCooldown > 0 || busy) return;
     setBusy(true);
-    const result = await verifyEmailAddress(email.trim().toLowerCase());
+
+    let result;
+    if (isPendingReg) {
+      result = await resendPendingRegistrationOtp();
+    } else {
+      result = await verifyEmailAddress(email.trim().toLowerCase());
+    }
     setBusy(false);
 
     if (result.ok) {
@@ -89,21 +140,34 @@ export default function VerifyEmailPage() {
     }
     setBusy(true);
     
-    const result = await confirmEmailOtp(email.trim().toLowerCase(), cleanOtp);
+    let result;
+    if (isPendingReg) {
+      result = await confirmPendingRegistration(cleanOtp);
+    } else {
+      result = await confirmEmailOtp(email.trim().toLowerCase(), cleanOtp);
+    }
     setBusy(false);
 
     if (result.ok) {
       updateProfile({ email: email.trim().toLowerCase(), verified: true });
-      toast.success('Email verified successfully!');
-      if (currentUser && !currentUser.onboarded) {
-        window.location.href = '/onboarding';
-      } else {
+      toast.success('Email verified successfully! Welcome to Wingle Mingle.');
+      if ((result as any)?.data?.onboarded || (currentUser && currentUser.onboarded)) {
         window.location.href = '/discover';
+      } else {
+        window.location.href = '/onboarding';
       }
     } else {
       toast.error(result.error || 'Incorrect code. Please enter the code sent to your email.');
     }
   };
+
+  if (checkingPending && !isHydrated) {
+    return (
+      <div className="flex min-h-screen w-full items-center justify-center bg-[#07061a]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#ec4899] border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="grid min-h-screen w-full lg:grid-cols-[1fr_1.05fr]">
@@ -116,6 +180,17 @@ export default function VerifyEmailPage() {
           <div className="absolute -left-32 -top-32 h-[420px] w-[420px] rounded-full bg-[#8b2fc9] opacity-35 blur-[100px]" />
           <div className="absolute -bottom-32 right-0 h-[350px] w-[350px] rounded-full bg-[#0ea5e9] opacity-25 blur-[90px]" />
           <div className="absolute left-1/2 top-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#ec4899] opacity-10 blur-[80px]" />
+        </div>
+
+        {/* Back to sign-up link */}
+        <div className="relative z-10">
+          <Link
+            href="/sign-up"
+            className="inline-flex items-center gap-2 text-[13px] font-medium text-white/50 transition-colors duration-150 hover:text-white"
+          >
+            <ArrowLeftIcon className="h-3.5 w-3.5" />
+            Back to sign up
+          </Link>
         </div>
 
         {/* Form card */}
@@ -193,7 +268,7 @@ export default function VerifyEmailPage() {
                     Enter Verification Code
                   </h1>
                   <p className="mt-2 text-[13px] leading-relaxed text-white/50">
-                    We just sent a 6-digit code to <span className="text-white font-medium break-all">{email}</span>. Enter it below to verify your account.
+                    We just sent a 6-digit code to <span className="text-white font-medium break-all">{email}</span>. Enter it below to complete your account setup.
                   </p>
                 </div>
 
@@ -226,7 +301,7 @@ export default function VerifyEmailPage() {
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                     ) : (
                       <>
-                        Verify & Continue
+                        Verify & Complete Account
                         <ArrowRightIcon className="h-4 w-4" />
                       </>
                     )}
@@ -244,16 +319,12 @@ export default function VerifyEmailPage() {
                       {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Didn’t receive the code? Resend'}
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setStep('email');
-                        setOtp('');
-                      }}
+                    <Link
+                      href="/sign-up"
                       className="text-[12px] text-white/40 hover:text-white/80 transition-colors"
                     >
-                      Change email address
-                    </button>
+                      Change details / Back to sign up
+                    </Link>
                   </div>
                 </form>
               </motion.div>

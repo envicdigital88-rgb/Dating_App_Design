@@ -13,24 +13,48 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Intercept root landing page and auth pages for already signed-in users
-  if (pathname === '/' || pathname === '/sign-in' || pathname === '/sign-up') {
-    const sessionCookie = request.cookies.get('session')?.value;
-    if (sessionCookie) {
-      try {
-        const { payload } = await jwtVerify(sessionCookie, encodedKey, {
-          algorithms: ['HS256'],
-        });
+  const sessionCookie = request.cookies.get('session')?.value;
+  let payload: any = null;
 
-        if (payload?.userId) {
-          const url = request.nextUrl.clone();
-          url.pathname = '/discover';
-          url.search = '';
-          return NextResponse.redirect(url);
-        }
-      } catch (err) {
-        // Invalid or expired token, proceed normally
-      }
+  if (sessionCookie) {
+    try {
+      const verified = await jwtVerify(sessionCookie, encodedKey, {
+        algorithms: ['HS256'],
+      });
+      payload = verified.payload;
+    } catch (err) {
+      // Invalid or expired token
+    }
+  }
+
+  // If user is unverified and trying to access any route other than verify-email
+  if (payload?.userId && payload.verified === false) {
+    if (pathname !== '/verify-email') {
+      const url = request.nextUrl.clone();
+      url.pathname = '/verify-email';
+      url.search = '';
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next();
+  }
+
+  // Intercept root landing page and auth pages for already signed-in verified users
+  if (pathname === '/' || pathname === '/sign-in' || pathname === '/sign-up') {
+    if (payload?.userId && payload.verified !== false) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/discover';
+      url.search = '';
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // Protected routes require valid session
+  if (pathname === '/onboarding' || pathname.startsWith('/discover')) {
+    if (!payload?.userId) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/sign-in';
+      url.search = '';
+      return NextResponse.redirect(url);
     }
   }
 
@@ -38,5 +62,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/sign-in', '/sign-up'],
+  matcher: ['/', '/sign-in', '/sign-up', '/onboarding', '/discover', '/discover/:path*'],
 };

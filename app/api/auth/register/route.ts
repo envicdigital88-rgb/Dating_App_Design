@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { createSession } from '@/lib/session';
-import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { startPendingRegistration } from '@/app/actions/verify';
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Please enter a valid email address").toLowerCase(),
   phone: z.string().min(8, "Invalid phone number"),
   password: z.string().min(8, "Password must be at least 8 characters"),
-  age: z.coerce.number().min(18, "Must be at least 18 years old").max(120),
-  gender: z.enum(["woman", "man", "non-binary"]),
-  intention: z.string(),
+  age: z.coerce.number().min(18, "Must be at least 18 years old").max(120).optional(),
+  gender: z.enum(["woman", "man", "non-binary"]).optional(),
+  intention: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -19,68 +18,36 @@ export async function POST(req: NextRequest) {
     const validated = registerSchema.safeParse(rawData);
 
     if (!validated.success) {
-      return NextResponse.json({ ok: false, error: "Validation failed", details: validated.error.flatten().fieldErrors }, { status: 400 });
+      const fieldErrors = validated.error.flatten().fieldErrors;
+      const firstError = Object.values(fieldErrors).flat()[0] || "Validation failed";
+      return NextResponse.json({ ok: false, error: firstError, details: fieldErrors }, { status: 400 });
     }
 
-    const { name, phone, password, age, gender, intention } = validated.data;
+    const { name, email, phone, password, age, gender, intention } = validated.data;
 
-    const existingUser = await db.orm.public.User.where({ phone }).first();
-    if (existingUser) {
-      return NextResponse.json({ ok: false, error: "Phone number already in use" }, { status: 400 });
-    }
-
-    const { formatNotifyPhoneNumber, getPhoneVariants } = await import('@/lib/notify');
-    const formattedPhone = formatNotifyPhoneNumber(phone);
-    const phoneVariants = getPhoneVariants(phone);
-
-    // Check if any Secret Wingles were sent to this phone before registration
-    const pendingSecretWingles = await db.orm.public.SecretWingle.where(sw =>
-      sw.targetPhone.in(phoneVariants)
-    ).all();
-
-    const secretBonus = pendingSecretWingles.length * 20;
-    const hashedPassword = await bcrypt.hash(password, 12);
-
-    const user = await db.transaction(async (tx) => {
-      const newUser = await tx.orm.public.User.create({
-        name,
-        email: `${phone}@temp.winglemingle.com`,
-        phone: formattedPhone || phone,
-        password: hashedPassword,
-        age,
-        gender,
-        intention,
-        wingitsBalance: secretBonus,
-        interests: '[]',
-        traits: '[]',
-        lifestyle: JSON.stringify({
-          drinking: '',
-          smoking: '',
-          exercise: '',
-          pets: '',
-          children: '',
-          education: '',
-          work: ''
-        }),
-      });
-
-      if (secretBonus > 0) {
-        await tx.orm.public.WingitsTransaction.create({
-          id: crypto.randomUUID(),
-          userId: newUser.id,
-          amount: secretBonus,
-          type: 'bonus',
-          description: `Secret Wingle welcome gift (+${secretBonus} Wingits)`
-        });
-      }
-
-      return newUser;
+    // Start pending registration (sends 6-digit verification code, DOES NOT save user in DB until code is confirmed!)
+    const result = await startPendingRegistration({
+      name,
+      email,
+      phone,
+      password,
+      age: age || 20,
+      gender: gender || 'woman',
+      intention: intention || 'Long-term relationship'
     });
 
-    await createSession(user.id);
-    return NextResponse.json({ ok: true, data: { userId: user.id, name: user.name, role: user.role } });
-  } catch (error) {
+    if (!result.ok) {
+      return NextResponse.json({ ok: false, error: result.error }, { status: 400 });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      requiresVerification: true,
+      email: result.email,
+      message: 'Verification code sent to your email'
+    });
+  } catch (error: any) {
     console.error("Registration API error:", error);
-    return NextResponse.json({ ok: false, error: "An unexpected error occurred during registration" }, { status: 500 });
+    return NextResponse.json({ ok: false, error: error?.message || "An unexpected error occurred during registration" }, { status: 500 });
   }
 }

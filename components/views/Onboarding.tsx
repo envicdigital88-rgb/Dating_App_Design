@@ -46,6 +46,7 @@ export function Onboarding() {
 
   if (!isHydrated) return null;
   if (!currentUser) return <Navigate to="/sign-up" replace />;
+  if (!currentUser.verified) return <Navigate to="/verify-email" replace />;
   if (currentUser.onboarded) return <Navigate to="/discover" replace />;
 
   const validate = () => {

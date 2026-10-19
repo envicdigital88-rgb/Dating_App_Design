@@ -39,6 +39,11 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
       }
     }
 
+    if (!currentUser.verified) {
+      router.replace('/verify-email');
+      return;
+    }
+
     if (currentUser.role === 'admin') {
       const saved = localStorage.getItem('winglemingle_last_path');
       router.replace(saved && saved.startsWith('/admin') ? saved : '/admin');
@@ -56,6 +61,22 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
     setError('');
     
     if (isRegister) {
+      if (!name.trim() || name.trim().length < 2) {
+        setError('Please enter your name (at least 2 characters).');
+        return;
+      }
+
+      const cleanEmail = email.trim().toLowerCase();
+      if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+        setError('Please enter a valid email address.');
+        return;
+      }
+
+      if (!phone.trim() || phone.trim().length < 8) {
+        setError('Please enter a valid mobile number.');
+        return;
+      }
+
       const pwHasLength = password.length >= 8;
       const pwHasUpperLower = /[A-Z]/.test(password) && /[a-z]/.test(password);
       const pwHasNumber = /[0-9]/.test(password);
@@ -81,7 +102,13 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            phone, password, name, age: 20, gender: 'woman', intention: 'Long-term relationship'
+            name: name.trim(),
+            email: email.trim().toLowerCase(),
+            phone: phone.trim(),
+            password,
+            age: 20,
+            gender: 'woman',
+            intention: 'Long-term relationship'
           })
         });
         result = await res.json();
@@ -89,7 +116,7 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
         const res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify({ email: email.trim().toLowerCase(), password })
         });
         result = await res.json();
       }
@@ -107,7 +134,7 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
     }
     
     if (isRegister) {
-      toast.success('Account created — please verify your email address');
+      toast.success(`Verification code sent to ${email.trim().toLowerCase()}`);
       window.location.href = '/verify-email';
       return;
     }
@@ -212,25 +239,23 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
               </div>
             )}
 
-            {/* Email (for login) */}
-            {!isRegister && (
-              <div className="relative">
-                <MailIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
-                <div className="absolute left-11 top-2.5 text-[10px] font-semibold uppercase tracking-wide text-white/35">Email</div>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@email.com"
-                  autoComplete="email"
-                  required
-                  className="w-full rounded-2xl border border-white/10 pb-3 pl-11 pr-4 pt-7 text-[14px] text-white placeholder-white/20 outline-none transition-all focus:border-[#0ea5e9]/50 focus:ring-1 focus:ring-[#0ea5e9]/25"
-                  style={{ background: 'rgba(255,255,255,0.06)' }}
-                />
-              </div>
-            )}
+            {/* Email (for both register and login) */}
+            <div className="relative">
+              <MailIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+              <div className="absolute left-11 top-2.5 text-[10px] font-semibold uppercase tracking-wide text-white/35">Email</div>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@email.com"
+                autoComplete="email"
+                required
+                className="w-full rounded-2xl border border-white/10 pb-3 pl-11 pr-4 pt-7 text-[14px] text-white placeholder-white/20 outline-none transition-all focus:border-[#0ea5e9]/50 focus:ring-1 focus:ring-[#0ea5e9]/25"
+                style={{ background: 'rgba(255,255,255,0.06)' }}
+              />
+            </div>
 
             {/* Phone (for register) */}
             {isRegister && (

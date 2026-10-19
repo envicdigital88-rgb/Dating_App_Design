@@ -24,10 +24,10 @@ export async function decrypt(session: string | undefined = '') {
   }
 }
 
-export async function createSession(userId: string) {
+export async function createSession(userId: string, verified: boolean = true) {
   // 30 days (persists across browser/tab closes for well over 10 days)
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-  const session = await encrypt({ userId, expiresAt })
+  const session = await encrypt({ userId, verified, expiresAt })
   
   const cookieStore = await cookies()
 
@@ -52,7 +52,11 @@ export async function updateSession() {
 
   // Renew session for another 30 days
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-  const newSession = await encrypt({ userId: payload.userId, expiresAt })
+  const newSession = await encrypt({
+    userId: payload.userId,
+    verified: payload.verified ?? true,
+    expiresAt
+  })
 
   cookieStore.set('session', newSession, {
     httpOnly: true,

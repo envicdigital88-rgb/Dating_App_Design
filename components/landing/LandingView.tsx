@@ -45,7 +45,9 @@ export function LandingView() {
     }
 
     if (currentUser && !currentUser.suspended) {
-      if (currentUser.role === 'admin') {
+      if (!currentUser.verified) {
+        router.replace('/verify-email');
+      } else if (currentUser.role === 'admin') {
         router.replace('/admin');
       } else if (!currentUser.onboarded) {
         router.replace('/onboarding');

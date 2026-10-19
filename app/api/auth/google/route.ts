@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       await db.orm.public.User.where({ id: user.id }).update({ online: true, role });
       user.role = role;
       
-      await createSession(user.id);
+      await createSession(user.id, true);
       return NextResponse.json({ ok: true, data: { userId: user.id, name: user.name, role: user.role, isNewUser: false } });
     } else {
       const randomPassword = crypto.randomBytes(16).toString('hex');
@@ -61,9 +61,10 @@ export async function POST(req: NextRequest) {
         traits: '[]',
         lifestyle: JSON.stringify({}),
         onboarded: false,
+        verified: true,
       });
 
-      await createSession(user.id);
+      await createSession(user.id, true);
       return NextResponse.json({ ok: true, data: { userId: user.id, name: user.name, role: user.role, isNewUser: true } });
     }
   } catch (error) {
