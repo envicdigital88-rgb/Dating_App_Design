@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
 interface PwaValue {
   installable: boolean;
@@ -14,29 +15,6 @@ interface PwaValue {
 
 const PwaContext = createContext<PwaValue | null>(null);
 
-const MANIFEST = {
-  name: 'Wingle Mingle — Wingling, deliberately',
-  short_name: 'Wingle Mingle',
-  description: 'Meet people properly. Profiles, photos, wingles and real conversations.',
-  start_url: '/',
-  display: 'standalone',
-  orientation: 'portrait',
-  background_color: '#fbf7f3',
-  theme_color: '#ac2b57',
-  icons: [
-  {
-    src:
-    'data:image/svg+xml,' +
-    encodeURIComponent(
-      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="#ac2b57"/><path fill="#fbf7f3" transform="translate(96 96) scale(13.3)" d="M12 21s-7.5-4.7-9.3-9.1C1.2 8.3 3.3 5 6.7 5c2 0 3.5 1 4.3 2.4C11.8 6 13.3 5 15.3 5c3.4 0 5.5 3.3 4 6.9C17.5 16.3 12 21 12 21Z"/></svg>`
-    ),
-    sizes: '512x512',
-    type: 'image/svg+xml',
-    purpose: 'any maskable'
-  }]
-};
-
-
 export function PwaProvider({ children }: {children: React.ReactNode;}) {
   const [installable, setInstallable] = useState(true);
   const [installed, setInstalled] = useState(false);
@@ -45,18 +23,12 @@ export function PwaProvider({ children }: {children: React.ReactNode;}) {
   const [deferredPrompt, setDeferredPrompt] = useState<{prompt: () => Promise<void>;} | null>(null);
 
   useEffect(() => {
-    // Web app manifest — injected at runtime so the app is installable.
-    const blob = new Blob([JSON.stringify(MANIFEST)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('link');
-    link.rel = 'manifest';
-    link.href = url;
-    document.head.appendChild(link);
-
-    const meta = document.createElement('meta');
-    meta.name = 'theme-color';
-    meta.content = '#0EA5E9';
-    document.head.appendChild(meta);
+    // Register Service Worker immediately on mount for PWA installability and background push
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch((err) => {
+        console.error('Service Worker registration failed:', err);
+      });
+    }
 
     const onPrompt = (e: Event) => {
       e.preventDefault();
@@ -75,18 +47,20 @@ export function PwaProvider({ children }: {children: React.ReactNode;}) {
     window.addEventListener('online', onOnline);
     window.addEventListener('offline', onOffline);
 
-    if (window.matchMedia('(display-mode: standalone)').matches) setInstalled(true);
-    if (typeof Notification !== 'undefined' && Notification.permission === 'granted')
-    setNotificationsEnabled(true);
+    if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone) {
+      setInstalled(true);
+      setInstallable(false);
+    }
+
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      setNotificationsEnabled(true);
+    }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', onPrompt);
       window.removeEventListener('appinstalled', onInstalled);
       window.removeEventListener('online', onOnline);
       window.removeEventListener('offline', onOffline);
-      link.remove();
-      meta.remove();
-      URL.revokeObjectURL(url);
     };
   }, []);
 
@@ -102,7 +76,7 @@ export function PwaProvider({ children }: {children: React.ReactNode;}) {
       notificationsEnabled,
       enableNotifications: async () => {
         if (typeof Notification === 'undefined') {
-          setNotificationsEnabled(true);
+          toast.info('Notifications are not supported on this browser');
           return;
         }
         try {
@@ -124,12 +98,15 @@ export function PwaProvider({ children }: {children: React.ReactNode;}) {
                 applicationServerKey: outputArray
               });
               const { savePushSubscriptionAction } = await import('@/app/actions/push');
-              savePushSubscriptionAction(newSub.toJSON());
+              await savePushSubscriptionAction(newSub.toJSON());
+              toast.success('Push notifications enabled!');
             }
+          } else if (permission === 'denied') {
+            toast.error('Notifications were blocked. Please enable them in your browser settings.');
           }
         } catch (e) {
-          console.error(e);
-          setNotificationsEnabled(true);
+          console.error('Error enabling notifications:', e);
+          toast.error('Failed to enable push notifications');
         }
       }
     }),

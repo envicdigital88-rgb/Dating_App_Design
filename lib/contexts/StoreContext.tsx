@@ -638,29 +638,21 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         // Request push subscription
         reg.pushManager.getSubscription().then((sub) => {
           if (sub) {
-            // Already subscribed, maybe update backend
+            // Already subscribed, sync with backend for current user
             import('@/app/actions/push').then(({ savePushSubscriptionAction }) => {
               savePushSubscriptionAction(sub.toJSON());
             });
-          } else {
-            // Check permissions first, some browsers block direct subscribe calls
-            Notification.requestPermission().then(permission => {
-              if (permission === 'granted') {
-                const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-                if (!publicKey) {
-                  console.error('VAPID public key not found in env');
-                  return;
-                }
-                reg.pushManager.subscribe({
-                  userVisibleOnly: true,
-                  applicationServerKey: urlBase64ToUint8Array(publicKey)
-                }).then((newSub) => {
-                  import('@/app/actions/push').then(({ savePushSubscriptionAction }) => {
-                    savePushSubscriptionAction(newSub.toJSON());
-                  });
-                }).catch(console.error);
-              }
-            });
+          } else if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+            if (!publicKey) return;
+            reg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(publicKey)
+            }).then((newSub) => {
+              import('@/app/actions/push').then(({ savePushSubscriptionAction }) => {
+                savePushSubscriptionAction(newSub.toJSON());
+              });
+            }).catch(console.error);
           }
         });
       }).catch((err) => {

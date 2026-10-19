@@ -86,7 +86,7 @@ export async function sendMingleAction(conversationId: string, body: string, ima
         await sendPushNotificationAction(otherId, {
           title: 'New Message',
           body: body ? body : (imageUrl ? 'Sent an image' : 'New message'),
-          url: `https://winglemingle.com/mingles/${conversationId}`
+          url: `/mingles/${conversationId}`
         });
       } catch (err) {
         console.error('Push error:', err);

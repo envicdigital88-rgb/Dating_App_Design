@@ -71,7 +71,7 @@ export async function likeUser(targetUserId: string) {
         await sendPushNotificationAction(targetUserId, {
           title: 'New Match! 🔥',
           body: 'Someone just liked you back. Start chatting now!',
-          url: `https://winglemingle.com/mingles/${conversation.id}`
+          url: `/mingles/${conversation.id}`
         });
         const { pusherServer } = await import('@/lib/pusher');
         await pusherServer.trigger(`private-user-${targetUserId}`, 'state-changed', {});
@@ -103,7 +103,7 @@ export async function likeUser(targetUserId: string) {
       await sendPushNotificationAction(targetUserId, {
         title: 'Someone liked you!',
         body: 'Someone just liked your profile. Check who it is!',
-        url: 'https://winglemingle.com/likes'
+        url: '/likes'
       });
     } catch (e) {
       console.error('Push error for like:', e);

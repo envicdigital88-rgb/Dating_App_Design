@@ -236,7 +236,7 @@ async function settlePayment(ledgerId: string, transactionId: string, transactio
           await sendPushNotificationAction(outcome.existingRecipientId, {
             title: 'Secret Wingle Received! 🤫🎁',
             body: 'Someone sent you a Secret Wingle and gifted you 20 free Wingits!',
-            url: `${appUrl}/secret-wingles`,
+            url: '/secret-wingles',
           });
           const { pusherServer } = await import('@/lib/pusher');
           await pusherServer.trigger(`private-user-${outcome.existingRecipientId}`, 'state-changed', {});

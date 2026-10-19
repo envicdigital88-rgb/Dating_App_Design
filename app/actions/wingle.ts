@@ -70,7 +70,7 @@ export async function sendWingle(toUserId: string, note: string) {
       await sendPushNotificationAction(toUserId, {
         title: 'New Wingle!',
         body: 'Someone sent you a Wingle. Check it out!',
-        url: 'https://winglemingle.com/wingles'
+        url: '/wingles'
       });
       const { pusherServer } = await import('@/lib/pusher');
       await pusherServer.trigger(`private-user-${toUserId}`, 'state-changed', {});
@@ -211,7 +211,7 @@ export async function respondToWingle(wingleId: string, accept: boolean) {
         await sendPushNotificationAction(wingle.fromUserId, {
           title: 'Wingle Accepted!',
           body: 'Your Wingle was accepted. You can now chat!',
-          url: `https://winglemingle.com/mingles/${conversation.id}`
+          url: `/mingles/${conversation.id}`
         });
       } catch (e) {
         console.error('Push error:', e);
@@ -316,7 +316,7 @@ export async function sendSecretWingleAction(
         await sendPushNotificationAction(existingUser.id, {
           title: 'Secret Wingle Received! 🤫',
           body: 'Someone sent you a Secret Wingle. Open the app to see it!',
-          url: `${appUrl}/secret-wingles`
+          url: '/secret-wingles'
         });
 
         const { pusherServer } = await import('@/lib/pusher');

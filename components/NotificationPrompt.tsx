@@ -2,10 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, X } from 'lucide-react';
-
+import { Bell, X, Download } from 'lucide-react';
 import { usePwa } from '@/components/PwaProvider';
-import { Download } from 'lucide-react';
+import { toast } from 'sonner';
 
 export function NotificationPrompt() {
   const [isVisible, setIsVisible] = useState(false);
@@ -63,6 +62,7 @@ export function NotificationPrompt() {
             });
             const { savePushSubscriptionAction } = await import('@/app/actions/push');
             await savePushSubscriptionAction(sub.toJSON());
+            toast.success('Push notifications enabled!');
           }
         }
       } catch (err) {

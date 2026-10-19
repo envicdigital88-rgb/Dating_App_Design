@@ -3,6 +3,9 @@ import { db } from '@/lib/db';
 import { redirect } from 'next/navigation';
 import { LandingView } from '@/components/landing/LandingView';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function Landing(props: {
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
