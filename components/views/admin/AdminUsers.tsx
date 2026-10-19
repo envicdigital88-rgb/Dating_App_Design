@@ -27,6 +27,15 @@ import type { User, Photo } from '@/lib/types';
 
 type AdminUser = User & { photos: Photo[] };
 
+function formatGender(gender?: string) {
+  if (!gender) return '—';
+  const g = gender.trim().toLowerCase();
+  if (g === 'woman') return 'Woman';
+  if (g === 'man') return 'Man';
+  if (g === 'non-binary') return 'Non-binary';
+  return gender.charAt(0).toUpperCase() + gender.slice(1);
+}
+
 export function AdminUsers() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'verified' | 'unverified' | 'suspended' | 'unlimited' | 'non-unlimited'>('all');
@@ -359,6 +368,11 @@ export function AdminUsers() {
                     <span className="min-w-0">
                       <span className="block truncate font-medium text-ink">
                         {user.name}, {user.age}
+                        {user.gender && (
+                          <span className="ml-1.5 text-[12px] font-normal text-ink-muted capitalize">
+                            · {user.gender}
+                          </span>
+                        )}
                       </span>
                       <span className="block truncate text-[12px] text-ink-muted">{user.email}</span>
                     </span>
@@ -504,7 +518,7 @@ export function AdminUsers() {
       <Modal
         open={!!detailUser}
         onClose={() => setDetail(null)}
-        title={detailUser ? `${detailUser.name}, ${detailUser.age}` : ''}
+        title={detailUser ? `${detailUser.name}, ${detailUser.age}${detailUser.gender ? ` (${formatGender(detailUser.gender)})` : ''}` : ''}
         description={detailUser?.email}
         size="md">
         
@@ -520,17 +534,44 @@ export function AdminUsers() {
             <p className="text-[14px] leading-relaxed text-ink-soft">{detailUser.bio}</p>
             <dl className="divide-y divide-sand border-y border-sand text-[13px]">
               {[
-                ['Location', detailUser.location],
-                ['Intention', detailUser.intention],
+                ['Gender', formatGender(detailUser.gender)],
+                ['Location', detailUser.location || '—'],
+                ['Intention', detailUser.intention || '—'],
                 ['Unlimited access', detailUser.isUnlimited ? 'Active (Unlimited)' : 'No (Standard)'],
                 ['Wingits balance', detailUser.wingitsBalance?.toString() || '0'],
                 ['Verification', detailUser.verified ? 'Verified' : 'Unverified'],
                 ['Account state', detailUser.suspended ? 'Suspended' : 'Active'],
                 ...(detailUser.suspended && detailUser.suspensionReason ? [['Suspension reason', detailUser.suspensionReason]] : [])
               ].map(([label, value]) =>
-                <div key={label} className="flex justify-between gap-4 py-2.5">
+                <div key={label} className="flex justify-between items-center gap-4 py-2.5">
                   <dt className="text-ink-muted">{label}</dt>
-                  <dd className="font-medium text-ink">{value}</dd>
+                  <dd className="font-medium text-ink">
+                    {label === 'Gender' ? (
+                      <Badge
+                        tone={
+                          detailUser.gender?.toLowerCase() === 'woman'
+                            ? 'berry'
+                            : detailUser.gender?.toLowerCase() === 'man'
+                            ? 'indigo'
+                            : 'neutral'
+                        }
+                      >
+                        {value}
+                      </Badge>
+                    ) : label === 'Verification' ? (
+                      <Badge tone={detailUser.verified ? 'moss' : 'amber'}>
+                        {value}
+                      </Badge>
+                    ) : label === 'Account state' ? (
+                      <Badge tone={detailUser.suspended ? 'red' : 'moss'}>
+                        {value}
+                      </Badge>
+                    ) : label === 'Unlimited access' && detailUser.isUnlimited ? (
+                      <Badge tone="indigo">{value}</Badge>
+                    ) : (
+                      value
+                    )}
+                  </dd>
                 </div>
               )}
             </dl>
