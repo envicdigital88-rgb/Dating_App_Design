@@ -52,6 +52,7 @@ export interface User {
   lifestyle: Lifestyle;
   verified: boolean;
   suspended: boolean;
+  suspensionReason?: string | null;
   onboarded: boolean;
   online: boolean;
   lastActiveAt: string;

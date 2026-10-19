@@ -1,4 +1,4 @@
-import { getSession } from '@/lib/session';
+import { getSession, deleteSession } from '@/lib/session';
 import { db } from '@/lib/db';
 import { redirect } from 'next/navigation';
 import { LandingView } from '@/components/landing/LandingView';
@@ -16,7 +16,11 @@ export default async function Landing(props: {
     if (session?.userId) {
       try {
         const user = await db.orm.public.User.where({ id: session.userId as string }).first();
-        if (user && !user.suspended) {
+        if (user) {
+          if (user.suspended) {
+            await deleteSession();
+            redirect('/sign-in?suspended=' + encodeURIComponent(user.suspensionReason || 'Violation of community safety guidelines.'));
+          }
           if (!user.verified) {
             redirect('/verify-email');
           } else if (user.role === 'admin') {

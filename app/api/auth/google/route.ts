@@ -35,7 +35,11 @@ export async function POST(req: NextRequest) {
 
     if (user) {
       if (user.suspended) {
-        return NextResponse.json({ ok: false, error: 'Your account has been suspended.' }, { status: 403 });
+        const reason = user.suspensionReason || 'Violation of community safety guidelines.';
+        return NextResponse.json({
+          ok: false,
+          error: `Your account has been suspended. Reason: ${reason}`
+        }, { status: 403 });
       }
       
       await db.orm.public.User.where({ id: user.id }).update({ online: true, role });

@@ -97,7 +97,7 @@ export async function deleteUserProfile() {
   }
 }
 
-export async function suspendUserAction(targetUserId: string, suspended: boolean) {
+export async function suspendUserAction(targetUserId: string, suspended: boolean, reason?: string) {
   try {
     const session = await getSession()
     if (!session?.userId) return { ok: false, error: 'Unauthorized' }
@@ -108,7 +108,10 @@ export async function suspendUserAction(targetUserId: string, suspended: boolean
       return { ok: false, error: 'Forbidden' }
     }
 
-    await db.orm.public.User.where({ id: targetUserId }).update({ suspended })
+    await db.orm.public.User.where({ id: targetUserId }).update({
+      suspended,
+      suspensionReason: suspended ? (reason?.trim() || 'Account suspended by administrator.') : null
+    })
     return { ok: true }
   } catch (err) {
     console.error('Suspend user error:', err)

@@ -19,6 +19,7 @@ model User {
   lifestyle      String         // Stored as JSON string
   verified       Boolean        @default(false)
   suspended      Boolean        @default(false)
+  suspensionReason String?
   onboarded      Boolean        @default(false)
   online         Boolean        @default(true)
   lastActiveAt   DateTime       @default(now())

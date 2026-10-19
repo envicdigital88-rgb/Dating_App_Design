@@ -28,6 +28,16 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const suspended = params.get('suspended');
+      if (suspended) {
+        setError(`Your account has been suspended. Reason: ${decodeURIComponent(suspended)}`);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     if (!isHydrated || !currentUser || currentUser.suspended) return;
 
     if (typeof window !== 'undefined') {
@@ -380,9 +390,21 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
 
             {/* Error */}
             {error && (
-              <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-[13px] text-red-400">
-                {error}
-              </p>
+              <div className="rounded-2xl border border-rose-500/40 bg-rose-500/15 p-4 text-[13px] text-rose-200 shadow-lg backdrop-blur-sm">
+                {error.toLowerCase().includes('suspend') ? (
+                  <div>
+                    <div className="flex items-center gap-2 font-bold text-rose-300 mb-1.5 text-[14px]">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-500/30 text-rose-200 text-xs">⚠️</span>
+                      Account Suspended
+                    </div>
+                    <p className="leading-relaxed text-white/90 font-medium">
+                      {error}
+                    </p>
+                  </div>
+                ) : (
+                  <p>{error}</p>
+                )}
+              </div>
             )}
 
             {/* Submit button */}

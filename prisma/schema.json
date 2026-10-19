@@ -1993,6 +1993,13 @@
                   "kind": "scalar"
                 }
               },
+              "suspensionReason": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "traits": {
                 "nullable": false,
                 "type": {
@@ -2436,6 +2443,9 @@
                 },
                 "suspended": {
                   "column": "suspended"
+                },
+                "suspensionReason": {
+                  "column": "suspensionReason"
                 },
                 "traits": {
                   "column": "traits"
@@ -4464,6 +4474,11 @@
                   "nativeType": "bool",
                   "nullable": false
                 },
+                "suspensionReason": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
                 "traits": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
@@ -4766,7 +4781,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "6ef80f0bea0017584650e9db662ceaeb3efe612b913b82c835ce11ef196edb6d"
+    "storageHash": "d8a60a87f88338aa45c3fe8f9777f96f8b2cda435bbce7b385dc2eb1b3e45c09"
   },
   "execution": {
     "executionHash": "cfcecedce98a9ee2c5be4cb3bd5d93271de2f5d9917661c48300aebc7990c4f4",

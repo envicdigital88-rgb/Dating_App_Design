@@ -36,9 +36,11 @@ export function AdminUsers() {
   const [page, setPage] = useState(1);
   const [busyIds, setBusyIds] = useState<Record<string, 'unlimited' | 'verify' | 'suspend' | null>>({});
   const [itemsPerPage, setItemsPerPage] = useState<number>(50);
+  const [suspendingUser, setSuspendingUser] = useState<AdminUser | null>(null);
+  const [suspensionReason, setSuspensionReason] = useState('');
 
   // Track recent local overrides with a timestamp to avoid background polling reverts
-  const recentOverridesRef = useRef<Map<string, { isUnlimited?: boolean; verified?: boolean; suspended?: boolean; timestamp: number }>>(new Map());
+  const recentOverridesRef = useRef<Map<string, { isUnlimited?: boolean; verified?: boolean; suspended?: boolean; suspensionReason?: string | null; timestamp: number }>>(new Map());
 
   useEffect(() => {
     setPage(1);
@@ -191,31 +193,39 @@ export function AdminUsers() {
     }
   };
 
-  const handleToggleSuspended = async (user: AdminUser) => {
+  const handleToggleSuspended = (user: AdminUser) => {
     if (busyIds[user.id]) return;
-    const targetSuspended = !user.suspended;
+    if (!user.suspended) {
+      setSuspendingUser(user);
+      setSuspensionReason('');
+      return;
+    }
+    executeSuspendUser(user, false);
+  };
 
+  const executeSuspendUser = async (user: AdminUser, targetSuspended: boolean, reason?: string) => {
     setBusyIds(prev => ({ ...prev, [user.id]: 'suspend' }));
     recentOverridesRef.current.set(user.id, {
       ...(recentOverridesRef.current.get(user.id) || {}),
       suspended: targetSuspended,
+      suspensionReason: targetSuspended ? reason : null,
       timestamp: Date.now()
     });
 
-    setRealUsers(prev => prev ? prev.map(u => u.id === user.id ? { ...u, suspended: targetSuspended } : u) : null);
+    setRealUsers(prev => prev ? prev.map(u => u.id === user.id ? { ...u, suspended: targetSuspended, suspensionReason: targetSuspended ? reason : null } : u) : null);
 
     try {
-      const res = await setUserSuspendedAction(user.id, targetSuspended);
+      const res = await setUserSuspendedAction(user.id, targetSuspended, reason);
       if (!res.ok) {
         recentOverridesRef.current.delete(user.id);
-        setRealUsers(prev => prev ? prev.map(u => u.id === user.id ? { ...u, suspended: user.suspended } : u) : null);
+        setRealUsers(prev => prev ? prev.map(u => u.id === user.id ? { ...u, suspended: user.suspended, suspensionReason: user.suspensionReason } : u) : null);
         toast.error('Failed to update suspension');
       } else {
-        toast.success(targetSuspended ? 'Member suspended' : 'Member reinstated');
+        toast.success(targetSuspended ? `Member suspended${reason ? `: ${reason}` : ''}` : 'Member reinstated');
       }
     } catch (err) {
       recentOverridesRef.current.delete(user.id);
-      setRealUsers(prev => prev ? prev.map(u => u.id === user.id ? { ...u, suspended: user.suspended } : u) : null);
+      setRealUsers(prev => prev ? prev.map(u => u.id === user.id ? { ...u, suspended: user.suspended, suspensionReason: user.suspensionReason } : u) : null);
       toast.error('Failed to update suspension');
     } finally {
       setBusyIds(prev => ({ ...prev, [user.id]: null }));
@@ -361,16 +371,23 @@ export function AdminUsers() {
                   {relativeTime(user.lastActiveAt)}
                 </td>
                 <td className="px-5 py-3.5">
-                  {user.suspended ?
-                <Badge tone="red">Suspended</Badge> :
-                user.verified ?
-                <Badge tone="moss">Verified</Badge> :
-
-                <Badge tone="amber">Unverified</Badge>
-                }
-                {user.isUnlimited && (
-                  <Badge tone="indigo" className="ml-2">Unlimited</Badge>
-                )}
+                  {user.suspended ? (
+                    <div>
+                      <Badge tone="red">Suspended</Badge>
+                      {user.suspensionReason && (
+                        <div className="text-[11px] text-berry-600 mt-1 max-w-[200px] truncate font-medium" title={user.suspensionReason}>
+                          Reason: {user.suspensionReason}
+                        </div>
+                      )}
+                    </div>
+                  ) : user.verified ? (
+                    <Badge tone="moss">Verified</Badge>
+                  ) : (
+                    <Badge tone="amber">Unverified</Badge>
+                  )}
+                  {user.isUnlimited && (
+                    <Badge tone="indigo" className="ml-2">Unlimited</Badge>
+                  )}
                 </td>
                 <td className="px-5 py-3.5">
                   <div className="flex justify-end gap-1.5">
@@ -508,7 +525,8 @@ export function AdminUsers() {
                 ['Unlimited access', detailUser.isUnlimited ? 'Active (Unlimited)' : 'No (Standard)'],
                 ['Wingits balance', detailUser.wingitsBalance?.toString() || '0'],
                 ['Verification', detailUser.verified ? 'Verified' : 'Unverified'],
-                ['Account state', detailUser.suspended ? 'Suspended' : 'Active']
+                ['Account state', detailUser.suspended ? 'Suspended' : 'Active'],
+                ...(detailUser.suspended && detailUser.suspensionReason ? [['Suspension reason', detailUser.suspensionReason]] : [])
               ].map(([label, value]) =>
                 <div key={label} className="flex justify-between gap-4 py-2.5">
                   <dt className="text-ink-muted">{label}</dt>
@@ -553,6 +571,73 @@ export function AdminUsers() {
             </Button>
           </>
         } />
+
+      {/* Suspend user reason modal */}
+      <Modal
+        open={!!suspendingUser}
+        onClose={() => { setSuspendingUser(null); setSuspensionReason(''); }}
+        title={`Suspend ${suspendingUser?.name}?`}
+        description="Provide a note or reason explaining why this member is being suspended. They will be immediately blocked from signing in and will see this reason when attempting to log in."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => { setSuspendingUser(null); setSuspensionReason(''); }}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              disabled={!suspensionReason.trim() || Boolean(suspendingUser && busyIds[suspendingUser.id])}
+              onClick={async () => {
+                const target = suspendingUser;
+                const reason = suspensionReason.trim();
+                if (!target || !reason) return;
+                setSuspendingUser(null);
+                setSuspensionReason('');
+                await executeSuspendUser(target, true, reason);
+              }}
+            >
+              Suspend Member
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3.5 pt-2">
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-ink-muted mb-1.5">
+              Reason for suspension <span className="text-berry-500">*</span>
+            </label>
+            <textarea
+              rows={3}
+              value={suspensionReason}
+              onChange={(e) => setSuspensionReason(e.target.value)}
+              placeholder="e.g. Inappropriate messages violating community safety rules, fake profile, repeated harassment..."
+              className="w-full rounded-xl border border-sand bg-cream px-3 py-2 text-sm text-ink outline-none transition focus:border-plum focus:ring-1 focus:ring-plum/30 placeholder:text-ink-muted/50"
+              autoFocus
+            />
+          </div>
+
+          <div>
+            <p className="text-xs font-medium text-ink-muted mb-1.5">Quick presets:</p>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                'Inappropriate messages or harassment',
+                'Fake profile or impersonation',
+                'Spam, advertising, or solicitation',
+                'Multiple reports from community members',
+                'Violation of community safety guidelines'
+              ].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setSuspensionReason(preset)}
+                  className="rounded-full bg-cream-deep px-2.5 py-1 text-[11px] font-medium text-ink-soft border border-sand hover:bg-sand/60 hover:text-ink transition-colors"
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Modal>
       
     </div>);
 

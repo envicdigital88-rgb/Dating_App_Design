@@ -101,7 +101,8 @@ export async function loginUser(formData: FormData) {
     }
 
     if (user.suspended) {
-      return { ok: false, error: "Your account has been suspended due to community reports." }
+      const reason = user.suspensionReason || 'Violation of community safety guidelines.';
+      return { ok: false, error: `Your account has been suspended. Reason: ${reason}` }
     }
 
     // Update last active
@@ -144,7 +145,8 @@ export async function googleAuthAction(credential: string) {
     let user = await db.orm.public.User.where({ email }).first();
 
     if (user && user.suspended) {
-      return { ok: false, error: "Your account has been suspended due to community reports." }
+      const reason = user.suspensionReason || 'Violation of community safety guidelines.';
+      return { ok: false, error: `Your account has been suspended. Reason: ${reason}` }
     }
 
     const role = (user && user.role === 'admin') || email === 'envicdigital88@gmail.com' ? 'admin' : 'member';

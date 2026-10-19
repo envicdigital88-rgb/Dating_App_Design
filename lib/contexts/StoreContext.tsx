@@ -304,6 +304,15 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       userPromise.then((user) => {
         // Hydrate the current user IMMEDIATELY - do not wait for discover
         if (user) {
+          if (user.suspended) {
+            setSessionId(null);
+            setIsHydrated(true);
+            if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/sign-')) {
+              window.location.href = '/sign-in?suspended=' + encodeURIComponent((user as any).suspensionReason || 'Violation of community safety guidelines.');
+            }
+            return;
+          }
+
           const mappedUser = {
             ...user,
             lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
