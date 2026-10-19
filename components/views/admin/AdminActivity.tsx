@@ -224,7 +224,7 @@ export function AdminActivity() {
           hint={`${acceptRate}% accept rate`} 
         />
         <StatTile 
-          label="Mingles sent" 
+          label="Mingles" 
           value={minglesSentCount} 
           emphasis 
         />

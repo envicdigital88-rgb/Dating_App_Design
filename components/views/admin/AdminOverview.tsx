@@ -122,11 +122,11 @@ export function AdminOverview() {
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
-          label="Wingling wingles"
+          label="Wingles"
           value={stats.totalWingles}
           hint={`${stats.acceptedWingles} accepted`} />
         
-        <StatTile label="Mingles sent" value={stats.minglesCount} />
+        <StatTile label="Mingles" value={stats.minglesCount} />
         <StatTile label="Connections" value={stats.connectionsCount} />
         <StatTile
           label="Open reports"
