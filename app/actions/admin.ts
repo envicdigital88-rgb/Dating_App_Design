@@ -36,7 +36,9 @@ export async function getAdminOverviewStatsAction() {
       packages,
       minglesCount,
       connectionsCount,
-      reports
+      reports,
+      transactionLedgers,
+      unlimitedUsersCount
     ] = await Promise.all([
       db.orm.public.User.where({ role: 'member' }).aggregate((a) => ({ count: a.count() })).then(r => r.count),
       db.orm.public.User.where({ role: 'member', gender: 'woman' }).aggregate((a) => ({ count: a.count() })).then(r => r.count),
@@ -50,7 +52,9 @@ export async function getAdminOverviewStatsAction() {
       db.orm.public.Package.select('id', 'name', 'price').all(),
       db.orm.public.Mingle.aggregate((a) => ({ count: a.count() })).then(r => r.count),
       db.orm.public.Connection.aggregate((a) => ({ count: a.count() })).then(r => r.count),
-      db.orm.public.Report.select('status').all()
+      db.orm.public.Report.select('status').all(),
+      db.orm.public.TransactionLedger.select('id', 'status', 'amountLKR').all(),
+      db.orm.public.User.where({ isUnlimited: true }).aggregate((a) => ({ count: a.count() })).then(r => r.count)
     ]);
 
     // For latest activity, we need the related users for the last 6 wingles
@@ -78,8 +82,18 @@ export async function getAdminOverviewStatsAction() {
         newThisMonth,
         activeToday,
         wingles: wingles.map(w => ({ id: w.id, status: w.status })),
-        payments: payments.map(p => ({ status: p.status, amount: p.amount, packageId: p.packageId })),
-        subscriptions: subscriptions.map(s => ({ status: s.status, expiresAt: s.expiresAt.toString() })),
+        payments: [
+          ...payments.map(p => ({ status: p.status, amount: p.amount, packageId: p.packageId })),
+          ...transactionLedgers.map((l: any) => ({
+            status: l.status === 'SUCCESS' ? 'succeeded' : l.status === 'FAILED' ? 'failed' : 'pending',
+            amount: l.amountLKR,
+            packageId: 'wingits'
+          }))
+        ],
+        subscriptions: [
+          ...subscriptions.map(s => ({ status: s.status, expiresAt: s.expiresAt.toString() })),
+          ...Array.from({ length: unlimitedUsersCount }).map(() => ({ status: 'active', expiresAt: '2099-01-01T00:00:00Z' }))
+        ],
         packages: packages.map(p => ({ id: p.id, name: p.name, price: p.price })),
         minglesCount,
         connectionsCount,
@@ -643,4 +657,199 @@ export async function resendAdminInviteAction(targetUserId: string) {
     return { ok: false, error: err?.message || 'Failed to resend invite' };
   }
 }
+
+export async function getAdminPaymentsAction() {
+  try {
+    const session = await getSession();
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
+
+    const caller = await db.orm.public.User.where({ id: session.userId as string }).first();
+    if (!caller || caller.role !== 'admin') {
+      return { ok: false, error: 'Forbidden' };
+    }
+
+    const [ledgers, payments, subscriptions, packages, users] = await Promise.all([
+      db.orm.public.TransactionLedger.limit(5000).all(),
+      db.orm.public.Payment.limit(5000).all(),
+      db.orm.public.Subscription.limit(5000).all(),
+      db.orm.public.Package.all(),
+      db.orm.public.User.select('id', 'name', 'email', 'phone', 'isUnlimited', 'createdAt').all()
+    ]);
+
+    const userMap = new Map(users.map((u: any) => [u.id, u]));
+    const packageMap = new Map(packages.map((p: any) => [p.id, p]));
+
+    const transformedLedgers = ledgers.map((l: any) => {
+      let meta: any = null;
+      if (l.transactionReference && typeof l.transactionReference === 'string' && l.transactionReference.startsWith('{')) {
+        try {
+          meta = JSON.parse(l.transactionReference);
+        } catch {}
+      }
+
+      const user = userMap.get(l.userId);
+      let packageName = `${l.wingitsCredited || l.amountLKR} Wingits`;
+      let reference = l.transactionReference || l.id.slice(0, 10).toUpperCase();
+
+      if (meta && meta.type === 'secret_wingle') {
+        packageName = meta.targetPhone ? `Secret Wingle (${meta.targetPhone})` : 'Secret Wingle (SMS)';
+        if (meta.gatewayTransactionId) reference = meta.gatewayTransactionId;
+      } else if (l.amountLKR === 50) {
+        packageName = 'Secret Wingle (SMS)';
+      }
+
+      let status: 'succeeded' | 'pending' | 'failed' | 'refunded' = 'pending';
+      const raw = String(l.status || '').toUpperCase();
+      if (raw === 'SUCCESS') status = 'succeeded';
+      else if (raw === 'FAILED') status = 'failed';
+      else if (raw === 'REFUNDED') status = 'refunded';
+
+      return {
+        id: l.id,
+        source: 'ledger' as const,
+        reference,
+        userId: l.userId,
+        userName: user?.name || 'Deleted member',
+        userEmail: user?.email || '',
+        userPhone: user?.phone || '',
+        packageName,
+        amount: Number(l.amountLKR) || 0,
+        status,
+        rawStatus: l.status,
+        method: 'Dialog Genie (IPG)',
+        createdAt: l.createdAt.toString(),
+        metadata: meta
+      };
+    });
+
+    const transformedPayments = payments.map((p: any) => {
+      const user = userMap.get(p.userId);
+      const pkg = packageMap.get(p.packageId);
+      return {
+        id: p.id,
+        source: 'payment' as const,
+        reference: p.reference,
+        userId: p.userId,
+        userName: user?.name || 'Deleted member',
+        userEmail: user?.email || '',
+        userPhone: user?.phone || '',
+        packageName: pkg?.name || 'Membership Package',
+        amount: Number(p.amount) || 0,
+        status: (p.status as any) || 'pending',
+        rawStatus: p.status,
+        method: p.method || 'Credit Card / Genie',
+        createdAt: p.createdAt.toString()
+      };
+    });
+
+    const allPayments = [...transformedLedgers, ...transformedPayments].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    const succeededList = allPayments.filter(p => p.status === 'succeeded');
+    const failedList = allPayments.filter(p => p.status === 'failed');
+    const pendingList = allPayments.filter(p => p.status === 'pending');
+    const refundedList = allPayments.filter(p => p.status === 'refunded');
+
+    const revenue = succeededList.reduce((acc, p) => acc + p.amount, 0);
+    const refundedAmount = refundedList.reduce((acc, p) => acc + p.amount, 0);
+
+    const unlimitedUsers = users.filter((u: any) => u.isUnlimited);
+    const activeSubsFromDb = subscriptions.filter(
+      (s: any) => s.status === 'active' && new Date(s.expiresAt) > new Date()
+    );
+    const expiredSubsFromDb = subscriptions.filter(
+      (s: any) => s.status !== 'active' || new Date(s.expiresAt) <= new Date()
+    );
+
+    const transformedSubscriptions = [
+      ...unlimitedUsers.map((u: any) => ({
+        id: `unlimited-${u.id}`,
+        userId: u.id,
+        userName: u.name,
+        userEmail: u.email,
+        userPhone: u.phone,
+        packageName: 'VIP Unlimited Access',
+        startedAt: u.createdAt.toString(),
+        expiresAt: null as string | null,
+        status: 'active' as const,
+        isUnlimited: true
+      })),
+      ...subscriptions.map((s: any) => {
+        const user = userMap.get(s.userId);
+        const pkg = packageMap.get(s.packageId);
+        const isActive = s.status === 'active' && new Date(s.expiresAt) > new Date();
+        return {
+          id: s.id,
+          userId: s.userId,
+          userName: user?.name || 'Deleted member',
+          userEmail: user?.email || '',
+          userPhone: user?.phone || '',
+          packageName: pkg?.name || 'Standard Package',
+          startedAt: s.startedAt.toString(),
+          expiresAt: s.expiresAt.toString(),
+          status: (isActive ? 'active' : s.status) as 'active' | 'expired' | 'cancelled',
+          isUnlimited: false
+        };
+      })
+    ];
+
+    return {
+      ok: true,
+      data: {
+        stats: {
+          revenue,
+          succeededCount: succeededList.length,
+          failedCount: failedList.length,
+          pendingCount: pendingList.length,
+          refundedCount: refundedList.length,
+          refundedAmount,
+          activeSubscriptionsCount: unlimitedUsers.length + activeSubsFromDb.length,
+          expiredSubscriptionsCount: expiredSubsFromDb.length
+        },
+        payments: allPayments,
+        subscriptions: transformedSubscriptions
+      }
+    };
+  } catch (err: any) {
+    console.error('getAdminPaymentsAction error:', err);
+    return { ok: false, error: err?.message || 'Failed to fetch payments data' };
+  }
+}
+
+export async function refundAdminPaymentAction(paymentId: string) {
+  try {
+    const session = await getSession();
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
+
+    const caller = await db.orm.public.User.where({ id: session.userId as string }).first();
+    if (!caller || caller.role !== 'admin') {
+      return { ok: false, error: 'Forbidden' };
+    }
+
+    // Try transaction ledger
+    const ledger = await db.orm.public.TransactionLedger.where({ id: paymentId }).first();
+    if (ledger) {
+      await db.orm.public.TransactionLedger.where({ id: paymentId }).update({
+        status: 'REFUNDED'
+      });
+      return { ok: true, message: 'Transaction marked as refunded' };
+    }
+
+    // Try payment table
+    const payment = await db.orm.public.Payment.where({ id: paymentId }).first();
+    if (payment) {
+      await db.orm.public.Payment.where({ id: paymentId }).update({
+        status: 'refunded'
+      });
+      return { ok: true, message: 'Payment marked as refunded' };
+    }
+
+    return { ok: false, error: 'Payment record not found' };
+  } catch (err: any) {
+    console.error('refundAdminPaymentAction error:', err);
+    return { ok: false, error: err?.message || 'Failed to refund payment' };
+  }
+}
+
 
