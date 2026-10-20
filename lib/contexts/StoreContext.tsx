@@ -228,6 +228,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   const [isHydrated, setIsHydrated] = useState(false);
   const [typingIn] = useState<string | null>(null);
   const [activePopupChatId, setActivePopupChatId] = useState<string | null>(null);
+  const [discoverIds, setDiscoverIds] = useState<string[]>([]);
   const timers = useRef<number[]>([]);
   const sessionIdRef = useRef<string | null>(null);
   sessionIdRef.current = sessionId;
@@ -340,10 +341,14 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
             ? discoverRes.data as User[]
             : [];
           if (realUsers.length > 0) {
+            setDiscoverIds(realUsers.map(u => u.id));
             setDb(d => {
               const allUsers = [...d.users];
               realUsers.forEach((ru: any) => {
-                if (!allUsers.find(u => u.id === ru.id)) {
+                const idx = allUsers.findIndex(u => u.id === ru.id);
+                if (idx >= 0) {
+                  allUsers[idx] = { ...allUsers[idx], ...ru };
+                } else {
                   if (ru.heartReacts === undefined) {
                     ru.heartReacts = ((ru.id.charCodeAt(0) + ru.id.charCodeAt(ru.id.length - 1)) % 50) + 1;
                   }
@@ -997,6 +1002,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     timers.current.forEach(window.clearTimeout);
     timers.current = [];
     setSessionId(null);
+    setDiscoverIds([]);
     setDb(initialDb); // Clear local store state
     if (typeof window !== 'undefined') {
       localStorage.removeItem('winglemingle_last_path');
@@ -1233,6 +1239,18 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       if (res?.ok && Array.isArray(res.data)) {
         const newUsers = res.data as User[];
         const newPhotos = newUsers.flatMap((u: any) => u.photos || []);
+
+        if (seenIds.length === 0) {
+          // Fresh batch on initial load, page refresh, or filter change
+          setDiscoverIds(newUsers.map(u => u.id));
+        } else {
+          // Append new profiles for pagination
+          setDiscoverIds(prev => {
+            const set = new Set(prev);
+            const toAdd = newUsers.map(u => u.id).filter(id => !set.has(id));
+            return [...prev, ...toAdd];
+          });
+        }
         
         setDb(d => {
           const allUsers = [...d.users];
@@ -1240,14 +1258,20 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
             if (u.heartReacts === undefined) {
               u.heartReacts = ((u.id.charCodeAt(0) + u.id.charCodeAt(u.id.length - 1)) % 50) + 1;
             }
-            if (!allUsers.find(existing => existing.id === u.id)) {
+            const existingIndex = allUsers.findIndex(existing => existing.id === u.id);
+            if (existingIndex >= 0) {
+              allUsers[existingIndex] = { ...allUsers[existingIndex], ...u };
+            } else {
               allUsers.push(u);
             }
           });
           
           const allPhotos = [...d.photos];
           newPhotos.forEach(p => {
-            if (!allPhotos.find(existing => existing.id === p.id)) {
+            const existingPhotoIndex = allPhotos.findIndex(existing => existing.id === p.id);
+            if (existingPhotoIndex >= 0) {
+              allPhotos[existingPhotoIndex] = { ...allPhotos[existingPhotoIndex], ...p };
+            } else {
               allPhotos.push(p);
             }
           });
@@ -1299,9 +1323,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       filter((s) => db.packages.find((p) => p.id === s.packageId)?.priorityVisibility).
       map((s) => s.userId)
     );
-    return db.users.
-    filter(
-      (u) =>
+
+    const isEligible = (u: User) =>
       u.id !== sessionId &&
       u.role === 'member' &&
       u.onboarded &&
@@ -1309,16 +1332,47 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       !blocked.has(u.id) &&
       !passed.has(u.id) &&
       !hearted.has(u.id) &&
-      !liked.has(u.id)
-    ).
-    sort((a, b) => {
-      const pa = premiumIds.has(a.id) ? 1 : 0;
-      const pb = premiumIds.has(b.id) ? 1 : 0;
-      if (pa !== pb) return pb - pa;
-      return new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime();
-    }).
-    map((u) => maskUser(u, sessionId));
-  }, [db.blocks, db.packages, db.passes, db.subscriptions, db.users, sessionId]);
+      !liked.has(u.id);
+
+    const userMap = new Map(db.users.map((u) => [u.id, u]));
+    const feed: User[] = [];
+    const included = new Set<string>();
+
+    // 1. First follow server-provided randomized discoverIds sequence
+    for (const id of discoverIds) {
+      const u = userMap.get(id);
+      if (u && isEligible(u) && !included.has(id)) {
+        feed.push(maskUser(u, sessionId));
+        included.add(id);
+      }
+    }
+
+    // 2. Fallback if discoverIds is empty (or for unlisted users in db)
+    if (feed.length === 0) {
+      const currentU = db.users.find((u) => u.id === sessionId);
+      const myGender = currentU?.gender?.toLowerCase();
+      const targetGender = myGender === 'man' ? 'woman' : myGender === 'woman' ? 'man' : null;
+
+      const candidates = db.users.filter((u) => isEligible(u) && !included.has(u.id));
+      candidates.sort((a, b) => {
+        const pa = premiumIds.has(a.id) ? 1 : 0;
+        const pb = premiumIds.has(b.id) ? 1 : 0;
+        if (pa !== pb) return pb - pa;
+        if (targetGender) {
+          const aPref = a.gender?.toLowerCase() === targetGender ? 1 : 0;
+          const bPref = b.gender?.toLowerCase() === targetGender ? 1 : 0;
+          if (aPref !== bPref) return bPref - aPref;
+        }
+        return new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime();
+      });
+
+      for (const u of candidates) {
+        feed.push(maskUser(u, sessionId));
+      }
+    }
+
+    return feed;
+  }, [db.blocks, db.packages, db.passes, db.heartBucket, db.likes, db.subscriptions, db.users, discoverIds, sessionId]);
 
   const likeUser = useCallback<StoreValue['likeUser']>((userId) => {
     // 1. Optimistic Like update

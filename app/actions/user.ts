@@ -127,12 +127,26 @@ export interface DiscoverFilters {
   onlineOnly: boolean;
 }
 
+function shuffleArray<T>(array: T[]): T[] {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: string[] = []) {
   console.log('getDiscoverUsers START');
   try {
-    const session = await getSession()
-    if (!session?.userId) return { ok: false, error: 'Unauthorized', data: [] }
-    const userId = session.userId as string
+    const session = await getSession();
+    if (!session?.userId) return { ok: false, error: 'Unauthorized', data: [] };
+    const userId = session.userId as string;
+
+    // Fetch current user to determine their gender for discover preference
+    const currentUser = await db.orm.public.User.where({ id: userId }).first();
+    const myGender = (currentUser?.gender || '').toLowerCase();
+    const preferredOppositeGender = myGender === 'man' ? 'woman' : myGender === 'woman' ? 'man' : null;
     
     const likes = await db.orm.public.Like.where({ fromUserId: userId }).all();
     const passes = await db.orm.public.Pass.where({ userId }).all();
@@ -141,7 +155,7 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
     
     const tenDaysAgo = new Date();
     tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
-    const recentPasses = passes.filter((p: any) => new Date(p.createdAt) >= tenDaysAgo);
+    const recentPasses = passes.filter((p: any) => new Date(p.createdAt?.toString() || 0) >= tenDaysAgo);
 
     const excludedIds = [
       userId,
@@ -150,26 +164,25 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
       ...heartBucket.map((h: any) => h.targetUserId),
       ...blocks.map((b: any) => b.blockerId === userId ? b.blockedUserId : b.blockerId),
       ...seenIds
-    ]
+    ];
     
-    // Fetch users only (no includes) - much faster
+    // Fetch all active, onboarded member users
     const rawUsers = await db.orm.public.User.where({
       onboarded: true,
       role: 'member',
       suspended: false
-    }).limit(50).all()
+    }).all();
     
     const excludedSet = new Set(excludedIds);
-    let filteredUsers = rawUsers.filter(u => !excludedSet.has(u.id));
+    let eligible = rawUsers.filter(u => !excludedSet.has(u.id) && u.discoverable !== false);
 
     if (filters) {
-      filteredUsers = filteredUsers.filter(u => {
-        if (u.age < filters.ageMin || u.age > filters.ageMax) return false;
-        if (filters.gender !== 'any' && u.gender !== filters.gender) return false;
-        if (filters.intention !== 'any' && u.intention !== filters.intention) return false;
+      eligible = eligible.filter(u => {
+        if (filters.ageMin !== undefined && u.age < filters.ageMin) return false;
+        if (filters.ageMax !== undefined && u.age > filters.ageMax) return false;
+        if (filters.intention && filters.intention !== 'any' && u.intention !== filters.intention) return false;
         if (filters.onlineOnly) {
-          // Assume online if lastActiveAt was within last 10 minutes
-          const lastActive = u.lastActiveAt ? new Date(u.lastActiveAt).getTime() : 0;
+          const lastActive = u.lastActiveAt ? new Date(u.lastActiveAt.toString()).getTime() : 0;
           const tenMinsAgo = Date.now() - 10 * 60 * 1000;
           if (lastActive < tenMinsAgo) return false;
         }
@@ -177,8 +190,45 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
       });
     }
 
-    const usersWithoutRelations = filteredUsers.slice(0, 20);
-    const userIds = usersWithoutRelations.map(u => u.id);
+    const BATCH_SIZE = 20;
+    let selectedUsers: typeof rawUsers = [];
+
+    if (filters?.gender && filters.gender !== 'any') {
+      // User explicitly set a gender filter: strictly respect it and randomize
+      const genderFiltered = eligible.filter(u => u.gender?.toLowerCase() === filters.gender.toLowerCase());
+      selectedUsers = shuffleArray(genderFiltered).slice(0, BATCH_SIZE);
+    } else if (preferredOppositeGender) {
+      // Default: Male user -> mostly women; Female user -> mostly men
+      const preferredPool = eligible.filter(u => u.gender?.toLowerCase() === preferredOppositeGender);
+      const otherPool = eligible.filter(u => u.gender?.toLowerCase() !== preferredOppositeGender);
+
+      const shuffledPreferred = shuffleArray(preferredPool);
+      const shuffledOthers = shuffleArray(otherPool);
+
+      let p = 0;
+      let o = 0;
+
+      // Distribute with majority opposite gender (e.g. 5 preferred to 1 other, ~83% preferred)
+      while (selectedUsers.length < BATCH_SIZE && (p < shuffledPreferred.length || o < shuffledOthers.length)) {
+        for (let k = 0; k < 5 && selectedUsers.length < BATCH_SIZE && p < shuffledPreferred.length; k++) {
+          selectedUsers.push(shuffledPreferred[p++]);
+        }
+        if (selectedUsers.length < BATCH_SIZE && o < shuffledOthers.length) {
+          selectedUsers.push(shuffledOthers[o++]);
+        }
+        if (p >= shuffledPreferred.length && o < shuffledOthers.length && selectedUsers.length < BATCH_SIZE) {
+          selectedUsers.push(shuffledOthers[o++]);
+        }
+        if (o >= shuffledOthers.length && p < shuffledPreferred.length && selectedUsers.length < BATCH_SIZE) {
+          selectedUsers.push(shuffledPreferred[p++]);
+        }
+      }
+    } else {
+      // Non-binary or unknown gender: randomize all eligible
+      selectedUsers = shuffleArray(eligible).slice(0, BATCH_SIZE);
+    }
+
+    const userIds = selectedUsers.map(u => u.id);
 
     if (userIds.length === 0) return { ok: true, data: [] };
 
@@ -193,7 +243,7 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
       });
     }
 
-    const mappedUsers = usersWithoutRelations.map((user: any) => {
+    const mappedUsers = selectedUsers.map((user: any) => {
       const realCount = heartReactsMap.get(user.id) || 0;
       const fakeCount = ((user.id.charCodeAt(0) + user.id.charCodeAt(user.id.length - 1)) % 50) + 1;
 
@@ -205,21 +255,24 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
         interests: typeof user.interests === 'string' ? JSON.parse(user.interests) : (user.interests || []),
         traits: typeof user.traits === 'string' ? JSON.parse(user.traits) : (user.traits || []),
         lifestyle: typeof user.lifestyle === 'string' ? JSON.parse(user.lifestyle) : (user.lifestyle || {}),
-        photos: photos.filter(p => p.userId === user.id && p.moderation === 'approved').map((p: any) => ({
-          ...p,
-          uploadedAt: p.uploadedAt?.toString() || new Date().toISOString()
-        })),
+        photos: photos
+          .filter(p => p.userId === user.id && p.moderation === 'approved')
+          .sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0) || a.order - b.order)
+          .map((p: any) => ({
+            ...p,
+            uploadedAt: p.uploadedAt?.toString() || new Date().toISOString()
+          })),
         prompts: [], // Loaded lazily on profile open
         heartReacts: realCount > 0 ? realCount : fakeCount
       };
 
     });
-    console.log('getDiscoverUsers END');
-    return { ok: true, data: mappedUsers }
+    console.log('getDiscoverUsers END, count:', mappedUsers.length);
+    return { ok: true, data: mappedUsers };
   } catch (err) {
     console.log('getDiscoverUsers ERROR', err);
-    console.error('getDiscoverUsers error:', err)
-    return { ok: false, error: 'Failed to fetch discover users', data: [] }
+    console.error('getDiscoverUsers error:', err);
+    return { ok: false, error: 'Failed to fetch discover users', data: [] };
   }
 }
 
