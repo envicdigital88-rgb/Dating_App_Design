@@ -119,8 +119,14 @@ export function Packages() {
     try {
       const result = await buyWingitsAction(amount, amount);
       
-      if (!result.ok || !result.redirectUrl) {
+      if (!result.ok) {
         toast.error(result.error || 'Payment gateway rejected the request');
+        setLoadingAmount(null);
+        return;
+      }
+
+      if (!result.redirectUrl) {
+        toast.error('Payment gateway rejected the request');
         setLoadingAmount(null);
         return;
       }

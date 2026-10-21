@@ -201,27 +201,33 @@ export function SecretWingleTab() {
         recipientName: recipientName.trim() || undefined
       });
 
-      if (res.ok && res.redirectUrl) {
-        toast.info('Connecting to Genie payment gateway...');
-        if (res.ledgerId) {
-          setPendingLedgerId(res.ledgerId);
-          setPendingPaymentUrl(res.redirectUrl);
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('wm_pending_secret_wingle_ledger', res.ledgerId);
-            localStorage.setItem('wm_pending_secret_wingle_url', res.redirectUrl);
-          }
-        }
-        const win = window.open(
-          res.redirectUrl,
-          'GeniePaymentWindow',
-          'width=550,height=750,left=250,top=100'
-        );
-        paymentPopupRef.current = win;
-        if (!win) {
-          window.location.href = res.redirectUrl;
-        }
-      } else {
+      if (!res.ok) {
         toast.error(res.error || 'Failed to connect to Genie payment gateway');
+        return;
+      }
+
+      if (!res.redirectUrl) {
+        toast.error('Failed to connect to Genie payment gateway');
+        return;
+      }
+
+      toast.info('Connecting to Genie payment gateway...');
+      if (res.ledgerId) {
+        setPendingLedgerId(res.ledgerId);
+        setPendingPaymentUrl(res.redirectUrl);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('wm_pending_secret_wingle_ledger', res.ledgerId);
+          localStorage.setItem('wm_pending_secret_wingle_url', res.redirectUrl);
+        }
+      }
+      const win = window.open(
+        res.redirectUrl,
+        'GeniePaymentWindow',
+        'width=550,height=750,left=250,top=100'
+      );
+      paymentPopupRef.current = win;
+      if (!win) {
+        window.location.href = res.redirectUrl;
       }
     } catch (err: any) {
       const msg = err?.message || '';

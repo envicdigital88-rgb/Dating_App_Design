@@ -63,9 +63,15 @@ export function Checkout() {
     // Call server action for IPG
     const result = await createIpgTransaction(pkg.id, pkg.price);
     
-    if (!result.ok || !result.redirectUrl) {
+    if (!result.ok) {
       setStage('form');
       setError(result.error || 'Payment gateway rejected the request');
+      return;
+    }
+
+    if (!result.redirectUrl) {
+      setStage('form');
+      setError('Payment gateway rejected the request');
       return;
     }
 

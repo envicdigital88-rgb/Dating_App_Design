@@ -21,8 +21,8 @@ async function getAppUrl(): Promise<string> {
 }
 
 export type PaymentInitResult =
-  | { ok: true; redirectUrl: string; ledgerId: string; error?: undefined }
-  | { ok: false; error: string; redirectUrl?: undefined; ledgerId?: undefined };
+  | { ok: true; redirectUrl: string; ledgerId: string }
+  | { ok: false; error: string };
 
 async function initializePayment(input: {
   userId: string;
