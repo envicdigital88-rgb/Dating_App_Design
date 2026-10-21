@@ -25,10 +25,10 @@ export default async function PaymentSuccessPage({
             Missing transaction details. We could not verify this payment.
           </p>
           <Link
-            href="/packages"
+            href="/store"
             className="inline-flex items-center justify-center w-full py-4 px-8 rounded-2xl bg-gradient-to-r from-berry-500 to-plum-500 text-white font-semibold shadow-lg shadow-berry-500/20 hover:opacity-95 transition-all"
           >
-            Return to Packages
+            Return to Store
           </Link>
         </div>
       </div>
@@ -60,7 +60,7 @@ export default async function PaymentSuccessPage({
           </p>
           <div className="space-y-3">
             <Link
-              href="/packages"
+              href="/store"
               className="inline-flex items-center justify-center w-full py-4 px-8 rounded-2xl bg-gradient-to-r from-berry-500 to-plum-500 text-white font-semibold shadow-lg shadow-berry-500/20 hover:opacity-95 transition-all"
             >
               Try Again
@@ -206,11 +206,11 @@ export default async function PaymentSuccessPage({
         {/* Action Buttons */}
         <div className="space-y-3">
           <Link
-            href="/packages"
+            href="/store"
             className="inline-flex items-center justify-center gap-2 w-full py-4 px-8 rounded-2xl bg-gradient-to-r from-berry-500 via-plum-500 to-berry-500 text-white font-semibold shadow-lg shadow-berry-500/25 hover:opacity-95 hover:scale-[1.01] active:scale-[0.99] transition-all text-base"
           >
             <CoinsIcon className="w-5 h-5" />
-            <span>Continue to Packages</span>
+            <span>Return to Wingits Store</span>
             <ArrowRightIcon className="w-4 h-4 ml-1" />
           </Link>
 

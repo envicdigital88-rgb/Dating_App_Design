@@ -20,13 +20,17 @@ async function getAppUrl(): Promise<string> {
   return 'https://www.winglemingle.com';
 }
 
+export type PaymentInitResult =
+  | { ok: true; redirectUrl: string; ledgerId: string; error?: undefined }
+  | { ok: false; error: string; redirectUrl?: undefined; ledgerId?: undefined };
+
 async function initializePayment(input: {
   userId: string;
   amountLKR: number;
   wingitsCredited: number;
   transactionReference?: string;
   secretWingle?: boolean;
-}) {
+}): Promise<PaymentInitResult> {
   try {
     // Validate configuration before creating a ledger or sending a credential.
     const { appKey } = getGenieConfig();
@@ -70,7 +74,7 @@ async function initializePayment(input: {
   }
 }
 
-export async function buyWingitsAction(packageAmountLKR: number, wingitsAmount: number) {
+export async function buyWingitsAction(packageAmountLKR: number, wingitsAmount: number): Promise<PaymentInitResult> {
   const session = await getSession();
   if (!session?.userId) return { ok: false, error: 'Unauthorized' };
   // One Wingit costs LKR 1. Never accept a separate client-controlled credit value.
@@ -94,7 +98,7 @@ export async function initiateSecretWinglePaymentAction(
     isAnonymous?: boolean;
     language?: 'en' | 'si' | 'ta';
   }
-) {
+): Promise<PaymentInitResult> {
   const session = await getSession();
   if (!session?.userId) return { ok: false, error: 'Unauthorized' };
   const userId = session.userId as string;

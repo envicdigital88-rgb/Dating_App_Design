@@ -51,7 +51,7 @@ export function SubscriptionPage() {
         title="Wingits"
         body="Your package, your remaining allowance, and every payment on your account."
         action={
-        <Button onClick={() => router.push('/packages')}>
+        <Button onClick={() => router.push('/store')}>
             Buy Wingits
           </Button>
         } />

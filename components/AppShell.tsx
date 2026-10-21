@@ -113,7 +113,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
   const account: NavItem[] = [
   { to: '/profile', label: 'My profile', icon: <UserIcon className="h-[18px] w-[18px]" /> },
   /* { to: '/packages', label: 'Packages', icon: <SparklesIcon className="h-[18px] w-[18px]" /> }, */
-  { to: '/subscription', label: 'Wingits', icon: <CoinsIcon className="h-[18px] w-[18px]" /> },
+  { to: '/store', label: 'Wingits', icon: <CoinsIcon className="h-[18px] w-[18px]" /> },
   { to: '/settings', label: 'Settings', icon: <SettingsIcon className="h-[18px] w-[18px]" /> }];
 
 
@@ -170,7 +170,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
           <nav aria-label="Account" className="space-y-1">
             {account.map((item) => {
-              const isActive = pathname.startsWith(item.to);
+              const isActive = pathname.startsWith(item.to) || (item.to === '/store' && pathname.startsWith('/subscription'));
               return (
               <Link key={item.to} href={item.to} className={navClass(isActive)}>
                   {item.icon}
@@ -369,7 +369,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
 
               <nav aria-label="Account" className="space-y-1">
                 {account.map((item) => {
-                  const isActive = pathname.startsWith(item.to);
+                  const isActive = pathname.startsWith(item.to) || (item.to === '/store' && pathname.startsWith('/subscription'));
                   return (
                     <Link
                       key={item.to}
