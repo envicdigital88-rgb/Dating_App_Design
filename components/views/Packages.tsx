@@ -135,15 +135,7 @@ export function Packages() {
       }
 
       toast.info('Connecting to Dialog payment gateway...');
-      const win = window.open(
-        result.redirectUrl,
-        'GeniePaymentWindow',
-        'width=550,height=750,left=250,top=100'
-      );
-      paymentPopupRef.current = win;
-      if (!win) {
-        window.location.href = result.redirectUrl;
-      }
+      window.location.href = result.redirectUrl;
     } catch (err: any) {
       const msg = err?.message || '';
       if (

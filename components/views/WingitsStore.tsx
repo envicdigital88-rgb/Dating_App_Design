@@ -178,6 +178,7 @@ export default function WingitsStore() {
         if (typeof window !== 'undefined') {
           localStorage.removeItem('wm_pending_wingits_ledger');
           localStorage.removeItem('wm_pending_wingits_amount');
+          localStorage.removeItem('wm_pending_wingits_url');
         }
 
         setPendingLedgerId(null);
@@ -301,23 +302,14 @@ export default function WingitsStore() {
         if (typeof window !== 'undefined') {
           localStorage.setItem('wm_pending_wingits_ledger', result.ledgerId);
           localStorage.setItem('wm_pending_wingits_amount', String(amount));
+          localStorage.setItem('wm_pending_wingits_url', result.redirectUrl);
         }
       }
 
       toast.info('Connecting to Dialog Genie IPG...');
 
-      // Open Dialog Pay in a dedicated popup window
-      const win = window.open(
-        result.redirectUrl,
-        'GeniePaymentWindow',
-        'width=550,height=750,left=250,top=100'
-      );
-      paymentPopupRef.current = win;
-
-      // Fallback if browser blocked the popup
-      if (!win) {
-        window.location.href = result.redirectUrl;
-      }
+      // Direct redirection to Dialog Genie IPG (prevents popup blocker / cross-origin opener issues)
+      window.location.href = result.redirectUrl;
     } catch (err: any) {
       const msg = err?.message || '';
       if (
@@ -387,8 +379,9 @@ export default function WingitsStore() {
 
                 <button
                   onClick={() => {
-                    if (paymentPopupRef.current && !paymentPopupRef.current.closed) {
-                      paymentPopupRef.current.focus();
+                    const savedUrl = typeof window !== 'undefined' ? localStorage.getItem('wm_pending_wingits_url') : null;
+                    if (savedUrl) {
+                      window.location.href = savedUrl;
                     } else if (typeof window !== 'undefined') {
                       toast.info('Re-checking payment status...');
                       verifyAndComplete(pendingLedgerId, pendingAmount);
@@ -397,7 +390,7 @@ export default function WingitsStore() {
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs sm:text-sm font-medium border border-white/15 transition-all"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Reopen Window</span>
+                  <span>Resume Payment</span>
                 </button>
 
                 <button
@@ -405,6 +398,7 @@ export default function WingitsStore() {
                     if (typeof window !== 'undefined') {
                       localStorage.removeItem('wm_pending_wingits_ledger');
                       localStorage.removeItem('wm_pending_wingits_amount');
+                      localStorage.removeItem('wm_pending_wingits_url');
                     }
                     setPendingLedgerId(null);
                     setPendingAmount(null);
