@@ -113,11 +113,12 @@ export function Packages() {
   if (!entitlements) return null;
 
   const handleBuy = async (amount: number) => {
-    if (amount < 100) return;
+    if (amount < 20) return;
     setLoadingAmount(amount);
     
     try {
-      const result = await buyWingitsAction(amount, amount);
+      const priceLKR = amount * 5;
+      const result = await buyWingitsAction(priceLKR, amount);
       
       if (!result.ok) {
         toast.error(result.error || 'Payment gateway rejected the request');
@@ -161,9 +162,9 @@ export function Packages() {
   };
 
   const presets = [
-    { amount: 100, featured: false, label: 'Starter' },
-    { amount: 500, featured: true, label: 'Popular' },
-    { amount: 1000, featured: false, label: 'Pro' },
+    { amount: 100, price: 500, featured: false, label: 'Starter' },
+    { amount: 500, price: 2500, featured: true, label: 'Popular' },
+    { amount: 1000, price: 5000, featured: false, label: 'Pro' },
   ];
 
   return (
@@ -204,7 +205,7 @@ export function Packages() {
       )}
       <PageHeader
         title="Buy Wingits"
-        body="Wingits are the currency of WingleMingle. 1 Wingit = Rs. 1. Minimum purchase is 100 Wingits." />
+        body="Wingits are the currency of WingleMingle. 20 Wingits = Rs. 100. Minimum purchase is 20 Wingits." />
       
       <div className="mb-12">
         <ul className="grid items-stretch gap-6 lg:grid-cols-3">
@@ -234,7 +235,7 @@ export function Packages() {
               </div>
               <div className="mt-8 mb-4">
                 <span className="font-display text-[48px] leading-[1.1] text-ink tracking-tight">
-                  {money(pkg.amount)}
+                  {money(pkg.price)}
                 </span>
               </div>
               <div className="mt-auto pt-6">
@@ -254,7 +255,7 @@ export function Packages() {
           <div className="relative z-10 flex flex-col md:flex-row gap-6 items-center justify-between">
             <div className="text-center md:text-left max-w-md">
               <h3 className="font-display text-2xl font-semibold text-ink mb-2">Custom Amount</h3>
-              <p className="text-[14px] text-ink-soft leading-relaxed">Enter any specific amount of Wingits you'd like to buy. (1 Wingit = Rs. 1, minimum 100).</p>
+              <p className="text-[14px] text-ink-soft leading-relaxed">Enter any specific amount of Wingits you'd like to buy. (20 Wingits = Rs. 100, minimum 20 Wingits).</p>
             </div>
             
             <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
@@ -262,22 +263,22 @@ export function Packages() {
                 <CoinsIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-berry-400" />
                 <Input
                   type="number"
-                  min="100"
+                  min="20"
                   value={customAmount}
                   onChange={(e) => setCustomAmount(e.target.value ? parseInt(e.target.value, 10) : '')}
-                  placeholder="e.g. 250"
+                  placeholder="e.g. 50"
                   className="pl-12 py-3 text-lg rounded-2xl w-full bg-white shadow-sm ring-1 ring-sand focus:ring-berry-500 font-semibold"
                 />
               </div>
               <div className="w-full sm:w-auto">
                 <Button 
-                  disabled={!customAmount || customAmount < 100}
+                  disabled={!customAmount || customAmount < 20}
                   loading={loadingAmount === customAmount}
                   onClick={() => handleBuy(customAmount as number)} 
                   variant="primary" 
                   className="w-full sm:w-auto px-8 py-3 text-lg rounded-2xl whitespace-nowrap shadow-md">
-                  {customAmount && customAmount >= 100 
-                    ? `Pay ${money(customAmount as number)}` 
+                  {customAmount && customAmount >= 20 
+                    ? `Pay ${money((customAmount as number) * 5)}` 
                     : 'Enter Amount'}
                 </Button>
               </div>

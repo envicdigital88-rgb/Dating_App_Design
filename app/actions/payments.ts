@@ -77,15 +77,23 @@ async function initializePayment(input: {
 export async function buyWingitsAction(packageAmountLKR: number, wingitsAmount: number): Promise<PaymentInitResult> {
   const session = await getSession();
   if (!session?.userId) return { ok: false, error: 'Unauthorized' };
-  // One Wingit costs LKR 1. Never accept a separate client-controlled credit value.
-  if (!Number.isSafeInteger(packageAmountLKR) || packageAmountLKR < 100 ||
-      !Number.isSafeInteger(packageAmountLKR * 100) || wingitsAmount !== packageAmountLKR) {
-    return { ok: false, error: 'Enter a whole Wingits amount of at least 100 (1 Wingit = LKR 1).' };
+  // Rate: 20 Wingits = LKR 100 (5 LKR per Wingit). Minimum purchase is 20 Wingits (100 LKR).
+  const WINGIT_PRICE_LKR = 5;
+  const MIN_WINGITS = 20;
+
+  if (!Number.isSafeInteger(wingitsAmount) || wingitsAmount < MIN_WINGITS) {
+    return { ok: false, error: `Enter a whole Wingits amount of at least ${MIN_WINGITS} (20 Wingits = Rs. 100).` };
   }
+
+  const expectedAmountLKR = wingitsAmount * WINGIT_PRICE_LKR;
+  if (!Number.isSafeInteger(packageAmountLKR) || packageAmountLKR !== expectedAmountLKR) {
+    return { ok: false, error: 'Payment amount does not match the Wingits rate (20 Wingits = Rs. 100).' };
+  }
+
   return initializePayment({
     userId: session.userId as string,
-    amountLKR: packageAmountLKR,
-    wingitsCredited: packageAmountLKR,
+    amountLKR: expectedAmountLKR,
+    wingitsCredited: wingitsAmount,
   });
 }
 

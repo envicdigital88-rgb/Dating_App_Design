@@ -11,5 +11,5 @@ export async function verifyPaymentAction(ledgerId: string, transactionId: strin
 }
 
 export async function createIpgTransaction(_packageId: string, amount: number) {
-  return buyWingits(amount, amount);
+  return buyWingits(amount * 5, amount);
 }

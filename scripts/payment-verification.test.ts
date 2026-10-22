@@ -207,6 +207,22 @@ await check('localId, ID, amount, currency, and ledger terms must match', async 
   assert.equal((await api.verifyGeniePayment(ledgerId, transactionId)).ok, false);
   assert.equal(state.claims, 0);
   assert.equal(state.invoices, 0);
+
+  // New rate test: 20 Wingits = Rs. 100 (5 LKR per Wingit)
+  const newRateValid = fixture();
+  newRateValid.state.ledger.amountLKR = 100;
+  newRateValid.state.ledger.wingitsCredited = 20;
+  newRateValid.state.gateway.amount = 10000;
+  assert.equal((await newRateValid.api.verifyGeniePayment(ledgerId, transactionId)).ok, true);
+  assert.equal(newRateValid.state.claims, 1);
+  assert.equal(newRateValid.state.users[0].wingitsBalance, 40); // 20 initial + 20 credited
+
+  // Invalid rate test: 25 Wingits for Rs. 100 (should be rejected)
+  const newRateInvalid = fixture();
+  newRateInvalid.state.ledger.amountLKR = 100;
+  newRateInvalid.state.ledger.wingitsCredited = 25;
+  newRateInvalid.state.gateway.amount = 10000;
+  assert.equal((await newRateInvalid.api.verifyGeniePayment(ledgerId, transactionId)).ok, false);
 });
 
 await check('pending, cancelled and unsupported success states cannot credit', async () => {

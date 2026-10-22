@@ -8,16 +8,20 @@ import { getWingitsTransactionsAction } from '@/app/actions/wingits';
 import { buyWingitsAction, checkAndVerifyPendingPaymentAction } from '@/app/actions/payments';
 import { cn } from '@/lib/utils/format';
 
+const WINGIT_RATE = 5; // 20 Wingits = Rs. 100 (5 LKR per Wingit)
+const MIN_CUSTOM_WINGITS = 20;
+
 const WINGIT_PACKAGES = [
-  { id: 'pkg_1', amount: 100, price: 100, popular: false },
-  { id: 'pkg_2', amount: 500, price: 500, popular: true },
-  { id: 'pkg_3', amount: 1000, price: 1000, popular: false },
-  { id: 'pkg_4', amount: 2000, price: 2000, popular: false },
+  { id: 'pkg_1', amount: 100, price: 500, popular: false },
+  { id: 'pkg_2', amount: 500, price: 2500, popular: true },
+  { id: 'pkg_3', amount: 1000, price: 5000, popular: false },
+  { id: 'pkg_4', amount: 2000, price: 10000, popular: false },
 ];
 
 export default function WingitsStore() {
   const { currentUser } = useStore();
   const [loadingPkg, setLoadingPkg] = useState<string | null>(null);
+  const [customWingits, setCustomWingits] = useState<number | ''>(20);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [pendingLedgerId, setPendingLedgerId] = useState<string | null>(null);
   const [pendingAmount, setPendingAmount] = useState<number | null>(null);
@@ -132,7 +136,11 @@ export default function WingitsStore() {
   };
 
   // Purchase package via Dialog Genie IPG
-  const handlePurchase = async (pkg: typeof WINGIT_PACKAGES[0]) => {
+  const handlePurchase = async (pkg: { id: string; amount: number; price: number }) => {
+    if (pkg.amount < MIN_CUSTOM_WINGITS) {
+      toast.error(`Minimum purchase is ${MIN_CUSTOM_WINGITS} Wingits (Rs. ${(MIN_CUSTOM_WINGITS * WINGIT_RATE).toLocaleString()})`);
+      return;
+    }
     setLoadingPkg(pkg.id);
 
     try {
@@ -189,9 +197,13 @@ export default function WingitsStore() {
           <Coins className="w-8 h-8 text-amber-500" />
         </div>
         <h1 className="text-3xl font-display font-bold tracking-tight mb-2 text-ink">Get More Wingits</h1>
-        <p className="text-ink-muted text-base sm:text-lg max-w-xl mx-auto">
+        <p className="text-ink-muted text-base sm:text-lg max-w-xl mx-auto mb-3">
           Wingits are your currency for premium features. Stand out with Secret Wingles, unlock more matches, and boost your profile.
         </p>
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-xs font-semibold text-amber-400">
+          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+          <span>Official Rate: 20 Wingits = Rs. 100</span>
+        </div>
       </div>
 
       {/* Pending Payment Alert */}
@@ -204,7 +216,7 @@ export default function WingitsStore() {
             </span>
             <div>
               <p className="text-sm font-semibold text-amber-300">
-                Dialog Genie Payment in Progress (Rs. {pendingAmount})
+                Dialog Genie Payment in Progress ({pendingAmount} Wingits • Rs. {(pendingAmount ? pendingAmount * WINGIT_RATE : 0).toLocaleString()})
               </p>
               <p className="text-xs text-amber-200/70">
                 {isVerifying ? 'Verifying payment with Dialog Genie...' : 'Complete payment in Dialog window or check status.'}
@@ -257,7 +269,7 @@ export default function WingitsStore() {
       </div>
 
       {/* Packages Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mb-12">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mb-8">
         {WINGIT_PACKAGES.map((pkg) => (
           <div
             key={pkg.id}
@@ -283,7 +295,7 @@ export default function WingitsStore() {
             </div>
 
             <div className="text-center mb-6">
-              <p className="text-2xl font-display font-bold text-ink">Rs. {pkg.price}</p>
+              <p className="text-2xl font-display font-bold text-ink">Rs. {pkg.price.toLocaleString()}</p>
             </div>
 
             <button
@@ -304,6 +316,142 @@ export default function WingitsStore() {
             </button>
           </div>
         ))}
+      </div>
+
+      {/* Custom Wingits Amount Section */}
+      <div className="bg-cream-deep border border-sand/60 rounded-3xl p-6 sm:p-8 mb-12 shadow-card relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+          <Coins className="w-56 h-56 -mr-12 -mt-12 text-amber-500" />
+        </div>
+
+        <div className="relative z-10">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-xs font-semibold text-amber-400 mb-2">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Custom Purchase</span>
+              </div>
+              <h2 className="text-2xl font-display font-bold text-ink">Choose Your Own Amount</h2>
+              <p className="text-sm text-ink-muted mt-1">
+                Enter any amount of Wingits you need. Rate: 20 Wingits = Rs. 100 (Minimum 20 Wingits).
+              </p>
+            </div>
+
+            {/* Live Price Tag */}
+            {typeof customWingits === 'number' && customWingits >= MIN_CUSTOM_WINGITS && (
+              <div className="bg-sand/30 border border-sand/60 rounded-2xl px-5 py-3 text-right shrink-0">
+                <p className="text-xs text-ink-muted font-medium">Total Price</p>
+                <p className="text-2xl font-display font-bold text-ink">
+                  Rs. {(customWingits * WINGIT_RATE).toLocaleString()}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Select Preset Chips */}
+          <div className="mb-6">
+            <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2.5">
+              Popular Quick Picks
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {[20, 50, 150, 250, 750].map((quickAmt) => (
+                <button
+                  key={quickAmt}
+                  type="button"
+                  onClick={() => setCustomWingits(quickAmt)}
+                  className={cn(
+                    "px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-all border",
+                    customWingits === quickAmt
+                      ? "bg-amber-500 text-black border-amber-500 shadow-md shadow-amber-500/20 font-bold"
+                      : "bg-sand/40 hover:bg-sand/70 text-ink border-white/5"
+                  )}
+                >
+                  {quickAmt} Wingits (Rs. {(quickAmt * WINGIT_RATE).toLocaleString()})
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Input & Action */}
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+            <div className="sm:col-span-7 relative">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none text-amber-500">
+                <Coins className="w-5 h-5" />
+              </div>
+              <input
+                type="number"
+                min={MIN_CUSTOM_WINGITS}
+                step={1}
+                value={customWingits}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '') {
+                    setCustomWingits('');
+                  } else {
+                    const parsed = parseInt(val, 10);
+                    setCustomWingits(Number.isNaN(parsed) ? '' : Math.max(0, parsed));
+                  }
+                }}
+                placeholder="Enter Wingits (min 20)"
+                className={cn(
+                  "w-full pl-12 pr-16 py-3.5 rounded-2xl bg-black/20 border text-ink font-semibold text-base transition-colors focus:outline-none focus:ring-2",
+                  customWingits !== '' && customWingits < MIN_CUSTOM_WINGITS
+                    ? "border-rose-500/50 focus:ring-rose-500/30 text-rose-300"
+                    : "border-sand/70 focus:ring-amber-500/30 focus:border-amber-500"
+                )}
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-ink-muted pointer-events-none">
+                Wingits
+              </span>
+            </div>
+
+            <div className="sm:col-span-5">
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof customWingits === 'number' && customWingits >= MIN_CUSTOM_WINGITS) {
+                    handlePurchase({
+                      id: 'custom',
+                      amount: customWingits,
+                      price: customWingits * WINGIT_RATE,
+                    });
+                  }
+                }}
+                disabled={
+                  typeof customWingits !== 'number' ||
+                  customWingits < MIN_CUSTOM_WINGITS ||
+                  loadingPkg === 'custom'
+                }
+                className={cn(
+                  "w-full py-3.5 px-5 rounded-2xl font-semibold transition-all flex items-center justify-center gap-2 text-sm shadow-md active:scale-95",
+                  typeof customWingits === 'number' && customWingits >= MIN_CUSTOM_WINGITS
+                    ? "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-bold shadow-amber-500/20"
+                    : "bg-sand/30 text-ink-muted cursor-not-allowed border border-white/5"
+                )}
+              >
+                {loadingPkg === 'custom' ? (
+                  <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <span>
+                      {typeof customWingits === 'number' && customWingits >= MIN_CUSTOM_WINGITS
+                        ? `Buy for Rs. ${(customWingits * WINGIT_RATE).toLocaleString()}`
+                        : 'Enter at least 20 Wingits'}
+                    </span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Validation note */}
+          {customWingits !== '' && customWingits < MIN_CUSTOM_WINGITS && (
+            <p className="text-xs text-rose-400 mt-2 font-medium flex items-center gap-1">
+              ⚠️ Minimum purchase is 20 Wingits (Rs. 100).
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Feature Pillars */}

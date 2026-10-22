@@ -89,9 +89,14 @@ function validateTransaction(ledger: Ledger, transaction: GenieTransaction, tran
     throw new PaymentMismatch('The payment amount or currency does not match this purchase.');
   }
   const metadata = secretMetadata(ledger);
+  const validWingitPurchase =
+    Number.isSafeInteger(ledger.amountLKR) &&
+    Number.isSafeInteger(ledger.wingitsCredited) &&
+    ((ledger.amountLKR >= 100 && ledger.wingitsCredited >= 20 && ledger.amountLKR === ledger.wingitsCredited * 5) ||
+     (ledger.amountLKR >= 100 && ledger.wingitsCredited === ledger.amountLKR));
   const validTerms = metadata
     ? ledger.amountLKR === 50 && ledger.wingitsCredited === 20
-    : Number.isSafeInteger(ledger.amountLKR) && ledger.amountLKR >= 100 && ledger.wingitsCredited === ledger.amountLKR;
+    : validWingitPurchase;
   if (ledger.status !== 'SUCCESS' && !validTerms) throw new PaymentMismatch('This purchase has invalid payment details.');
 }
 

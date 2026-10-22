@@ -161,12 +161,12 @@ test('Genie config rejects conflicting environments, arbitrary URL components an
 
 test('Wingits creation sends raw authorization, minor units and the documented SHA1 signature', async () => {
   const h = harness({ env: { GENIE_API_URL: 'https://api.geniebiz.lk/public/' } });
-  const result = await h.actions.buyWingitsAction(100, 100);
+  const result = await h.actions.buyWingitsAction(100, 20);
   assert.equal(result.ok, true);
   assert.equal(result.ledgerId, 'ledger-1');
   assert.equal(h.ledgers.length, 1);
   assert.equal(h.ledgers[0].amountLKR, 100);
-  assert.equal(h.ledgers[0].wingitsCredited, 100);
+  assert.equal(h.ledgers[0].wingitsCredited, 20);
   assert.equal(h.ledgers[0].status, 'PENDING');
   assert.equal(h.requests.length, 1);
   const { url, init } = h.requests[0];
@@ -191,7 +191,7 @@ test('Wingits creation sends raw authorization, minor units and the documented S
 
 test('HTML creation failures return sanitized diagnostics without leaking upstream content or keys', async () => {
   const h = harness({ response: response(`<!doctype html><html>${UPSTREAM_SECRET} ${TEST_APP_KEY}</html>`, 200, 'text/html') });
-  const result = await h.actions.buyWingitsAction(100, 100);
+  const result = await h.actions.buyWingitsAction(100, 20);
   assert.equal(result.ok, false);
   assert.match(result.error, /web page instead of JSON/);
   assert.equal(h.errors.length, 1);
@@ -205,7 +205,7 @@ test('redirect creation failures are rejected without following or reading gatew
   const redirected = response('', 302, 'text/html');
   redirected.text = async () => { bodyReads++; return `<html>${TEST_APP_KEY} ${UPSTREAM_SECRET}</html>`; };
   const h = harness({ response: redirected });
-  const result = await h.actions.buyWingitsAction(100, 100);
+  const result = await h.actions.buyWingitsAction(100, 20);
   assert.equal(result.ok, false);
   assert.match(result.error, /redirected the API request/);
   assert.equal(h.requests[0].init.redirect, 'manual');
@@ -216,13 +216,13 @@ test('redirect creation failures are rejected without following or reading gatew
 test('authorization and network creation failures do not expose upstream errors', async () => {
   for (const status of [401, 403, 500]) {
     const h = harness({ response: response({ error: `${TEST_APP_KEY} ${UPSTREAM_SECRET}` }, status) });
-    const result = await h.actions.buyWingitsAction(100, 100);
+    const result = await h.actions.buyWingitsAction(100, 20);
     assert.equal(result.ok, false);
     assert.match(result.error, new RegExp(`HTTP ${status}`));
     assertNoSensitiveOutput(result, h.errors);
   }
   const h = harness({ fetchError: new Error(`${TEST_APP_KEY} ${UPSTREAM_SECRET}`) });
-  const result = await h.actions.buyWingitsAction(100, 100);
+  const result = await h.actions.buyWingitsAction(100, 20);
   assert.equal(result.ok, false);
   assert.match(result.error, /Could not reach Dialog Genie/);
   assertNoSensitiveOutput(result, h.errors);
@@ -237,20 +237,20 @@ test('the gateway must supply a valid HTTPS payment URL', async () => {
     assert.throws(() => genie.getGeniePaymentUrl(data), /payment URL/);
   }
   const h = harness({ response: response({ url: 'http://checkout.geniebiz.lk/test' }) });
-  const result = await h.actions.buyWingitsAction(100, 100);
+  const result = await h.actions.buyWingitsAction(100, 20);
   assert.equal(result.ok, false);
   assert.match(result.error, /invalid payment URL/);
 });
 
 test('untrusted amounts and Wingits mismatches cannot create a ledger or call the gateway', async () => {
   for (const [amount, wingits] of [
-    [100, 1000], [100, '100'], [99, 99], [100.5, 100.5], [NaN, NaN],
-    [Infinity, Infinity], [-100, -100], [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
+    [100, 1000], [100, '20'], [95, 19], [100.5, 20.1], [NaN, NaN],
+    [Infinity, Infinity], [-100, -20], [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
   ]) {
     const h = harness();
     const result = await h.actions.buyWingitsAction(amount, wingits);
     assert.equal(result.ok, false);
-    assert.match(result.error, /whole Wingits amount/);
+    assert.ok(result.error.includes('Wingits amount') || result.error.includes('rate'));
     assert.equal(h.ledgers.length, 0);
     assert.equal(h.requests.length, 0);
   }
@@ -260,7 +260,7 @@ test('unauthorized callers cannot create standard or Secret Wingle payments', as
   for (const session of [null, {}, { userId: '' }]) {
     const h = harness({ session });
     for (const result of [
-      await h.actions.buyWingitsAction(100, 100),
+      await h.actions.buyWingitsAction(100, 20),
       await h.actions.initiateSecretWinglePaymentAction('0772222222', 'Hello'),
     ]) {
       assert.equal(result.ok, false);
@@ -280,7 +280,7 @@ test('invalid server configuration fails before creating a ledger or sending a c
     { NEXT_PUBLIC_APP_URL: 'http://localhost:3000' },
   ]) {
     const h = harness({ env });
-    const result = await h.actions.buyWingitsAction(100, 100);
+    const result = await h.actions.buyWingitsAction(100, 20);
     assert.equal(result.ok, false);
     assert.equal(h.ledgers.length, 0);
     assert.equal(h.requests.length, 0);
@@ -290,7 +290,7 @@ test('invalid server configuration fails before creating a ledger or sending a c
 
 test('standard Wingits and Secret Wingle share the same UAT gateway transport', async () => {
   const h = harness({ env: { GENIE_ENV: 'sandbox', GENIE_API_URL: 'https://api.uat.geniebiz.lk/public', NEXT_PUBLIC_APP_URL: 'https://winglemingle.com/profile' } });
-  const standard = await h.actions.buyWingitsAction(100, 100);
+  const standard = await h.actions.buyWingitsAction(100, 20);
   const secret = await h.actions.initiateSecretWinglePaymentAction('0772222222', ' Hello ', { recipientName: ' Recipient ' });
   assert.equal(standard.ok, true);
   assert.equal(secret.ok, true);
@@ -322,7 +322,7 @@ test('unexpected database create and update errors do not leak messages or crede
       [`${operation}Error`]: new Error(privateMessage),
       response: response({ id: 'provider-transaction-for-update', url: 'https://checkout.geniebiz.lk/test-payment' }),
     });
-    const result = await h.actions.buyWingitsAction(100, 100);
+    const result = await h.actions.buyWingitsAction(100, 20);
     assert.equal(result.ok, false);
     assert.equal(result.error, 'Could not initialize the payment. Please try again shortly.');
     assert.equal(h.requests.length, operation === 'create' ? 0 : 1);
@@ -336,7 +336,7 @@ test('unexpected database create and update errors do not leak messages or crede
 test('the exact provider transaction ID is persisted for standard and Secret Wingle payments', async () => {
   const standardId = 'provider-standard-transaction-123';
   const standard = harness({ response: response({ id: standardId, url: 'https://checkout.geniebiz.lk/standard' }) });
-  const standardResult = await standard.actions.buyWingitsAction(100, 100);
+  const standardResult = await standard.actions.buyWingitsAction(100, 20);
   assert.equal(standardResult.ok, true);
   assert.equal(standard.updates.length, 1);
   assert.equal(standard.updates[0].query.id, standardResult.ledgerId);
