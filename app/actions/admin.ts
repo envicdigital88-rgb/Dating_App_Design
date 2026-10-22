@@ -2,7 +2,6 @@
 
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
-import { or } from '@prisma/orm-postgres/orm-client'
 import { Temporal } from 'temporal-polyfill'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
@@ -125,14 +124,178 @@ export async function deleteUserAction(targetUserId: string) {
       return { ok: false, error: 'Forbidden' }
     }
 
-    // Delete conversations where this user is a participant (cascades to Mingles)
-    await db.orm.public.Conversation.where((c) => or(c.userId1.eq(targetUserId), c.userId2.eq(targetUserId))).delete();
+    if (targetUserId === caller.id) {
+      return { ok: false, error: 'You cannot delete your own administrator account.' }
+    }
 
-    // Delete connections where this user is a participant
-    await db.orm.public.Connection.where((c) => or(c.userId1.eq(targetUserId), c.userId2.eq(targetUserId))).delete();
+    const targetUser = await db.orm.public.User.where({ id: targetUserId }).first()
+    if (!targetUser) {
+      return { ok: false, error: 'Target member not found.' }
+    }
 
-    // Delete the user (this cascades to likes, passes, wingles, etc.)
-    await db.orm.public.User.where({ id: targetUserId }).delete();
+    if (targetUser.role === 'admin' && caller.email !== 'envicdigital88@gmail.com') {
+      return { ok: false, error: 'Only the super administrator can manage admin accounts.' }
+    }
+
+    // 1. Delete mingles sent by the target user
+    await db.runtime().execute(
+      db.sql.public.mingle
+        .delete()
+        .where((f, fns) => fns.eq(f.senderId, targetUserId))
+        .build()
+    );
+
+    // 2. Delete all conversations where this user is a participant
+    await db.runtime().execute(
+      db.sql.public.conversation
+        .delete()
+        .where((f, fns) => fns.or(fns.eq(f.userId1, targetUserId), fns.eq(f.userId2, targetUserId)))
+        .build()
+    );
+
+    // 3. Delete all connections where this user is a participant
+    await db.runtime().execute(
+      db.sql.public.connection
+        .delete()
+        .where((f, fns) => fns.or(fns.eq(f.userId1, targetUserId), fns.eq(f.userId2, targetUserId)))
+        .build()
+    );
+
+    // 4. Delete photos
+    await db.runtime().execute(
+      db.sql.public.photo
+        .delete()
+        .where((f, fns) => fns.eq(f.userId, targetUserId))
+        .build()
+    );
+
+    // 5. Delete prompts
+    await db.runtime().execute(
+      db.sql.public.prompt
+        .delete()
+        .where((f, fns) => fns.eq(f.userId, targetUserId))
+        .build()
+    );
+
+    // 6. Delete userStatus
+    await db.runtime().execute(
+      db.sql.public.userStatus
+        .delete()
+        .where((f, fns) => fns.eq(f.userId, targetUserId))
+        .build()
+    );
+
+    // 7. Delete usage
+    await db.runtime().execute(
+      db.sql.public.usage
+        .delete()
+        .where((f, fns) => fns.eq(f.userId, targetUserId))
+        .build()
+    );
+
+    // 8. Delete notifications
+    await db.runtime().execute(
+      db.sql.public.notification
+        .delete()
+        .where((f, fns) => fns.eq(f.userId, targetUserId))
+        .build()
+    );
+
+    // 9. Delete likes
+    await db.runtime().execute(
+      db.sql.public.like
+        .delete()
+        .where((f, fns) => fns.or(fns.eq(f.fromUserId, targetUserId), fns.eq(f.toUserId, targetUserId)))
+        .build()
+    );
+
+    // 10. Delete passes
+    await db.runtime().execute(
+      db.sql.public.pass
+        .delete()
+        .where((f, fns) => fns.or(fns.eq(f.userId, targetUserId), fns.eq(f.targetUserId, targetUserId)))
+        .build()
+    );
+
+    // 11. Delete heartBucket
+    await db.runtime().execute(
+      db.sql.public.heartBucket
+        .delete()
+        .where((f, fns) => fns.or(fns.eq(f.userId, targetUserId), fns.eq(f.targetUserId, targetUserId)))
+        .build()
+    );
+
+    // 12. Delete wingles
+    await db.runtime().execute(
+      db.sql.public.wingle
+        .delete()
+        .where((f, fns) => fns.or(fns.eq(f.fromUserId, targetUserId), fns.eq(f.toUserId, targetUserId)))
+        .build()
+    );
+
+    // 13. Delete secret wingles
+    await db.runtime().execute(
+      db.sql.public.secretWingle
+        .delete()
+        .where((f, fns) => fns.eq(f.senderId, targetUserId))
+        .build()
+    );
+
+    // 14. Delete reports
+    await db.runtime().execute(
+      db.sql.public.report
+        .delete()
+        .where((f, fns) => fns.or(fns.eq(f.reporterId, targetUserId), fns.eq(f.targetUserId, targetUserId)))
+        .build()
+    );
+
+    // 15. Delete blocks
+    await db.runtime().execute(
+      db.sql.public.block
+        .delete()
+        .where((f, fns) => fns.or(fns.eq(f.blockerId, targetUserId), fns.eq(f.blockedUserId, targetUserId)))
+        .build()
+    );
+
+    // 16. Delete subscriptions
+    await db.runtime().execute(
+      db.sql.public.subscription
+        .delete()
+        .where((f, fns) => fns.eq(f.userId, targetUserId))
+        .build()
+    );
+
+    // 17. Delete payments
+    await db.runtime().execute(
+      db.sql.public.payment
+        .delete()
+        .where((f, fns) => fns.eq(f.userId, targetUserId))
+        .build()
+    );
+
+    // 18. Delete wingits transactions
+    await db.runtime().execute(
+      db.sql.public.wingitsTransaction
+        .delete()
+        .where((f, fns) => fns.eq(f.userId, targetUserId))
+        .build()
+    );
+
+    // 19. Delete transaction ledgers
+    await db.runtime().execute(
+      db.sql.public.transactionLedger
+        .delete()
+        .where((f, fns) => fns.eq(f.userId, targetUserId))
+        .build()
+    );
+
+    // 20. Delete user record
+    await db.runtime().execute(
+      db.sql.public.user
+        .delete()
+        .where((f, fns) => fns.eq(f.id, targetUserId))
+        .build()
+    );
 
     return { ok: true }
   } catch (err) {

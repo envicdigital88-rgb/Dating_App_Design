@@ -50,6 +50,7 @@ export function AdminUsers() {
   const [suspendingUser, setSuspendingUser] = useState<AdminUser | null>(null);
   const [suspensionReason, setSuspensionReason] = useState('');
   const [busySelfieId, setBusySelfieId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleModerateSelfie = async (userId: string, status: 'approved' | 'rejected') => {
     setBusySelfieId(userId);
@@ -69,7 +70,7 @@ export function AdminUsers() {
   };
 
   // Track recent local overrides with a timestamp to avoid background polling reverts
-  const recentOverridesRef = useRef<Map<string, { isUnlimited?: boolean; verified?: boolean; suspended?: boolean; suspensionReason?: string | null; timestamp: number }>>(new Map());
+  const recentOverridesRef = useRef<Map<string, { isUnlimited?: boolean; verified?: boolean; suspended?: boolean; suspensionReason?: string | null; isDeleted?: boolean; timestamp: number }>>(new Map());
 
   useEffect(() => {
     setPage(1);
@@ -91,18 +92,23 @@ export function AdminUsers() {
         }
 
         const incoming = res.data as unknown as AdminUser[];
-        const merged = incoming.map((u) => {
-          const override = recentOverridesRef.current.get(u.id);
-          if (override) {
-            return {
-              ...u,
-              ...(override.isUnlimited !== undefined ? { isUnlimited: override.isUnlimited } : {}),
-              ...(override.verified !== undefined ? { verified: override.verified } : {}),
-              ...(override.suspended !== undefined ? { suspended: override.suspended } : {}),
-            };
-          }
-          return u;
-        });
+        const merged = incoming
+          .filter((u) => {
+            const override = recentOverridesRef.current.get(u.id);
+            return !override?.isDeleted;
+          })
+          .map((u) => {
+            const override = recentOverridesRef.current.get(u.id);
+            if (override) {
+              return {
+                ...u,
+                ...(override.isUnlimited !== undefined ? { isUnlimited: override.isUnlimited } : {}),
+                ...(override.verified !== undefined ? { verified: override.verified } : {}),
+                ...(override.suspended !== undefined ? { suspended: override.suspended } : {}),
+              };
+            }
+            return u;
+          });
 
         setRealUsers(merged);
       }
@@ -466,7 +472,7 @@ export function AdminUsers() {
                       size="sm"
                       variant="danger"
                       aria-label={`Delete ${user.name}`}
-                      disabled={Boolean(busyIds[user.id])}
+                      disabled={Boolean(busyIds[user.id]) || isDeleting}
                       onClick={() => setPendingDelete(user.id)}
                     >
                       <Trash2Icon className="h-3.5 w-3.5" />
@@ -653,34 +659,84 @@ export function AdminUsers() {
 
       <Modal
         open={!!pendingDelete}
-        onClose={() => setPendingDelete(null)}
+        onClose={() => {
+          if (!isDeleting) setPendingDelete(null);
+        }}
         title="Delete this member?"
-        description="Their profile and photos are removed permanently. Payment records are retained for accounting."
+        description="Their profile, photos, conversations, connections, and all associated platform records will be permanently removed."
         footer={
-        <>
-            <Button variant="ghost" onClick={() => setPendingDelete(null)}>
+          <>
+            <Button variant="ghost" disabled={isDeleting} onClick={() => setPendingDelete(null)}>
               Cancel
             </Button>
             <Button
               variant="danger"
+              disabled={isDeleting}
               onClick={async () => {
                 const toDelete = pendingDelete;
-                setPendingDelete(null);
-                if (!toDelete) return;
+                if (!toDelete || isDeleting) return;
+                setIsDeleting(true);
+
+                // Add to overrides map so polling doesn't resurrect them
+                recentOverridesRef.current.set(toDelete, {
+                  isDeleted: true,
+                  timestamp: Date.now()
+                });
+
+                // Optimistically remove from view
                 setRealUsers(prev => prev ? prev.filter(u => u.id !== toDelete) : null);
+
                 try {
-                  const res = await deleteUserAction(toDelete);
-                  if (res.ok) {
-                    toast.success('Member deleted');
+                  // 1. Call dedicated API route first for maximum reliability
+                  const apiRes = await fetch('/api/admin/users/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: toDelete })
+                  }).then(r => r.json()).catch(() => null);
+
+                  let success = apiRes?.ok;
+                  let errorMsg = apiRes?.error;
+
+                  // 2. Fallback to Server Action if API route failed
+                  if (!success) {
+                    const actionRes = await deleteUserAction(toDelete);
+                    success = actionRes?.ok;
+                    if (!success) {
+                      errorMsg = actionRes?.error || errorMsg;
+                    }
+                  }
+
+                  if (success) {
+                    toast.success('Member deleted permanently');
+                    setPendingDelete(null);
                   } else {
-                    toast.error(res.error || 'Failed to delete member');
+                    recentOverridesRef.current.delete(toDelete);
+                    const refreshRes = await getAdminUsersAction();
+                    if (refreshRes.ok && refreshRes.data) {
+                      setRealUsers(refreshRes.data as unknown as AdminUser[]);
+                    }
+                    toast.error(errorMsg || 'Failed to delete member');
                   }
                 } catch (err: any) {
+                  recentOverridesRef.current.delete(toDelete);
+                  const refreshRes = await getAdminUsersAction();
+                  if (refreshRes.ok && refreshRes.data) {
+                    setRealUsers(refreshRes.data as unknown as AdminUser[]);
+                  }
                   toast.error(err?.message || 'Failed to delete member');
+                } finally {
+                  setIsDeleting(false);
                 }
               }}
             >
-              Delete member
+              {isDeleting ? (
+                <>
+                  <Loader2Icon className="h-4 w-4 mr-1.5 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete member'
+              )}
             </Button>
           </>
         } />

@@ -2420,8 +2420,20 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       users: d.users.filter((u) => u.id !== userId),
       photos: d.photos.filter((p) => p.userId !== userId)
     }));
-    import('@/app/actions/admin').then(({ deleteUserAction }) => {
-      deleteUserAction(userId).catch(console.error);
+    fetch('/api/admin/users/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId })
+    }).then(res => {
+      if (!res.ok) {
+        import('@/app/actions/admin').then(({ deleteUserAction }) => {
+          deleteUserAction(userId).catch(console.error);
+        });
+      }
+    }).catch(() => {
+      import('@/app/actions/admin').then(({ deleteUserAction }) => {
+        deleteUserAction(userId).catch(console.error);
+      });
     });
   }, []);
 
