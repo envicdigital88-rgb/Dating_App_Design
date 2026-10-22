@@ -34,7 +34,7 @@ import type {
 } from '@prisma/orm-postgres/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'d8a60a87f88338aa45c3fe8f9777f96f8b2cda435bbce7b385dc2eb1b3e45c09'>;
+  StorageHashBase<'eb50bbea0d0b63e5d34c4c25983ea1ddf90ffc736cfe8ca7ba212bdd92646167'>;
 export type ExecutionHash =
   ExecutionHashBase<'cfcecedce98a9ee2c5be4cb3bd5d93271de2f5d9917661c48300aebc7990c4f4'>;
 export type ProfileHash =
@@ -403,6 +403,8 @@ export type FieldOutputTypes = {
       readonly traits: CodecTypes['pg/text@1']['output'];
       readonly lifestyle: CodecTypes['pg/text@1']['output'];
       readonly verified: CodecTypes['pg/bool@1']['output'];
+      readonly verificationSelfie: CodecTypes['pg/text@1']['output'] | null;
+      readonly selfieStatus: CodecTypes['pg/text@1']['output'] | null;
       readonly suspended: CodecTypes['pg/bool@1']['output'];
       readonly suspensionReason: CodecTypes['pg/text@1']['output'] | null;
       readonly onboarded: CodecTypes['pg/bool@1']['output'];
@@ -612,6 +614,8 @@ export type FieldInputTypes = {
       readonly traits: CodecTypes['pg/text@1']['input'];
       readonly lifestyle: CodecTypes['pg/text@1']['input'];
       readonly verified: CodecTypes['pg/bool@1']['input'];
+      readonly verificationSelfie: CodecTypes['pg/text@1']['input'] | null;
+      readonly selfieStatus: CodecTypes['pg/text@1']['input'] | null;
       readonly suspended: CodecTypes['pg/bool@1']['input'];
       readonly suspensionReason: CodecTypes['pg/text@1']['input'] | null;
       readonly onboarded: CodecTypes['pg/bool@1']['input'];
@@ -832,11 +836,13 @@ export type StorageColumnTypes = {
       readonly pushSubscription: CodecTypes['pg/json@1']['output'] | null;
       readonly readReceipts: CodecTypes['pg/bool@1']['output'];
       readonly role: CodecTypes['pg/text@1']['output'];
+      readonly selfieStatus: CodecTypes['pg/text@1']['output'] | null;
       readonly showDistance: CodecTypes['pg/bool@1']['output'];
       readonly showOnline: CodecTypes['pg/bool@1']['output'];
       readonly suspended: CodecTypes['pg/bool@1']['output'];
       readonly suspensionReason: CodecTypes['pg/text@1']['output'] | null;
       readonly traits: CodecTypes['pg/text@1']['output'];
+      readonly verificationSelfie: CodecTypes['pg/text@1']['output'] | null;
       readonly verified: CodecTypes['pg/bool@1']['output'];
       readonly wingitsBalance: CodecTypes['pg/int4@1']['output'];
     };
@@ -1041,11 +1047,13 @@ export type StorageColumnInputTypes = {
       readonly pushSubscription: CodecTypes['pg/json@1']['input'] | null;
       readonly readReceipts: CodecTypes['pg/bool@1']['input'];
       readonly role: CodecTypes['pg/text@1']['input'];
+      readonly selfieStatus: CodecTypes['pg/text@1']['input'] | null;
       readonly showDistance: CodecTypes['pg/bool@1']['input'];
       readonly showOnline: CodecTypes['pg/bool@1']['input'];
       readonly suspended: CodecTypes['pg/bool@1']['input'];
       readonly suspensionReason: CodecTypes['pg/text@1']['input'] | null;
       readonly traits: CodecTypes['pg/text@1']['input'];
+      readonly verificationSelfie: CodecTypes['pg/text@1']['input'] | null;
       readonly verified: CodecTypes['pg/bool@1']['input'];
       readonly wingitsBalance: CodecTypes['pg/int4@1']['input'];
     };
@@ -1094,6 +1102,8 @@ export namespace Models {
     traits: CodecTypes['pg/text@1']['output'];
     lifestyle: CodecTypes['pg/text@1']['output'];
     verified: CodecTypes['pg/bool@1']['output'];
+    verificationSelfie: CodecTypes['pg/text@1']['output'] | null;
+    selfieStatus: CodecTypes['pg/text@1']['output'] | null;
     suspended: CodecTypes['pg/bool@1']['output'];
     suspensionReason: CodecTypes['pg/text@1']['output'] | null;
     onboarded: CodecTypes['pg/bool@1']['output'];
@@ -2707,6 +2717,20 @@ type ContractBase = Omit<
                     readonly value: DefaultLiteralValue<'pg/bool@1', false>;
                   };
                 };
+                readonly verificationSelfie: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                };
+                readonly selfieStatus: {
+                  readonly nativeType: 'text';
+                  readonly codecId: 'pg/text@1';
+                  readonly nullable: true;
+                  readonly default: {
+                    readonly kind: 'literal';
+                    readonly value: DefaultLiteralValue<'pg/text@1', 'pending'>;
+                  };
+                };
                 readonly suspended: {
                   readonly nativeType: 'bool';
                   readonly codecId: 'pg/bool@1';
@@ -4228,6 +4252,14 @@ type ContractBase = Omit<
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
               };
+              readonly verificationSelfie: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
+              readonly selfieStatus: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/text@1' };
+              };
               readonly suspended: {
                 readonly nullable: false;
                 readonly type: { readonly kind: 'scalar'; readonly codecId: 'pg/bool@1' };
@@ -4562,6 +4594,8 @@ type ContractBase = Omit<
                 readonly traits: { readonly column: 'traits' };
                 readonly lifestyle: { readonly column: 'lifestyle' };
                 readonly verified: { readonly column: 'verified' };
+                readonly verificationSelfie: { readonly column: 'verificationSelfie' };
+                readonly selfieStatus: { readonly column: 'selfieStatus' };
                 readonly suspended: { readonly column: 'suspended' };
                 readonly suspensionReason: { readonly column: 'suspensionReason' };
                 readonly onboarded: { readonly column: 'onboarded' };

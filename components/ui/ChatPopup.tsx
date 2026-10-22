@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { XIcon, SendIcon, MinusIcon, Maximize2Icon, ChevronUpIcon, CheckIcon, CheckCheckIcon } from 'lucide-react';
+import { XIcon, SendIcon, MinusIcon, Maximize2Icon, ChevronUpIcon, CheckIcon, CheckCheckIcon, ShieldCheckIcon } from 'lucide-react';
 import { Avatar } from './Bits';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { dayLabel, mingleTime, presence } from '@/lib/utils/format';
@@ -81,7 +81,14 @@ export function ChatPopup() {
         <header className="flex items-center gap-3 border-b border-sand/70 bg-cream-deep px-3 py-3 shadow-sm cursor-pointer" onClick={() => setMinimized(!minimized)}>
           <Avatar src={photo?.url} name={other?.name ?? '?'} size={36} online={other?.online} />
           <div className="flex-1 min-w-0">
-            <span className="block truncate font-medium text-ink leading-tight">{other?.name}</span>
+            <span className="flex items-center gap-1 truncate font-medium text-ink leading-tight">
+              <span className="truncate">{other?.name}</span>
+              {(other?.selfieStatus === 'approved' || other?.isUnlimited) && (
+                <span title="Photo Verified" className="inline-flex shrink-0">
+                  <ShieldCheckIcon className="h-3.5 w-3.5 text-blue-600" />
+                </span>
+              )}
+            </span>
             <span className="block truncate text-[11px] text-ink-muted">
               {typingIn === conversation.id ? 'Typing...' : other ? presence(other.online, other.lastActiveAt) : ''}
             </span>

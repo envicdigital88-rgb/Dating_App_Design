@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CompassIcon, SparklesIcon, FlameIcon, HeartIcon, Trash2Icon, ShoppingBagIcon, SlidersHorizontalIcon, XIcon, ChevronDownIcon } from 'lucide-react';
+import { CompassIcon, SparklesIcon, FlameIcon, HeartIcon, Trash2Icon, ShoppingBagIcon, SlidersHorizontalIcon, XIcon, ChevronDownIcon, ShieldCheckIcon, LockIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Page, PageHeader } from '@/components/AppShell';
@@ -235,6 +235,36 @@ export function Discover() {
           <Button variant="outline" onClick={() => router.push('/packages')}><SparklesIcon className="h-4 w-4" /> Upgrade package</Button>
         ) : undefined}
       />
+
+      {/* ── Pending Verification: Private Profile Banner ── */}
+      {currentUser?.selfieStatus === 'pending' && (
+        <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs sm:text-sm text-amber-900 dark:text-amber-200 flex flex-wrap items-center justify-between gap-3 backdrop-blur-sm">
+          <div className="flex items-center gap-2">
+            <LockIcon className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <span>
+              <strong>Profile Under Review:</strong> Your profile is currently private until an admin approves your selfie verification.
+            </span>
+          </div>
+          <button onClick={() => router.push('/profile')} className="shrink-0 underline font-medium hover:text-amber-950 dark:hover:text-white">
+            View status
+          </button>
+        </div>
+      )}
+
+      {/* ── Existing Users: Verification Announcement Banner (Never shown for Unlimited accounts) ── */}
+      {currentUser && !currentUser.isUnlimited && !currentUser.selfieStatus && (
+        <div className="mb-6 rounded-2xl border border-blue-500/30 bg-blue-500/10 p-3.5 text-xs sm:text-sm text-blue-900 dark:text-blue-200 flex flex-wrap items-center justify-between gap-3 backdrop-blur-sm">
+          <div className="flex items-center gap-2">
+            <ShieldCheckIcon className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+            <span>
+              <strong>New Feature:</strong> Verify your profile with a quick live selfie to earn the Photo Verified badge!
+            </span>
+          </div>
+          <button onClick={() => router.push('/profile')} className="shrink-0 rounded-full bg-blue-600 hover:bg-blue-700 px-3 py-1 text-xs font-semibold text-white shadow-sm transition-colors">
+            Verify Now
+          </button>
+        </div>
+      )}
 
       {/* Tabs + Filter toggle */}
       <div className="mb-6 flex items-center justify-between flex-wrap gap-3">

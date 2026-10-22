@@ -3,22 +3,27 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { EyeIcon, ImageIcon, PencilIcon, SparklesIcon } from 'lucide-react';
+import { EyeIcon, ImageIcon, PencilIcon, SparklesIcon, ShieldCheckIcon, LockIcon, CameraIcon, AlertCircleIcon } from 'lucide-react';
 import { Page, PageHeader } from '@/components/AppShell';
 import { PhotoGallery } from '@/components/PhotoGallery';
 import { Button } from '@/components/ui/Button';
 import { Badge, VerifiedMark } from '@/components/ui/Bits';
 import { Input, Label, Select, Textarea } from '@/components/ui/Field';
 import { UsageMeter } from '@/components/UsageMeter';
+import { Modal } from '@/components/ui/Modal';
+import { LiveSelfieCapture } from '@/components/LiveSelfieCapture';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { interestOptions, intentionOptions, lifestyleFields } from '@/lib/data/interests';
 import type { WinglingIntention, Lifestyle } from '@/lib/types';
 
 export function MyProfile() {
   const router = useRouter();
-  const { db, currentUser, photosOf, updateProfile, entitlements, likesReceived, sentWingles, userById, unblockUser } =
+  const { db, currentUser, photosOf, updateProfile, entitlements, likesReceived, sentWingles, userById, unblockUser, submitVerificationSelfie } =
   useStore();
   const [activeTab, setActiveTab] = useState<'profile' | 'edit' | 'blocked'>('profile');
+  const [isVerifyingSelfie, setIsVerifyingSelfie] = useState(false);
+  const [capturedSelfie, setCapturedSelfie] = useState<string | null>(null);
+  const [isSubmittingSelfie, setIsSubmittingSelfie] = useState(false);
   const [draft, setDraft] = useState({
     name: currentUser?.name ?? '',
     location: currentUser?.location ?? '',
@@ -52,6 +57,28 @@ export function MyProfile() {
     });
     setActiveTab('profile');
     toast.success('Profile updated');
+  };
+
+  const handleSaveSelfie = async () => {
+    if (!capturedSelfie) {
+      toast.error('Please capture a clear live selfie first.');
+      return;
+    }
+    setIsSubmittingSelfie(true);
+    try {
+      const ok = await submitVerificationSelfie(capturedSelfie);
+      if (ok) {
+        toast.success('Selfie submitted! Your profile is pending review.');
+        setIsVerifyingSelfie(false);
+        setCapturedSelfie(null);
+      } else {
+        toast.error('Failed to submit verification selfie. Please try again.');
+      }
+    } catch (err) {
+      toast.error('Something went wrong submitting selfie.');
+    } finally {
+      setIsSubmittingSelfie(false);
+    }
   };
 
   return (
@@ -98,7 +125,90 @@ export function MyProfile() {
           </div>
         }
       />
-      
+
+      {/* ── Pending Verification: Private Profile / Under Review Banner ── */}
+      {currentUser.selfieStatus === 'pending' && (
+        <div className="mb-6 rounded-3xl border border-amber-500/30 bg-amber-500/10 p-5 backdrop-blur-sm">
+          <div className="flex flex-col sm:flex-row items-start gap-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-500">
+              <LockIcon className="h-6 w-6" />
+            </div>
+            <div className="flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-display text-lg font-semibold text-ink">
+                  Private Profile · Pending Admin Approval
+                </h3>
+                <span className="rounded-full bg-amber-500/20 px-2.5 py-0.5 text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                  Under Review
+                </span>
+              </div>
+              <p className="mt-1.5 text-[14px] leading-relaxed text-ink-soft">
+                Your profile is currently private and hidden from Discover while our admin team reviews your selfie verification. Once approved, your profile will be published with an official <strong>Photo Verified</strong> badge!
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Rejected Selfie Banner ── */}
+      {currentUser.selfieStatus === 'rejected' && (
+        <div className="mb-6 rounded-3xl border border-rose-500/30 bg-rose-500/10 p-5 backdrop-blur-sm">
+          <div className="flex flex-col sm:flex-row items-start gap-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-500/20 text-rose-500">
+              <AlertCircleIcon className="h-6 w-6" />
+            </div>
+            <div className="flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-display text-lg font-semibold text-rose-600 dark:text-rose-400">
+                  Verification Not Approved · Retake Selfie
+                </h3>
+              </div>
+              <p className="mt-1.5 text-[14px] leading-relaxed text-ink-soft">
+                Your selfie verification was not approved. Please retake a clear live selfie facing the camera in good lighting to get your profile published and verified.
+              </p>
+              <div className="mt-3">
+                <Button size="sm" onClick={() => { setCapturedSelfie(null); setIsVerifyingSelfie(true); }}>
+                  <CameraIcon className="h-4 w-4" />
+                  Retake Live Selfie
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Existing Users Verification Announcement Banner (DO NOT show for Unlimited accounts) ── */}
+      {!currentUser.isUnlimited && !currentUser.selfieStatus && (
+        <div className="mb-6 rounded-3xl border border-blue-500/30 bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-transparent p-5 backdrop-blur-sm">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-500/20 text-blue-500">
+                <ShieldCheckIcon className="h-6 w-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-blue-500/20 px-2.5 py-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                    New Feature
+                  </span>
+                  <h3 className="font-display text-base font-semibold text-ink">
+                    Get Photo Verified
+                  </h3>
+                </div>
+                <p className="mt-1 text-[13px] text-ink-soft leading-relaxed max-w-xl">
+                  Take a quick live selfie with your front camera to verify your identity. Verified profiles stand out on Discover with an official Photo Verified badge!
+                </p>
+              </div>
+            </div>
+            <Button
+              className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20"
+              onClick={() => { setCapturedSelfie(null); setIsVerifyingSelfie(true); }}
+            >
+              <CameraIcon className="h-4 w-4" />
+              Verify Photo Now
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:gap-12">
         <div className="space-y-5 lg:sticky lg:top-8 lg:self-start">
@@ -285,11 +395,17 @@ export function MyProfile() {
             </div> :
 
           <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <h2 className="font-display text-[32px] leading-none text-ink">
                   {currentUser.name}, {currentUser.age}
                 </h2>
                 {currentUser.verified && <VerifiedMark className="mt-1" />}
+                {(currentUser.selfieStatus === 'approved' || currentUser.isUnlimited) && (
+                  <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-semibold text-blue-600 border border-blue-500/20">
+                    <ShieldCheckIcon className="h-3.5 w-3.5 text-blue-600" />
+                    Photo Verified
+                  </span>
+                )}
               </div>
               <p className="mt-2 text-[14px] text-ink-soft">{currentUser.location}</p>
 
@@ -340,6 +456,51 @@ export function MyProfile() {
           }
         </div>
       </div>
+
+      {/* ── Live Selfie Verification Modal ── */}
+      <Modal
+        open={isVerifyingSelfie}
+        onClose={() => {
+          if (!isSubmittingSelfie) {
+            setIsVerifyingSelfie(false);
+            setCapturedSelfie(null);
+          }
+        }}
+        title="Live Photo Verification"
+      >
+        <div className="space-y-4">
+          <p className="text-[13px] text-ink-soft">
+            To ensure genuine members and build trust across WingleMingle, take a quick live selfie with your front camera. This selfie is private for moderation review only and will not appear on your public photo gallery.
+          </p>
+
+          <div className="py-2">
+            <LiveSelfieCapture
+              value={capturedSelfie}
+              onChange={(val) => setCapturedSelfie(val)}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="ghost"
+              disabled={isSubmittingSelfie}
+              onClick={() => {
+                setIsVerifyingSelfie(false);
+                setCapturedSelfie(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={!capturedSelfie || isSubmittingSelfie}
+              onClick={handleSaveSelfie}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {isSubmittingSelfie ? 'Submitting...' : 'Submit Verification'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </Page>);
 
 }

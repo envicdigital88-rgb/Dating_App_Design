@@ -25,7 +25,8 @@ import {
   CropIcon,
   StickerIcon,
   TypeIcon,
-  PenToolIcon
+  PenToolIcon,
+  ShieldCheckIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar, Badge } from '@/components/ui/Bits';
@@ -251,7 +252,14 @@ export function Chat() {
             className="flex min-w-0 flex-1 items-center gap-3 text-left">
             <Avatar src={photo?.url} name={other?.name ?? '?'} size={40} online={other?.online} />
             <span className="min-w-0">
-              <span className="block truncate font-medium text-ink">{other?.name}</span>
+              <span className="flex items-center gap-1.5 truncate font-medium text-ink">
+                <span className="truncate">{other?.name}</span>
+                {(other?.selfieStatus === 'approved' || other?.isUnlimited) && (
+                  <span title="Photo Verified" className="inline-flex shrink-0">
+                    <ShieldCheckIcon className="h-4 w-4 text-blue-600" />
+                  </span>
+                )}
+              </span>
               <span className="block truncate text-[12px] text-ink-muted">
                 {typingIn === conversation.id ? 'Typing ' : other ? presence(other.online, other.lastActiveAt) : ''}
               </span>

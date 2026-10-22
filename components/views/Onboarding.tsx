@@ -9,12 +9,13 @@ import { BrandMark } from '@/components/BrandMark';
 import { Button } from '@/components/ui/Button';
 import { FieldError, Input, Label, Select, Textarea } from '@/components/ui/Field';
 import { PhotoUploader } from '@/components/PhotoUploader';
+import { LiveSelfieCapture } from '@/components/LiveSelfieCapture';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { interestOptions, intentionOptions, lifestyleFields, traitOptions, promptAnswers } from '@/lib/data/interests';
 import type { WinglingIntention, Lifestyle, User, Prompt } from '@/lib/types';
 import { id as makeId } from '@/lib/utils/format';
 
-const steps = ['About you', 'Your words', 'Interests', 'Personality', 'Lifestyle', 'Vibe Prompts', 'Photos'];
+const steps = ['About you', 'Your words', 'Interests', 'Personality', 'Lifestyle', 'Vibe Prompts', 'Photos', 'Live Verification'];
 
 export function Onboarding() {
   const { currentUser, completeOnboarding, isHydrated } = useStore();
@@ -43,6 +44,7 @@ export function Onboarding() {
     { id: makeId('p'), question: 'A typical weekend for me looks like...', answer: '' }
   ]);
   const [photos, setPhotos] = useState<string[]>([]);
+  const [verificationSelfie, setVerificationSelfie] = useState<string | null>(null);
 
   if (!isHydrated) return null;
   if (!currentUser) return <Navigate to="/sign-up" replace />;
@@ -61,6 +63,9 @@ export function Onboarding() {
     if (step === 5) {
       const answered = prompts.filter(p => p.answer.trim().length > 0);
       if (answered.length === 0) return 'Please select an answer for at least one prompt.';
+    }
+    if (step === 7 && !verificationSelfie) {
+      return 'Please take a live selfie with your camera to complete verification.';
     }
     // We removed photo validation so users can skip uploading an image
     return '';
@@ -96,7 +101,8 @@ export function Onboarding() {
       traits,
       prompts: prompts.filter(p => p.answer.trim().length > 0),
       lifestyle: { ...lifestyle, work: work.trim() },
-      photoUrls: finalPhotos
+      photoUrls: finalPhotos,
+      verificationSelfie: verificationSelfie || null
     };
 
     // Update frontend state just in case
@@ -450,6 +456,24 @@ export function Onboarding() {
             </div>
           )}
 
+          {step === 7 && (
+            <div>
+              <div className="mb-6">
+                <h1 className="font-display text-[28px] leading-tight text-ink">
+                  Live Selfie Verification
+                </h1>
+                <p className="mt-2 text-[15px] text-ink-soft">
+                  Take a quick live photo with your camera to prove you are a real person. This helps keep Wingle Mingle safe and authentic.
+                </p>
+              </div>
+
+              <LiveSelfieCapture
+                value={verificationSelfie}
+                onChange={setVerificationSelfie}
+              />
+            </div>
+          )}
+
           <FieldError>{error}</FieldError>
 
           <div className="mt-8 flex items-center justify-between gap-3">
@@ -462,7 +486,7 @@ export function Onboarding() {
               Back
             </Button>
             <Button onClick={next} size="lg">
-              {step === steps.length - 1 ? 'Publish my profile' : 'Continue'}
+              {step === steps.length - 1 ? 'Verify & Publish Profile' : 'Continue'}
               {step < steps.length - 1 && <ArrowRightIcon className="h-4 w-4" />}
             </Button>
           </div>

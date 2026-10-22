@@ -1972,6 +1972,13 @@
                   "kind": "scalar"
                 }
               },
+              "selfieStatus": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "showDistance": {
                 "nullable": false,
                 "type": {
@@ -2002,6 +2009,13 @@
               },
               "traits": {
                 "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "verificationSelfie": {
+                "nullable": true,
                 "type": {
                   "codecId": "pg/text@1",
                   "kind": "scalar"
@@ -2435,6 +2449,9 @@
                 "role": {
                   "column": "role"
                 },
+                "selfieStatus": {
+                  "column": "selfieStatus"
+                },
                 "showDistance": {
                   "column": "showDistance"
                 },
@@ -2449,6 +2466,9 @@
                 },
                 "traits": {
                   "column": "traits"
+                },
+                "verificationSelfie": {
+                  "column": "verificationSelfie"
                 },
                 "verified": {
                   "column": "verified"
@@ -4447,6 +4467,15 @@
                   "nativeType": "text",
                   "nullable": false
                 },
+                "selfieStatus": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "pending"
+                  },
+                  "nativeType": "text",
+                  "nullable": true
+                },
                 "showDistance": {
                   "codecId": "pg/bool@1",
                   "default": {
@@ -4483,6 +4512,11 @@
                   "codecId": "pg/text@1",
                   "nativeType": "text",
                   "nullable": false
+                },
+                "verificationSelfie": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
                 },
                 "verified": {
                   "codecId": "pg/bool@1",
@@ -4781,7 +4815,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "d8a60a87f88338aa45c3fe8f9777f96f8b2cda435bbce7b385dc2eb1b3e45c09"
+    "storageHash": "eb50bbea0d0b63e5d34c4c25983ea1ddf90ffc736cfe8ca7ba212bdd92646167"
   },
   "execution": {
     "executionHash": "cfcecedce98a9ee2c5be4cb3bd5d93271de2f5d9917661c48300aebc7990c4f4",

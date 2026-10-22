@@ -96,6 +96,7 @@ interface OnboardingInput {
   prompts: Prompt[];
   lifestyle: User['lifestyle'];
   photoUrls: string[];
+  verificationSelfie?: string | null;
 }
 
 interface StoreValue {
@@ -110,6 +111,7 @@ interface StoreValue {
   completeOnboarding: (input: OnboardingInput) => void;
   updateProfile: (patch: Partial<User>) => void;
   deleteAccount: () => void;
+  submitVerificationSelfie: (selfie: string) => Promise<boolean>;
   // photos
   photosOf: (userId: string) => Photo[];
   addPhoto: (url: string) => void;
@@ -1055,6 +1057,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
           traits: input.traits,
           prompts: input.prompts,
           lifestyle: input.lifestyle,
+          verificationSelfie: input.verificationSelfie,
           onboarded: true
         } :
         u
@@ -1093,6 +1096,26 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       users: d.users.filter((u) => u.id !== uid),
       photos: d.photos.filter((p) => p.userId !== uid)
     }));
+  }, []);
+
+  const submitVerificationSelfie = useCallback<StoreValue['submitVerificationSelfie']>(async (selfie: string) => {
+    try {
+      const { submitVerificationSelfieAction } = await import('@/app/actions/user');
+      const res = await submitVerificationSelfieAction(selfie);
+      if (res.ok) {
+        setDb((d) => ({
+          ...d,
+          users: d.users.map((u) =>
+            u.id === sessionIdRef.current ? { ...u, verificationSelfie: selfie, selfieStatus: 'pending' } : u
+          )
+        }));
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('submitVerificationSelfie error:', err);
+      return false;
+    }
   }, []);
 
   /* -------------------------------------------------------------- photos */
@@ -1332,7 +1355,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       !blocked.has(u.id) &&
       !passed.has(u.id) &&
       !hearted.has(u.id) &&
-      !liked.has(u.id);
+      !liked.has(u.id) &&
+      (u.isUnlimited || (u.selfieStatus !== 'pending' && u.selfieStatus !== 'rejected'));
 
     const userMap = new Map(db.users.map((u) => [u.id, u]));
     const feed: User[] = [];
@@ -2521,6 +2545,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     completeOnboarding,
     updateProfile,
     deleteAccount,
+    submitVerificationSelfie,
     photosOf,
     addPhoto,
     deletePhoto,

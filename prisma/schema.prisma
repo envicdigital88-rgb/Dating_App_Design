@@ -18,6 +18,8 @@ model User {
   traits         String         // Stored as JSON string
   lifestyle      String         // Stored as JSON string
   verified       Boolean        @default(false)
+  verificationSelfie String?
+  selfieStatus   String?        @default("pending")
   suspended      Boolean        @default(false)
   suspensionReason String?
   onboarded      Boolean        @default(false)

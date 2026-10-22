@@ -95,11 +95,17 @@ export function ProfileDetail() {
         <div>
           <div className="flex flex-col sm:flex-row flex-wrap items-center sm:items-start justify-between gap-4 text-center sm:text-left">
             <div>
-              <div className="flex items-center justify-center sm:justify-start gap-2">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
                 <h1 className="font-display text-[34px] leading-none text-ink">
                   {user.name}{!user.isAnonymous && `, ${user.age}`}
                 </h1>
                 {user.verified && <VerifiedMark className="mt-1" />}
+                {(user.selfieStatus === 'approved' || user.isUnlimited) && (
+                  <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-semibold text-blue-600 border border-blue-500/20">
+                    <ShieldCheckIcon className="h-3.5 w-3.5 text-blue-600" />
+                    Photo Verified
+                  </span>
+                )}
                 {user.heartReacts && user.heartReacts > 0 && (
                   <div className="mt-1 flex items-center gap-1.5 rounded-full bg-berry-500/10 px-3 py-1 text-sm font-bold text-berry-600 border border-berry-500/20">
                     <HeartIcon className="h-4 w-4 fill-berry-600" />

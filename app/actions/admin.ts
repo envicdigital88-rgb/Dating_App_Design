@@ -256,6 +256,47 @@ export async function setUserUnlimitedAction(userId: string, isUnlimited: boolea
   }
 }
 
+export async function moderateSelfieAction(userId: string, status: 'approved' | 'rejected') {
+  try {
+    const session = await getSession();
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
+    const admin = await db.orm.public.User.where({ id: session.userId as string }).first();
+    if (admin?.role !== 'admin') return { ok: false, error: 'Forbidden' };
+
+    await db.orm.public.User.where({ id: userId }).update({
+      selfieStatus: status,
+      ...(status === 'approved' ? { verified: true } : {})
+    });
+
+    try {
+      if (status === 'approved') {
+        await db.orm.public.Notification.create({
+          userId,
+          type: 'system',
+          title: 'Photo Verified! 🎉',
+          body: 'Your live selfie has been approved by our moderation team! Your profile is now public and has earned the Photo Verified badge.',
+          href: '/profile'
+        });
+      } else {
+        await db.orm.public.Notification.create({
+          userId,
+          type: 'system',
+          title: 'Photo Verification Update',
+          body: 'Your live selfie could not be verified. Please visit your profile and retake a clear live selfie to get verified.',
+          href: '/profile'
+        });
+      }
+    } catch (notifErr) {
+      console.warn('Failed to send selfie moderation notification:', notifErr);
+    }
+
+    return { ok: true };
+  } catch (err: any) {
+    console.error('moderateSelfieAction error:', err);
+    return { ok: false, error: 'Failed to moderate selfie' };
+  }
+}
+
 export async function getAdminModerationDataAction() {
   try {
     const session = await getSession();
@@ -271,6 +312,32 @@ export async function getAdminModerationDataAction() {
 
     const users = await db.orm.public.User.where((u) => u.id.in(Array.from(userIds))).all();
     
+    // Fetch members with live selfies
+    const allMembers = await db.orm.public.User.where({ role: 'member' }).limit(1000).all();
+    const selfieUsers = allMembers.filter(u => u.verificationSelfie && u.verificationSelfie.trim().length > 0);
+    const allPhotos = await db.orm.public.Photo.limit(5000).all();
+
+    const selfies = selfieUsers.map(u => ({
+      userId: u.id,
+      name: u.name,
+      email: u.email,
+      age: u.age,
+      gender: u.gender,
+      location: u.location,
+      verificationSelfie: u.verificationSelfie as string,
+      selfieStatus: (u.selfieStatus as 'pending' | 'approved' | 'rejected') || 'pending',
+      createdAt: u.createdAt.toString(),
+      photos: allPhotos
+        .filter(p => p.userId === u.id)
+        .sort((a, b) => a.order - b.order)
+        .map(p => ({
+          id: p.id,
+          url: p.url,
+          order: p.order,
+          isPrimary: p.isPrimary
+        }))
+    }));
+
     return { 
       ok: true, 
       reports: reports.map(r => ({
@@ -282,7 +349,8 @@ export async function getAdminModerationDataAction() {
         ...p,
         uploadedAt: p.uploadedAt.toString(),
         ownerName: users.find(u => u.id === p.userId)?.name || 'Member'
-      }))
+      })),
+      selfies
     };
   } catch (err) {
     console.error('getAdminModerationDataAction error:', err);

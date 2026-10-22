@@ -51,6 +51,8 @@ export interface User {
   prompts: Prompt[];
   lifestyle: Lifestyle;
   verified: boolean;
+  verificationSelfie?: string | null;
+  selfieStatus?: 'pending' | 'approved' | 'rejected' | null;
   suspended: boolean;
   suspensionReason?: string | null;
   onboarded: boolean;

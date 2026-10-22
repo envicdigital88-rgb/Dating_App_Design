@@ -7,7 +7,7 @@ import {
   useTransform,
   useAnimation,
 } from 'framer-motion';
-import { HeartIcon, SendIcon, XIcon, ZapIcon, SparklesIcon, HeartCrackIcon } from 'lucide-react';
+import { HeartIcon, SendIcon, XIcon, ZapIcon, SparklesIcon, HeartCrackIcon, ShieldCheckIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Badge } from './ui/Bits';
 import { useStore } from '@/lib/contexts/StoreContext';
@@ -199,6 +199,14 @@ export function ProfileCard({
 
         {/* Badges container */}
         <div className="absolute left-4 top-6 z-10 flex flex-col gap-2 pointer-events-none">
+          {/* Photo Verified Badge */}
+          {(user.selfieStatus === 'approved' || user.isUnlimited) && (
+            <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-blue-600/90 px-3 py-1 text-xs font-bold text-white shadow-md backdrop-blur-md border border-white/20">
+              <ShieldCheckIcon className="h-3.5 w-3.5 text-white" />
+              Photo Verified
+            </div>
+          )}
+
           {/* Vibe Match Badge */}
           {matchResult && matchResult.score > 0 && (
             <div className="inline-flex items-center gap-1.5 rounded-full bg-berry-500/95 px-3 py-1.5 text-sm font-bold text-white shadow-md backdrop-blur-md">

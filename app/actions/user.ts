@@ -174,7 +174,15 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
     }).all();
     
     const excludedSet = new Set(excludedIds);
-    let eligible = rawUsers.filter(u => !excludedSet.has(u.id) && u.discoverable !== false);
+    let eligible = rawUsers.filter(u => {
+      if (excludedSet.has(u.id)) return false;
+      if (u.discoverable === false) return false;
+      // Unlimited accounts are always public and photo verified
+      if (u.isUnlimited) return true;
+      // Pending or rejected selfies are NOT public (private profile until approved)
+      if (u.selfieStatus === 'pending' || u.selfieStatus === 'rejected') return false;
+      return true;
+    });
 
     if (filters) {
       eligible = eligible.filter(u => {
@@ -360,12 +368,14 @@ export async function completeUserOnboarding(data: any) {
     const session = await getSession()
     if (!session?.userId) return { ok: false, error: 'Unauthorized' }
 
-    const { photoUrls, prompts, ...userData } = data;
+    const { photoUrls, prompts, verificationSelfie, ...userData } = data;
     const userId = session.userId as string;
 
     // Stringify JSON fields because they are stored as text in DB
     const updatePayload = {
       ...userData,
+      verificationSelfie: verificationSelfie || null,
+      selfieStatus: verificationSelfie ? 'pending' : null,
       onboarded: true,
       lifestyle: JSON.stringify(userData.lifestyle || {}),
       interests: JSON.stringify(userData.interests || []),
@@ -598,4 +608,23 @@ export async function updatePhotosOrderAction(orderedPhotoIds: string[], primary
     return { ok: false, error: 'Failed to update photos order' };
   }
 }
+
+export async function submitVerificationSelfieAction(verificationSelfie: string) {
+  try {
+    const session = await getSession();
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
+    const userId = session.userId as string;
+
+    await db.orm.public.User.where({ id: userId }).update({
+      verificationSelfie,
+      selfieStatus: 'pending'
+    });
+
+    return { ok: true };
+  } catch (err) {
+    console.error('Submit verification selfie error:', err);
+    return { ok: false, error: 'Failed to submit verification selfie' };
+  }
+}
+
 
