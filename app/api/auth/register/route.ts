@@ -49,8 +49,7 @@ export async function POST(req: NextRequest) {
       phone: result.phone,
       maskedPhone: result.maskedPhone,
       email: result.email,
-      sentVia: (result as any).sentVia || 'sms',
-      message: (result as any).message || 'Verification code sent to your mobile phone via SMS'
+      message: result.message || 'Verification code sent to your mobile phone via SMS'
     });
   } catch (error: any) {
     console.error("Registration API error:", error);
