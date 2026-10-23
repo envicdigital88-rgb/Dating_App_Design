@@ -87,7 +87,23 @@ export async function checkWelcomeBonusAction(): Promise<boolean> {
       .where({ userId: session.userId as string, description: 'Welcome Bonus' })
       .first();
 
-    return !!transaction;
+    if (transaction) return true;
+
+    // Safety check: if user already has 20 or more wingits (e.g. created previously),
+    // mark Welcome Bonus as claimed so they never get double-credited to 40.
+    const user = await db.orm.public.User.select('wingitsBalance').first({ id: session.userId as string });
+    if (user && user.wingitsBalance >= 20) {
+      await db.orm.public.WingitsTransaction.create({
+        id: crypto.randomUUID(),
+        userId: session.userId as string,
+        amount: 20,
+        type: 'bonus',
+        description: 'Welcome Bonus'
+      });
+      return true;
+    }
+
+    return false;
   } catch (error) {
     console.error('checkWelcomeBonusAction error:', error);
     return true; // hide popup on error
@@ -111,9 +127,12 @@ export async function claimWelcomeBonusAction(): Promise<{ ok: boolean; error?: 
       const user = await tx.orm.public.User.select('wingitsBalance').first({ id: session.userId as string });
       const currentBalance = user?.wingitsBalance || 0;
 
+      // Ensure user ends up with exactly 20 total Wingits (not 40)
+      const targetBalance = currentBalance >= 20 ? currentBalance : 20;
+
       await tx.orm.public.User
         .where({ id: session.userId as string })
-        .update({ wingitsBalance: currentBalance + 20 });
+        .update({ wingitsBalance: targetBalance });
 
       await tx.orm.public.WingitsTransaction.create({
         id: crypto.randomUUID(),

@@ -22,11 +22,12 @@ import { Modal } from '@/components/ui/Modal';
 import { ReportDialog } from '@/components/ReportDialog';
 import { WingleDialog } from '@/components/WingleDialog';
 import { UpgradeDialog, type UpgradeReason } from '@/components/UpgradeDialog';
+import { SelfieVerificationModal } from '@/components/SelfieVerificationModal';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { presence } from '@/lib/utils/format';
 import { calculateVibeMatch } from '@/lib/utils/matching';
 import { lifestyleFields } from '@/lib/data/interests';
-import type { Lifestyle } from '@/lib/types';
+import { type Lifestyle, isSelfieVerified } from '@/lib/types';
 
 export function ProfileDetail() {
   const params = useParams();
@@ -53,6 +54,7 @@ export function ProfileDetail() {
   const [blocking, setBlocking] = useState(false);
   const [wingleing, setWingleing] = useState(false);
   const [upgrade, setUpgrade] = useState<UpgradeReason | null>(null);
+  const [showSelfieModal, setShowSelfieModal] = useState(false);
 
   const user = userId ? userById(userId) : undefined;
   if (!user || !currentUser || !entitlements) { redirect("/discover"); return null as any; }
@@ -154,6 +156,10 @@ export function ProfileDetail() {
               onClick={() => {
                 if (wingle) {
                   toast.info('You already have a wingle with this person.');
+                  return;
+                }
+                if (!isSelfieVerified(currentUser)) {
+                  setShowSelfieModal(true);
                   return;
                 }
                 if (entitlements.winglesRemaining !== null && entitlements.winglesRemaining <= 0) {
@@ -327,6 +333,12 @@ export function ProfileDetail() {
         open={!!upgrade}
         reason={upgrade ?? 'wingle_limit'}
         onClose={() => setUpgrade(null)}
+      />
+
+      <SelfieVerificationModal
+        open={showSelfieModal}
+        onClose={() => setShowSelfieModal(false)}
+        currentUser={currentUser}
       />
       
       <Modal

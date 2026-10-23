@@ -24,6 +24,10 @@ export async function sendWingle(toUserId: string, note: string) {
       const user = await tx.orm.public.User.where({ id: session.userId as string }).first();
       if (!user) throw new Error('User not found');
       
+      if (!user.isUnlimited && (!user.verificationSelfie || user.selfieStatus !== 'approved')) {
+        throw new Error('Selfie verification required. Please complete selfie verification to activate your account before sending Wingles.');
+      }
+      
       let wingitsCost = 8;
       if (user.isUnlimited) {
         wingitsCost = 0;
@@ -79,9 +83,15 @@ export async function sendWingle(toUserId: string, note: string) {
     }
 
     return { ok: true, wingleId: newWingle.id }
-  } catch (err) {
+  } catch (err: any) {
     console.error('Send Wingle error:', err)
-    return { ok: false, error: 'Failed to send Wingle' }
+    const msg = err?.message || 'Failed to send Wingle';
+    const isVerification = msg.toLowerCase().includes('verification');
+    return { 
+      ok: false, 
+      error: msg,
+      reason: isVerification ? 'verification_required' : undefined
+    }
   }
 }
 

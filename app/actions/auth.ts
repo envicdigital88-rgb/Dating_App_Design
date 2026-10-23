@@ -6,6 +6,7 @@ import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import { OAuth2Client } from 'google-auth-library'
 import crypto from 'crypto'
+import { Temporal } from 'temporal-polyfill'
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -49,6 +50,8 @@ export async function registerUser(formData: FormData) {
       age,
       gender,
       intention,
+      wingitsBalance: 0,
+      lastDailyBonusAt: Temporal.Instant.from(new Date().toISOString()),
       interests: '[]', // Default empty JSON arrays
       traits: '[]',
       lifestyle: JSON.stringify({
@@ -165,6 +168,8 @@ export async function googleAuthAction(credential: string) {
         age: 20, // default
         gender: 'woman', // default
         intention: 'Long-term relationship',
+        wingitsBalance: 0,
+        lastDailyBonusAt: Temporal.Instant.from(new Date().toISOString()),
         interests: '[]',
         traits: '[]',
         lifestyle: JSON.stringify({

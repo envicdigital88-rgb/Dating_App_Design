@@ -9,7 +9,8 @@ import { EmptyState } from '@/components/ui/Bits';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { WingleDialog } from '@/components/WingleDialog';
 import { UpgradeDialog, type UpgradeReason } from '@/components/UpgradeDialog';
-import type { User } from '@/lib/types';
+import { SelfieVerificationModal } from '@/components/SelfieVerificationModal';
+import { type User, isSelfieVerified } from '@/lib/types';
 
 export function HeartBucket() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export function HeartBucket() {
   
   const [wingleTarget, setWingleTarget] = useState<User | null>(null);
   const [upgrade, setUpgrade] = useState<UpgradeReason | null>(null);
+  const [showSelfieModal, setShowSelfieModal] = useState(false);
 
   React.useEffect(() => {
     markHeartBucketViewed();
@@ -76,6 +78,10 @@ export function HeartBucket() {
                     </button>
                     <button
                       onClick={() => {
+                        if (!isSelfieVerified(currentUser)) {
+                          setShowSelfieModal(true);
+                          return;
+                        }
                         if (
                           entitlements.winglesRemaining !== null &&
                           entitlements.winglesRemaining <= 0
@@ -110,6 +116,12 @@ export function HeartBucket() {
         open={!!upgrade}
         reason={upgrade ?? 'wingle_limit'}
         onClose={() => setUpgrade(null)}
+      />
+
+      <SelfieVerificationModal
+        open={showSelfieModal}
+        onClose={() => setShowSelfieModal(false)}
+        currentUser={currentUser}
       />
     </Page>
   );

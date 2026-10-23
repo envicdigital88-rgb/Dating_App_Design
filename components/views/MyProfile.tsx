@@ -41,6 +41,15 @@ export function MyProfile() {
     }) as Lifestyle
   });
 
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('verify') && currentUser && !currentUser.isUnlimited && currentUser.selfieStatus !== 'approved') {
+        setIsVerifyingSelfie(true);
+      }
+    }
+  }, [currentUser]);
+
   if (!currentUser || !entitlements) return null;
 
   const photos = photosOf(currentUser.id);
@@ -178,7 +187,7 @@ export function MyProfile() {
       )}
 
       {/* ── Existing Users Verification Announcement Banner (DO NOT show for Unlimited accounts) ── */}
-      {!currentUser.isUnlimited && !currentUser.selfieStatus && (
+      {!currentUser.isUnlimited && !currentUser.verificationSelfie && currentUser.selfieStatus !== 'approved' && (
         <div className="mb-6 rounded-3xl border border-blue-500/30 bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-transparent p-5 backdrop-blur-sm">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-start gap-3.5">

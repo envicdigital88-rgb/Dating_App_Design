@@ -6,8 +6,9 @@ import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { Label, Textarea } from './ui/Field';
 import { useStore } from '@/lib/contexts/StoreContext';
-import type { User } from '@/lib/types';
+import { type User, isSelfieVerified } from '@/lib/types';
 import { InsufficientWingitsModal } from './InsufficientWingitsModal';
+import { SelfieVerificationModal } from './SelfieVerificationModal';
 
 export function WingleDialog({
   open,
@@ -24,12 +25,19 @@ export function WingleDialog({
   const [note, setNote] = useState('');
   const [sending, setSending] = useState(false);
   const [showTopup, setShowTopup] = useState(false);
+  const [showSelfieModal, setShowSelfieModal] = useState(false);
 
   if (!target || !currentUser) return null;
 
   const cost = currentUser.isUnlimited ? 0 : (currentUser.freeWinglesSent < 5 ? 0 : 8);
 
   const submit = async () => {
+    if (!isSelfieVerified(currentUser)) {
+      onClose();
+      setShowSelfieModal(true);
+      return;
+    }
+
     if ((currentUser.wingitsBalance ?? 0) < cost) {
       setShowTopup(true);
       return;
@@ -40,8 +48,13 @@ export function WingleDialog({
     setSending(false);
     if (!result.ok) {
       onClose();
-      if (result.reason === 'wingle_limit') onLimitReached();else
-      toast.error(result.error);
+      if (result.reason === 'verification_required') {
+        setShowSelfieModal(true);
+      } else if (result.reason === 'wingle_limit') {
+        onLimitReached();
+      } else {
+        toast.error(result.error);
+      }
       return;
     }
     setNote('');
@@ -90,6 +103,11 @@ export function WingleDialog({
       requiredAmount={cost} 
       currentBalance={currentUser?.wingitsBalance ?? 0} 
       actionName="send this Wingle"
+    />
+    <SelfieVerificationModal
+      open={showSelfieModal}
+      onClose={() => setShowSelfieModal(false)}
+      currentUser={currentUser}
     />
     </>
   );

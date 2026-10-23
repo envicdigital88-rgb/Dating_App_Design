@@ -8,6 +8,7 @@ import { SignJWT, jwtVerify } from 'jose';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { formatNotifyPhoneNumber, getPhoneVariants } from '@/lib/notify';
+import { Temporal } from 'temporal-polyfill';
 
 const secretKey = process.env.SESSION_SECRET || 'winglemingle_session_jwt_secret_key_2026_super_secure_auth_token_99x';
 const encodedKey = new TextEncoder().encode(secretKey);
@@ -374,7 +375,8 @@ export async function confirmPendingRegistration(enteredOtp: string) {
         intention: payload.intention || 'Long-term relationship',
         verified: true, // VERIFIED IS TRUE!
         onboarded: false,
-        wingitsBalance: 20 + secretBonus,
+        wingitsBalance: secretBonus,
+        lastDailyBonusAt: Temporal.Instant.from(new Date().toISOString()),
         interests: '[]',
         traits: '[]',
         lifestyle: JSON.stringify({

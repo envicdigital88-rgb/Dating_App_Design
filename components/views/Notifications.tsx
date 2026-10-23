@@ -5,11 +5,13 @@ import React from 'react';
 import Link from 'next/link';
 import {
   BellIcon,
+  CameraIcon,
   CreditCardIcon,
   HeartIcon,
   LockIcon,
   MessageCircleIcon,
   SendIcon,
+  ShieldCheckIcon,
   SparklesIcon,
   UsersIcon } from
 'lucide-react';
@@ -31,7 +33,9 @@ const icons: Record<NotificationType, React.ReactNode> = {
   chat_limit_warning: <LockIcon className="h-4 w-4" />,
   chat_limit_reached: <LockIcon className="h-4 w-4" />,
   payment_success: <CreditCardIcon className="h-4 w-4" />,
-  subscription_expiring: <CreditCardIcon className="h-4 w-4" />
+  subscription_expiring: <CreditCardIcon className="h-4 w-4" />,
+  selfie_verification: <CameraIcon className="h-4 w-4" />,
+  system: <ShieldCheckIcon className="h-4 w-4" />
 };
 
 export function Notifications() {

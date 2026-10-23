@@ -57,7 +57,7 @@ export function AdminUsers() {
     try {
       const res = await moderateSelfieAction(userId, status);
       if (res.ok) {
-        setRealUsers(prev => prev ? prev.map(u => u.id === userId ? { ...u, selfieStatus: status } : u) : null);
+        setRealUsers(prev => prev ? prev.map(u => u.id === userId ? { ...u, selfieStatus: status, verificationSelfie: '' } : u) : null);
         toast.success(status === 'approved' ? 'Selfie approved & verified!' : 'Selfie rejected');
       } else {
         toast.error(res.error || 'Failed to update selfie status');
@@ -559,48 +559,91 @@ export function AdminUsers() {
             </ul>
 
             {/* Live Verification Selfie Preview for Admins with Action Buttons */}
-            {detailUser.verificationSelfie ? (
+            {detailUser.verificationSelfie || detailUser.selfieStatus === 'approved' || detailUser.selfieStatus === 'rejected' ? (
               <div className="rounded-2xl border border-berry-200 bg-berry-50/40 p-4">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-1.5 text-[12px] font-semibold text-berry-700">
                     <ShieldCheckIcon className="h-4 w-4 text-berry-600" />
-                    Live Verification Selfie (Private)
+                    Live Selfie Verification
                   </div>
                   <Badge tone={detailUser.selfieStatus === 'approved' ? 'moss' : detailUser.selfieStatus === 'rejected' ? 'red' : 'amber'}>
                     {detailUser.selfieStatus === 'approved' ? 'Verified' : detailUser.selfieStatus === 'rejected' ? 'Rejected' : 'Pending Review'}
                   </Badge>
                 </div>
-                <div className="flex items-start gap-4">
-                  <img
-                    src={detailUser.verificationSelfie}
-                    alt="Live selfie"
-                    className="h-28 w-24 rounded-2xl object-cover border-2 border-berry-300 shadow-sm shrink-0"
-                  />
-                  <div className="space-y-3 flex-1">
-                    <p className="text-[12px] text-ink-muted leading-relaxed">
-                      Captured live via camera on onboarding. Compare against the public profile photos above to confirm identity.
-                    </p>
+
+                {detailUser.selfieStatus === 'approved' || detailUser.selfieStatus === 'rejected' ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                    <div className="space-y-0.5">
+                      <p className="text-[13px] font-medium text-ink">
+                        Selfie verification completed for <strong className="font-semibold">{detailUser.name}</strong>
+                      </p>
+                      <p className="text-[12px] text-ink-muted">
+                        {detailUser.selfieStatus === 'approved'
+                          ? 'This user is verified. The selfie photo has been reviewed and is hidden from admin display.'
+                          : 'This user verification was rejected. The selfie photo is hidden from admin display.'}
+                      </p>
+                    </div>
                     <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        disabled={busySelfieId === detailUser.id || detailUser.selfieStatus === 'approved'}
-                        onClick={() => handleModerateSelfie(detailUser.id, 'approved')}
-                      >
-                        <CheckIcon className="h-3.5 w-3.5" />
-                        {detailUser.selfieStatus === 'approved' ? 'Approved' : 'Approve Selfie'}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="danger"
-                        disabled={busySelfieId === detailUser.id || detailUser.selfieStatus === 'rejected'}
-                        onClick={() => handleModerateSelfie(detailUser.id, 'rejected')}
-                      >
-                        <XIcon className="h-3.5 w-3.5" />
-                        {detailUser.selfieStatus === 'rejected' ? 'Rejected' : 'Reject'}
-                      </Button>
+                      {detailUser.selfieStatus === 'rejected' && (
+                        <Button
+                          size="sm"
+                          disabled={busySelfieId === detailUser.id}
+                          onClick={() => handleModerateSelfie(detailUser.id, 'approved')}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+                        >
+                          <CheckIcon className="h-3.5 w-3.5" />
+                          Approve
+                        </Button>
+                      )}
+                      {detailUser.selfieStatus === 'approved' && (
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          disabled={busySelfieId === detailUser.id}
+                          onClick={() => handleModerateSelfie(detailUser.id, 'rejected')}
+                          className="text-xs"
+                        >
+                          <XIcon className="h-3.5 w-3.5" />
+                          Reject
+                        </Button>
+                      )}
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex items-start gap-4">
+                    <img
+                      src={detailUser.verificationSelfie || undefined}
+                      alt="Live selfie"
+                      className="h-28 w-24 rounded-2xl object-cover border-2 border-berry-300 shadow-sm shrink-0"
+                    />
+                    <div className="space-y-3 flex-1">
+                      <p className="text-[12px] text-ink-muted leading-relaxed">
+                        Captured live via camera on onboarding. Compare against the public profile photos above to confirm identity.
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          disabled={busySelfieId === detailUser.id}
+                          onClick={() => handleModerateSelfie(detailUser.id, 'approved')}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+                        >
+                          <CheckIcon className="h-3.5 w-3.5" />
+                          Approve Selfie
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          disabled={busySelfieId === detailUser.id}
+                          onClick={() => handleModerateSelfie(detailUser.id, 'rejected')}
+                          className="text-xs"
+                        >
+                          <XIcon className="h-3.5 w-3.5" />
+                          Reject
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex items-center gap-2 rounded-xl border border-sand bg-cream-deep/60 px-3.5 py-2.5 text-[12px] text-ink-muted">

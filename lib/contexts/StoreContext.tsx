@@ -980,7 +980,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         online: true,
         lastActiveAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
-        wingitsBalance: 20,
+        wingitsBalance: 0,
         freeWinglesSent: 0,
         freeWinglesAccepted: 0,
         isUnlimited: false,
@@ -1356,7 +1356,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       !passed.has(u.id) &&
       !hearted.has(u.id) &&
       !liked.has(u.id) &&
-      (u.isUnlimited || (u.selfieStatus !== 'pending' && u.selfieStatus !== 'rejected'));
+      (u.isUnlimited || (Boolean(u.verificationSelfie) && u.selfieStatus === 'approved'));
 
     const userMap = new Map(db.users.map((u) => [u.id, u]));
     const feed: User[] = [];
@@ -1637,6 +1637,13 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   const sendWingle = useCallback<StoreValue['sendWingle']>(
     (toUserId, note) => {
       if (!currentUser || !entitlements) return { ok: false, error: 'Sign in first.' };
+      if (!currentUser.isUnlimited && (!currentUser.verificationSelfie || currentUser.selfieStatus !== 'approved')) {
+        return {
+          ok: false,
+          error: 'Please complete your selfie verification first to activate your account and send Wingles.',
+          reason: 'verification_required'
+        };
+      }
       if (db.wingles.some((r) => r.fromUserId === currentUser.id && r.toUserId === toUserId))
       return { ok: false, error: 'You have already sent this person a wingle.', reason: 'invalid' };
       if (entitlements.winglesRemaining !== null && entitlements.winglesRemaining <= 0)

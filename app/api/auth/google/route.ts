@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { createSession } from '@/lib/session';
 import { OAuth2Client } from 'google-auth-library';
 import crypto from 'crypto';
+import { Temporal } from 'temporal-polyfill';
 
 export async function POST(req: NextRequest) {
   try {
@@ -61,6 +62,8 @@ export async function POST(req: NextRequest) {
         age: 20, 
         gender: 'non-binary',
         intention: 'Meeting new people',
+        wingitsBalance: 0,
+        lastDailyBonusAt: Temporal.Instant.from(new Date().toISOString()),
         interests: '[]',
         traits: '[]',
         lifestyle: JSON.stringify({}),

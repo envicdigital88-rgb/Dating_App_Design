@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { CheckIcon, FlagIcon, XIcon, ShieldCheckIcon, CameraIcon, Loader2Icon } from 'lucide-react';
+import { CheckIcon, FlagIcon, XIcon, ShieldCheckIcon, CameraIcon, Loader2Icon, CheckCircle2Icon, XCircleIcon } from 'lucide-react';
 import { AdminHeader } from './AdminShell';
 import { Button } from '@/components/ui/Button';
 import { Badge, EmptyState } from '@/components/ui/Bits';
@@ -64,7 +64,7 @@ export function AdminModeration() {
     try {
       const res = await moderateSelfieAction(userId, status);
       if (res.ok) {
-        setRealSelfies(prev => prev.map(s => s.userId === userId ? { ...s, selfieStatus: status } : s));
+        setRealSelfies(prev => prev.map(s => s.userId === userId ? { ...s, selfieStatus: status, verificationSelfie: '', photos: [] } : s));
         toast.success(status === 'approved' ? 'Selfie approved & verified!' : 'Selfie rejected');
       } else {
         toast.error(res.error || 'Failed to update selfie status');
@@ -194,93 +194,149 @@ export function AdminModeration() {
 
                       {/* Action buttons */}
                       <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          disabled={isBusy || item.selfieStatus === 'approved'}
-                          onClick={() => handleModerateSelfie(item.userId, 'approved')}
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                        >
-                          {isBusy ? (
-                            <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <CheckIcon className="h-3.5 w-3.5" />
-                          )}
-                          {item.selfieStatus === 'approved' ? 'Approved' : 'Approve Selfie'}
-                        </Button>
+                        {item.selfieStatus === 'pending' ? (
+                          <>
+                            <Button
+                              size="sm"
+                              disabled={isBusy}
+                              onClick={() => handleModerateSelfie(item.userId, 'approved')}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                            >
+                              {isBusy ? (
+                                <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <CheckIcon className="h-3.5 w-3.5" />
+                              )}
+                              Approve Selfie
+                            </Button>
 
-                        <Button
-                          size="sm"
-                          variant="danger"
-                          disabled={isBusy || item.selfieStatus === 'rejected'}
-                          onClick={() => handleModerateSelfie(item.userId, 'rejected')}
-                        >
-                          {isBusy ? (
-                            <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <XIcon className="h-3.5 w-3.5" />
-                          )}
-                          {item.selfieStatus === 'rejected' ? 'Rejected' : 'Reject'}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Comparison Body: Live Selfie vs Public Photos */}
-                    <div className="mt-5 grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
-                      
-                      {/* Left: Private Live Selfie */}
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wider text-berry-500">
-                          <CameraIcon className="h-3.5 w-3.5" />
-                          Live Captured Selfie
-                        </div>
-                        <div className="relative aspect-square w-full max-w-[260px] overflow-hidden rounded-2xl border-2 border-berry-400/50 bg-black shadow-md">
-                          <img
-                            src={item.verificationSelfie}
-                            alt={`${item.name} selfie`}
-                            className="h-full w-full object-cover"
-                          />
-                          <span className="absolute bottom-2 left-2 rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-medium text-white backdrop-blur-sm border border-white/20">
-                            Private · Admin view only
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Right: Public Uploaded Photos for Comparison */}
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-[12px] font-semibold uppercase tracking-wider text-ink-muted">
-                          <span>Public Profile Photos ({item.photos.length})</span>
-                          <span className="text-[11px] font-normal normal-case text-ink-soft">
-                            Compare facial features to verify identity
-                          </span>
-                        </div>
-
-                        {item.photos.length === 0 ? (
-                          <div className="flex h-48 items-center justify-center rounded-2xl border border-dashed border-sand bg-cream/30 text-[13px] text-ink-muted">
-                            No public gallery photos uploaded yet.
-                          </div>
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              disabled={isBusy}
+                              onClick={() => handleModerateSelfie(item.userId, 'rejected')}
+                            >
+                              {isBusy ? (
+                                <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <XIcon className="h-3.5 w-3.5" />
+                              )}
+                              Reject
+                            </Button>
+                          </>
                         ) : (
-                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                            {item.photos.map((photo, pIdx) => (
-                              <div
-                                key={photo.id || pIdx}
-                                className="group relative aspect-[3/4] overflow-hidden rounded-2xl border border-sand bg-black/40"
+                          <>
+                            {item.selfieStatus === 'approved' ? (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                disabled={isBusy}
+                                onClick={() => handleModerateSelfie(item.userId, 'rejected')}
+                                className="text-rose-600 hover:text-rose-700 text-xs"
                               >
-                                <img
-                                  src={photo.url}
-                                  alt={`Public photo ${pIdx + 1}`}
-                                  className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                                />
-                                {photo.isPrimary && (
-                                  <span className="absolute top-2 left-2 rounded-full bg-berry-500/90 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm">
-                                    Main
-                                  </span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
+                                {isBusy ? <Loader2Icon className="h-3 w-3 animate-spin" /> : <XIcon className="h-3 w-3" />}
+                                Revoke & Reject
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                disabled={isBusy}
+                                onClick={() => handleModerateSelfie(item.userId, 'approved')}
+                                className="text-emerald-600 hover:text-emerald-700 text-xs"
+                              >
+                                {isBusy ? <Loader2Icon className="h-3 w-3 animate-spin" /> : <CheckIcon className="h-3 w-3" />}
+                                Approve
+                              </Button>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
+
+                    {/* Comparison Body vs Reviewed Privacy Summary */}
+                    {item.selfieStatus === 'pending' && item.verificationSelfie ? (
+                      <div className="mt-5 grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
+                        
+                        {/* Left: Private Live Selfie */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wider text-berry-500">
+                            <CameraIcon className="h-3.5 w-3.5" />
+                            Live Captured Selfie
+                          </div>
+                          <div className="relative aspect-square w-full max-w-[260px] overflow-hidden rounded-2xl border-2 border-berry-400/50 bg-black shadow-md">
+                            <img
+                              src={item.verificationSelfie}
+                              alt={`${item.name} selfie`}
+                              className="h-full w-full object-cover"
+                            />
+                            <span className="absolute bottom-2 left-2 rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-medium text-white backdrop-blur-sm border border-white/20">
+                              Private · Admin view only
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Right: Public Uploaded Photos for Comparison */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-[12px] font-semibold uppercase tracking-wider text-ink-muted">
+                            <span>Public Profile Photos ({item.photos.length})</span>
+                            <span className="text-[11px] font-normal normal-case text-ink-soft">
+                              Compare facial features to verify identity
+                            </span>
+                          </div>
+
+                          {item.photos.length === 0 ? (
+                            <div className="flex h-48 items-center justify-center rounded-2xl border border-dashed border-sand bg-cream/30 text-[13px] text-ink-muted">
+                              No public gallery photos uploaded yet.
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                              {item.photos.map((photo, pIdx) => (
+                                <div
+                                  key={photo.id || pIdx}
+                                  className="group relative aspect-[3/4] overflow-hidden rounded-2xl border border-sand bg-black/40"
+                                >
+                                  <img
+                                    src={photo.url}
+                                    alt={`Public photo ${pIdx + 1}`}
+                                    className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                                  />
+                                  {photo.isPrimary && (
+                                    <span className="absolute top-2 left-2 rounded-full bg-berry-500/90 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm">
+                                      Main
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      /* Approved or Rejected - Photo is hidden, only user's name & status shown */
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sand bg-cream/40 px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          {item.selfieStatus === 'approved' ? (
+                            <span className="inline-flex items-center gap-2 text-[13px] font-medium text-emerald-700">
+                              <CheckCircle2Icon className="h-4 w-4 text-emerald-600 shrink-0" />
+                              <span>
+                                Verification approved for <strong className="font-semibold text-ink">{item.name}</strong>. Selfie photo is hidden from admin display.
+                              </span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-2 text-[13px] font-medium text-rose-700">
+                              <XCircleIcon className="h-4 w-4 text-rose-600 shrink-0" />
+                              <span>
+                                Verification rejected for <strong className="font-semibold text-ink">{item.name}</strong>. Selfie photo is hidden from admin display.
+                              </span>
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[11px] font-medium text-ink-muted">
+                          Photo privacy protected
+                        </span>
+                      </div>
+                    )}
                   </li>
                 );
               })}

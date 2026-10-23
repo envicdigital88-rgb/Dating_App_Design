@@ -9,11 +9,12 @@ import { Page, PageHeader } from '@/components/AppShell';
 import { ProfileCard } from '@/components/ProfileCard';
 import { WingleDialog } from '@/components/WingleDialog';
 import { UpgradeDialog, type UpgradeReason } from '@/components/UpgradeDialog';
+import { SelfieVerificationModal } from '@/components/SelfieVerificationModal';
 import { Button } from '@/components/ui/Button';
 import { EmptyState, Skeleton } from '@/components/ui/Bits';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { calculateVibeMatch } from '@/lib/utils/matching';
-import type { User } from '@/lib/types';
+import { type User, isSelfieVerified } from '@/lib/types';
 
 type DropZone = 'heart' | 'recycle' | null;
 
@@ -140,6 +141,7 @@ export function Discover() {
   const [tab, setTab] = useState<'nearby' | 'daily5'>('nearby');
   const [wingleTarget, setWingleTarget] = useState<User | null>(null);
   const [upgrade, setUpgrade] = useState<UpgradeReason | null>(null);
+  const [showSelfieModal, setShowSelfieModal] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<DiscoverFilters>(DEFAULT_FILTERS);
@@ -237,30 +239,45 @@ export function Discover() {
       />
 
       {/* ── Pending Verification: Private Profile Banner ── */}
-      {currentUser?.selfieStatus === 'pending' && (
+      {currentUser && !currentUser.isUnlimited && currentUser.selfieStatus === 'pending' && Boolean(currentUser.verificationSelfie) && (
         <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs sm:text-sm text-amber-900 dark:text-amber-200 flex flex-wrap items-center justify-between gap-3 backdrop-blur-sm">
           <div className="flex items-center gap-2">
             <LockIcon className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
             <span>
-              <strong>Profile Under Review:</strong> Your profile is currently private until an admin approves your selfie verification.
+              <strong>Profile Under Review:</strong> Your live selfie was submitted and is under admin review. Once approved, your profile will be shown on Discover and you can send Wingles!
             </span>
           </div>
-          <button onClick={() => router.push('/profile')} className="shrink-0 underline font-medium hover:text-amber-950 dark:hover:text-white">
+          <button onClick={() => router.push('/verify-selfie')} className="shrink-0 underline font-medium hover:text-amber-950 dark:hover:text-white">
             View status
           </button>
         </div>
       )}
 
-      {/* ── Existing Users: Verification Announcement Banner (Never shown for Unlimited accounts) ── */}
-      {currentUser && !currentUser.isUnlimited && !currentUser.selfieStatus && (
-        <div className="mb-6 rounded-2xl border border-blue-500/30 bg-blue-500/10 p-3.5 text-xs sm:text-sm text-blue-900 dark:text-blue-200 flex flex-wrap items-center justify-between gap-3 backdrop-blur-sm">
+      {/* ── Rejected Selfie Banner ── */}
+      {currentUser && !currentUser.isUnlimited && currentUser.selfieStatus === 'rejected' && (
+        <div className="mb-6 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-3.5 text-xs sm:text-sm text-rose-900 dark:text-rose-200 flex flex-wrap items-center justify-between gap-3 backdrop-blur-sm">
           <div className="flex items-center gap-2">
-            <ShieldCheckIcon className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+            <LockIcon className="h-4 w-4 shrink-0 text-rose-600 dark:text-rose-400" />
             <span>
-              <strong>New Feature:</strong> Verify your profile with a quick live selfie to earn the Photo Verified badge!
+              <strong>Verification Needed:</strong> Your previous verification selfie was not approved. Retake a live selfie to activate your account and send Wingles!
             </span>
           </div>
-          <button onClick={() => router.push('/profile')} className="shrink-0 rounded-full bg-blue-600 hover:bg-blue-700 px-3 py-1 text-xs font-semibold text-white shadow-sm transition-colors">
+          <button onClick={() => router.push('/verify-selfie')} className="shrink-0 rounded-full bg-rose-600 hover:bg-rose-700 px-3 py-1 text-xs font-semibold text-white shadow-sm transition-colors">
+            Retake Now
+          </button>
+        </div>
+      )}
+
+      {/* ── Unverified Users Banner (Never shown for Unlimited accounts) ── */}
+      {currentUser && !currentUser.isUnlimited && !currentUser.verificationSelfie && currentUser.selfieStatus !== 'approved' && (
+        <div className="mb-6 rounded-2xl border border-berry-500/30 bg-berry-500/10 p-3.5 text-xs sm:text-sm text-berry-900 dark:text-berry-200 flex flex-wrap items-center justify-between gap-3 backdrop-blur-sm">
+          <div className="flex items-center gap-2">
+            <ShieldCheckIcon className="h-4 w-4 shrink-0 text-berry-600 dark:text-berry-400" />
+            <span>
+              <strong>Action Required:</strong> Complete your live selfie verification to activate your account, show up on Discover, and send Wingles!
+            </span>
+          </div>
+          <button onClick={() => router.push('/verify-selfie')} className="shrink-0 rounded-full bg-berry-600 hover:bg-berry-700 px-3 py-1 text-xs font-semibold text-white shadow-sm transition-colors">
             Verify Now
           </button>
         </div>
@@ -362,6 +379,10 @@ export function Discover() {
                   }}
                   onRecycleBin={() => { passUser(current.id); }}
                   onWingle={() => {
+                    if (!isSelfieVerified(currentUser)) {
+                      setShowSelfieModal(true);
+                      return;
+                    }
                     if (entitlements.winglesRemaining !== null && entitlements.winglesRemaining <= 0) { setUpgrade('wingle_limit'); return; }
                     setWingleTarget(current);
                   }}
@@ -459,6 +480,11 @@ export function Discover() {
 
       <WingleDialog open={!!wingleTarget} target={wingleTarget} onClose={() => setWingleTarget(null)} onLimitReached={() => setUpgrade('wingle_limit')} />
       <UpgradeDialog open={!!upgrade} reason={upgrade ?? 'wingle_limit'} onClose={() => setUpgrade(null)} />
+      <SelfieVerificationModal
+        open={showSelfieModal}
+        onClose={() => setShowSelfieModal(false)}
+        currentUser={currentUser}
+      />
     </Page>
   );
 }

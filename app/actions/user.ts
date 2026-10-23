@@ -179,8 +179,8 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
       if (u.discoverable === false) return false;
       // Unlimited accounts are always public and photo verified
       if (u.isUnlimited) return true;
-      // Pending or rejected selfies are NOT public (private profile until approved)
-      if (u.selfieStatus === 'pending' || u.selfieStatus === 'rejected') return false;
+      // Must have completed and been approved for selfie verification to appear on Discover
+      if (!u.verificationSelfie || u.selfieStatus !== 'approved') return false;
       return true;
     });
 
@@ -472,7 +472,26 @@ export async function getUserStateAction() {
     const wingles = await db.orm.public.Wingle.where(w => or(w.fromUserId.eq(userId), w.toUserId.eq(userId))).all();
     const connections = await db.orm.public.Connection.where(c => or(c.userId1.eq(userId), c.userId2.eq(userId))).all();
     const blocks = await db.orm.public.Block.where(b => or(b.blockerId.eq(userId), b.blockedUserId.eq(userId))).all();
-    const notifications = await db.orm.public.Notification.where({ userId }).all();
+    let notifications = await db.orm.public.Notification.where({ userId }).all();
+
+    const currentUserRecord = await db.orm.public.User.where({ id: userId }).first();
+    if (currentUserRecord && !currentUserRecord.isUnlimited && (!currentUserRecord.verificationSelfie || currentUserRecord.selfieStatus !== 'approved')) {
+      const hasSelfieNotif = notifications.some((n: any) => n.type === 'selfie_verification' || n.href === '/verify-selfie');
+      if (!hasSelfieNotif) {
+        try {
+          const newNotif = await db.orm.public.Notification.create({
+            userId,
+            type: 'selfie_verification',
+            title: 'Selfie Verification Required 📸',
+            body: 'Complete your quick live selfie to activate your account, show up on Discover, and send Wingles!',
+            href: '/verify-selfie'
+          });
+          notifications = [newNotif, ...notifications];
+        } catch (e) {
+          console.warn('Failed to ensure selfie notification:', e);
+        }
+      }
+    }
 
     const relatedUserIds = new Set<string>();
     likes.forEach(l => { relatedUserIds.add(l.fromUserId); relatedUserIds.add(l.toUserId); });

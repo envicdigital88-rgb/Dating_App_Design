@@ -199,16 +199,18 @@ export interface Conversation {
 }
 
 export type NotificationType =
-'wingle_received' |
-'wingle_accepted' |
-'mingle' |
-'connection' |
-'like' |
-'package_activated' |
-'chat_limit_warning' |
-'chat_limit_reached' |
-'payment_success' |
-'subscription_expiring';
+  | 'wingle_received'
+  | 'wingle_accepted'
+  | 'mingle'
+  | 'connection'
+  | 'like'
+  | 'package_activated'
+  | 'chat_limit_warning'
+  | 'chat_limit_reached'
+  | 'payment_success'
+  | 'subscription_expiring'
+  | 'selfie_verification'
+  | 'system';
 
 export interface AppNotification {
   id: string;
@@ -255,5 +257,11 @@ export interface Entitlements {
 }
 
 export type ServerResult<T = void> =
-{ok: true;data: T;} |
-{ok: false;error: string;reason?: 'chat_limit' | 'wingle_limit' | 'locked' | 'invalid';};
+  | { ok: true; data: T; }
+  | { ok: false; error: string; reason?: 'chat_limit' | 'wingle_limit' | 'locked' | 'invalid' | 'verification_required'; };
+
+export function isSelfieVerified(user: User | null | undefined): boolean {
+  if (!user) return false;
+  if (user.isUnlimited) return true;
+  return Boolean(user.verificationSelfie) && user.selfieStatus === 'approved';
+}

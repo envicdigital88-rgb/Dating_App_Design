@@ -356,6 +356,7 @@ export async function getAdminUsersAction() {
       ok: true, 
       data: sortedUsers.map(u => ({
         ...u,
+        verificationSelfie: u.selfieStatus === 'approved' || u.selfieStatus === 'rejected' ? '' : u.verificationSelfie,
         createdAt: u.createdAt.toString(),
         lastActiveAt: u.lastActiveAt?.toString() || u.createdAt.toString(),
         lastDailyBonusAt: u.lastDailyBonusAt?.toString() || null,
@@ -437,16 +438,16 @@ export async function moderateSelfieAction(userId: string, status: 'approved' | 
           userId,
           type: 'system',
           title: 'Photo Verified! 🎉',
-          body: 'Your live selfie has been approved by our moderation team! Your profile is now public and has earned the Photo Verified badge.',
-          href: '/profile'
+          body: 'Your live selfie has been approved by our moderation team! Your profile is now public on Discover and you can send Wingles.',
+          href: '/discover'
         });
       } else {
         await db.orm.public.Notification.create({
           userId,
-          type: 'system',
-          title: 'Photo Verification Update',
-          body: 'Your live selfie could not be verified. Please visit your profile and retake a clear live selfie to get verified.',
-          href: '/profile'
+          type: 'selfie_verification',
+          title: 'Photo Verification Update 📸',
+          body: 'Your live selfie could not be verified. Please visit the verification page to retake a clear live selfie to activate your account.',
+          href: '/verify-selfie'
         });
       }
     } catch (notifErr) {
@@ -480,26 +481,31 @@ export async function getAdminModerationDataAction() {
     const selfieUsers = allMembers.filter(u => u.verificationSelfie && u.verificationSelfie.trim().length > 0);
     const allPhotos = await db.orm.public.Photo.limit(5000).all();
 
-    const selfies = selfieUsers.map(u => ({
-      userId: u.id,
-      name: u.name,
-      email: u.email,
-      age: u.age,
-      gender: u.gender,
-      location: u.location,
-      verificationSelfie: u.verificationSelfie as string,
-      selfieStatus: (u.selfieStatus as 'pending' | 'approved' | 'rejected') || 'pending',
-      createdAt: u.createdAt.toString(),
-      photos: allPhotos
-        .filter(p => p.userId === u.id)
-        .sort((a, b) => a.order - b.order)
-        .map(p => ({
-          id: p.id,
-          url: p.url,
-          order: p.order,
-          isPrimary: p.isPrimary
-        }))
-    }));
+    const selfies = selfieUsers.map(u => {
+      const isReviewed = u.selfieStatus === 'approved' || u.selfieStatus === 'rejected';
+      return {
+        userId: u.id,
+        name: u.name,
+        email: u.email,
+        age: u.age,
+        gender: u.gender,
+        location: u.location,
+        verificationSelfie: isReviewed ? '' : (u.verificationSelfie as string),
+        selfieStatus: (u.selfieStatus as 'pending' | 'approved' | 'rejected') || 'pending',
+        createdAt: u.createdAt.toString(),
+        photos: isReviewed
+          ? []
+          : allPhotos
+              .filter(p => p.userId === u.id)
+              .sort((a, b) => a.order - b.order)
+              .map(p => ({
+                id: p.id,
+                url: p.url,
+                order: p.order,
+                isPrimary: p.isPrimary
+              }))
+      };
+    });
 
     return { 
       ok: true, 
