@@ -5,11 +5,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PhoneIcon, ArrowRightIcon, ShieldCheckIcon, RotateCwIcon, ArrowLeftIcon, SmartphoneIcon } from 'lucide-react';
+import { PhoneIcon, ArrowRightIcon, ShieldCheckIcon, RotateCwIcon, ArrowLeftIcon, SmartphoneIcon, MailIcon } from 'lucide-react';
 import { useStore } from '@/lib/contexts/StoreContext';
 import {
   getPendingRegistrationStatus,
   resendPendingRegistrationOtp,
+  resendPendingRegistrationOtpViaEmail,
   confirmPendingRegistration,
   sendPhoneVerificationOtp,
   confirmPhoneOtp
@@ -21,6 +22,7 @@ export default function VerifyPhonePage() {
   
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [maskedPhone, setMaskedPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [busy, setBusy] = useState(false);
@@ -38,6 +40,7 @@ export default function VerifyPhonePage() {
         if (mounted && pending.hasPending && pending.phone) {
           setIsPendingReg(true);
           setPhone(pending.phone);
+          if (pending.email) setEmail(pending.email);
           setMaskedPhone(pending.maskedPhone || maskPhoneNumber(pending.phone));
           setStep('otp');
           setResendCooldown(60);
@@ -134,6 +137,22 @@ export default function VerifyPhonePage() {
       toast.success(`New verification code sent via SMS to ${maskedPhone || phone}`);
     } else {
       toast.error(result.error || 'Failed to resend SMS verification code.');
+    }
+  };
+
+  const handleResendEmail = async () => {
+    if (resendCooldown > 0 || busy) return;
+    setBusy(true);
+
+    const result = await resendPendingRegistrationOtpViaEmail();
+    setBusy(false);
+
+    if (result.ok) {
+      setResendCooldown(60);
+      setOtp('');
+      toast.success(`Verification code sent to your email (${result.email || email})`);
+    } else {
+      toast.error(result.error || 'Failed to send verification code to email.');
     }
   };
 
@@ -335,6 +354,18 @@ export default function VerifyPhonePage() {
                       <RotateCwIcon className={`h-3.5 w-3.5 ${busy ? 'animate-spin' : ''}`} />
                       {resendCooldown > 0 ? `Resend SMS in ${resendCooldown}s` : 'Didn’t receive the SMS? Resend code'}
                     </button>
+
+                    {isPendingReg && email && (
+                      <button
+                        type="button"
+                        onClick={handleResendEmail}
+                        disabled={resendCooldown > 0 || busy}
+                        className="inline-flex items-center gap-1.5 text-[13px] text-[#0ea5e9] hover:text-[#38bdf8] transition-colors disabled:opacity-40 font-medium"
+                      >
+                        <MailIcon className="h-3.5 w-3.5" />
+                        Send code to my email ({email}) instead
+                      </button>
+                    )}
 
                     <Link
                       href="/sign-up"

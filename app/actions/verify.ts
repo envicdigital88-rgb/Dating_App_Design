@@ -214,19 +214,29 @@ export async function startPendingRegistration(data: {
 
     // Send 6-digit verification code directly to mobile phone via SMS
     const sendResult = await sendVerificationOtpSms(formattedPhone, otp);
+    let sentVia: 'sms' | 'email' = 'sms';
+
     if (!sendResult.ok) {
-      console.error('[SMS Verify] Send error:', sendResult.error);
-      return {
-        ok: false,
-        error: sendResult.error || 'Failed to send SMS verification code. Please check your mobile number.'
-      };
+      console.warn('[SMS Verify] SMS failed, attempting automatic email fallback:', sendResult.error);
+      const emailResult = await sendOtpEmail(cleanEmail, otp);
+      if (!emailResult.ok) {
+        return {
+          ok: false,
+          error: sendResult.error || emailResult.error || 'Failed to deliver verification code.'
+        };
+      }
+      sentVia = 'email';
     }
 
     return {
       ok: true,
       phone: formattedPhone,
       maskedPhone,
-      email: cleanEmail
+      email: cleanEmail,
+      sentVia,
+      message: sentVia === 'sms'
+        ? `Verification code sent via SMS to ${maskedPhone}`
+        : `Verification code sent to your email (${cleanEmail})`
     };
   } catch (error: any) {
     console.error('startPendingRegistration error:', error);
@@ -307,6 +317,61 @@ export async function resendPendingRegistrationOtp() {
   } catch (error: any) {
     console.error('resendPendingRegistrationOtp error:', error);
     return { ok: false, error: error?.message || 'Failed to resend code' };
+  }
+}
+
+export async function resendPendingRegistrationOtpViaEmail() {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get(PENDING_REG_COOKIE_NAME)?.value;
+    if (!token) {
+      return { ok: false, error: 'Registration session expired. Please sign up again.' };
+    }
+
+    const { payload } = await jwtVerify(token, encodedKey, { algorithms: ['HS256'] });
+    if (!payload?.phone || !payload?.email) {
+      return { ok: false, error: 'Invalid registration session. Please sign up again.' };
+    }
+
+    const email = payload.email as string;
+    const phone = payload.phone as string;
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpHash = computeOtpHash(otp, phone, email);
+    const expiresAt = Date.now() + 10 * 60 * 1000;
+
+    const updatedToken = await new SignJWT({
+      ...payload,
+      otpHash,
+      expiresAt,
+      attempts: 0
+    })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('10m')
+      .sign(encodedKey);
+
+    cookieStore.set(PENDING_REG_COOKIE_NAME, updatedToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      expires: new Date(expiresAt),
+      maxAge: 10 * 60,
+      sameSite: 'lax',
+      path: '/'
+    });
+
+    const sendRes = await sendOtpEmail(email, otp);
+    if (!sendRes.ok) {
+      return { ok: false, error: sendRes.error || 'Failed to send verification code to email' };
+    }
+
+    return {
+      ok: true,
+      email,
+      message: `Verification code sent to ${email}`
+    };
+  } catch (error: any) {
+    console.error('resendPendingRegistrationOtpViaEmail error:', error);
+    return { ok: false, error: error?.message || 'Failed to resend code via email' };
   }
 }
 

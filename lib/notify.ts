@@ -179,7 +179,7 @@ export async function sendVerificationOtpSms(
   otp: string
 ): Promise<SendSmsResult> {
   const formattedPhone = formatNotifyPhoneNumber(phone);
-  const message = `Your Wingle Mingle verification code is: ${otp}. Valid for 10 minutes. Do not share this code with anyone.`;
+  const message = `Wingle Mingle code: ${otp}. Valid for 10 minutes.`;
   return sendNotifySms({
     to: formattedPhone,
     message
@@ -242,16 +242,15 @@ export async function sendNotifySms({
   // Detect whether message contains non-ASCII characters (Sinhala, Tamil, emoji, etc.)
   const isUnicode = /[^\u0000-\u007F]/.test(message);
 
-  // If credentials are not configured, simulate sending cleanly so development works without crashing
+  // If credentials are not configured in environment
   if (!userId || !apiKey) {
     console.warn(
-      `[Notify.lk] NOTIFY_USER_ID or NOTIFY_API_KEY not configured in .env. SMS simulated for ${formattedTo}:\n"${message}"`
+      `[Notify.lk] NOTIFY_USER_ID or NOTIFY_API_KEY not configured in environment.`
     );
     return {
-      ok: true,
+      ok: false,
       simulated: true,
-      status: 'simulated',
-      data: 'SMS simulated (Notify.lk credentials not set in .env)'
+      error: 'SMS Gateway credentials (NOTIFY_USER_ID / NOTIFY_API_KEY) are not configured in your hosting environment variables.'
     };
   }
 
