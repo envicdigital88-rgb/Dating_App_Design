@@ -59,6 +59,7 @@ export function AdminUsers() {
       if (res.ok) {
         setRealUsers(prev => prev ? prev.map(u => u.id === userId ? { ...u, selfieStatus: status, verificationSelfie: '' } : u) : null);
         toast.success(status === 'approved' ? 'Selfie approved & verified!' : 'Selfie rejected');
+        window.dispatchEvent(new CustomEvent('admin-moderation-updated'));
       } else {
         toast.error(res.error || 'Failed to update selfie status');
       }

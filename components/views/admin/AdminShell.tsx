@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
+import { toast } from 'sonner';
 
 import {
   BarChart3Icon,
@@ -17,6 +18,7 @@ import {
 import { BrandMark } from '@/components/BrandMark';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { cn } from '@/lib/utils/format';
+import { getAdminPendingModerationCountAction } from '@/app/actions/admin';
 
 const items = [
 { to: '/admin', label: 'Overview', icon: <BarChart3Icon className="h-[18px] w-[18px]" />, end: true },
@@ -32,6 +34,48 @@ export function AdminShell({ children }: { children?: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { currentUser, logout } = useStore();
+  const [pendingCount, setPendingCount] = useState<number>(0);
+  const prevCountRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchPendingCount = async () => {
+      try {
+        const res = await getAdminPendingModerationCountAction();
+        if (res.ok && mounted) {
+          const newCount = res.count ?? 0;
+          if (prevCountRef.current !== null && newCount > prevCountRef.current) {
+            const diff = newCount - prevCountRef.current;
+            toast.info(`📸 ${diff} new verification selfie${diff > 1 ? 's' : ''} submitted for review!`, {
+              action: {
+                label: 'Review',
+                onClick: () => router.push('/admin/moderation')
+              }
+            });
+          }
+          prevCountRef.current = newCount;
+          setPendingCount(newCount);
+        }
+      } catch (err) {
+        console.error('Failed to fetch pending moderation count:', err);
+      }
+    };
+
+    fetchPendingCount();
+    const interval = setInterval(fetchPendingCount, 10000);
+
+    const handleUpdate = () => {
+      fetchPendingCount();
+    };
+    window.addEventListener('admin-moderation-updated', handleUpdate);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+      window.removeEventListener('admin-moderation-updated', handleUpdate);
+    };
+  }, [router]);
 
   return (
     <div className="min-h-full w-full bg-cream">
@@ -47,16 +91,29 @@ export function AdminShell({ children }: { children?: React.ReactNode }) {
           <nav aria-label="Admin" className="space-y-1">
             {items.map((item) => {
               const isActive = item.end ? pathname === item.to : pathname.startsWith(item.to);
+              const isModeration = item.to === '/admin/moderation';
               return (
                 <Link
                   key={item.to}
                   href={item.to}
                   className={cn(
-                    'flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-colors duration-150 ease-soft',
+                    'group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-colors duration-150 ease-soft',
                     isActive ? 'bg-white/10 text-white' : 'text-white/65 hover:bg-white/10 hover:text-white'
                   )}>
                     {item.icon}
-                    {item.label}
+                    <span className="flex-1 truncate">{item.label}</span>
+                    {isModeration && pendingCount > 0 && (
+                      <span
+                        title={`${pendingCount} pending moderation item${pendingCount > 1 ? 's' : ''}`}
+                        className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-plum-500 to-rose-600 px-2 py-0.5 text-[11px] font-bold text-white shadow-[0_0_12px_rgba(236,72,153,0.5)] ring-1 ring-white/20 transition-transform group-hover:scale-105"
+                      >
+                        <span className="relative flex h-2 w-2">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75"></span>
+                          <span className="relative inline-flex h-2 w-2 rounded-full bg-white"></span>
+                        </span>
+                        <span>{pendingCount > 99 ? '99+' : pendingCount}</span>
+                      </span>
+                    )}
                 </Link>
               );
             })}
@@ -118,15 +175,21 @@ export function AdminShell({ children }: { children?: React.ReactNode }) {
             <nav aria-label="Admin" className="k-scroll-hide -mx-1 mt-3 flex gap-1 overflow-x-auto pb-0.5">
               {items.map((item) => {
                 const isActive = item.end ? pathname === item.to : pathname.startsWith(item.to);
+                const isModeration = item.to === '/admin/moderation';
                 return (
                   <Link
                     key={item.to}
                     href={item.to}
                     className={cn(
-                      'shrink-0 rounded-full px-3.5 py-1.5 text-[13px] transition-colors duration-150 ease-soft font-medium',
+                      'shrink-0 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] transition-colors duration-150 ease-soft font-medium',
                       isActive ? 'bg-plum-500 text-cream' : 'bg-cream-deep text-ink-soft border border-sand/40'
                     )}>
-                      {item.label}
+                      <span>{item.label}</span>
+                      {isModeration && pendingCount > 0 && (
+                        <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-gradient-to-r from-plum-500 to-rose-600 text-[10px] font-bold text-white shadow-sm ring-1 ring-white/20">
+                          {pendingCount > 99 ? '99+' : pendingCount}
+                        </span>
+                      )}
                   </Link>
                 );
               })}

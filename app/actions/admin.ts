@@ -527,6 +527,43 @@ export async function getAdminModerationDataAction() {
   }
 }
 
+export async function getAdminPendingModerationCountAction() {
+  try {
+    const session = await getSession();
+    if (!session?.userId) {
+      return { ok: false, error: 'Unauthorized', count: 0, pendingSelfies: 0, pendingPhotos: 0, openReports: 0 };
+    }
+    const admin = await db.orm.public.User.where({ id: session.userId as string }).first();
+    if (admin?.role !== 'admin') {
+      return { ok: false, error: 'Forbidden', count: 0, pendingSelfies: 0, pendingPhotos: 0, openReports: 0 };
+    }
+
+    const [openReports, pendingPhotos, allMembers] = await Promise.all([
+      db.orm.public.Report.where({ status: 'open' }).select('id').all(),
+      db.orm.public.Photo.where({ moderation: 'pending' }).select('id').all(),
+      db.orm.public.User.where({ role: 'member' }).select('id', 'selfieStatus', 'verificationSelfie').all()
+    ]);
+
+    const pendingSelfies = allMembers.filter(u => 
+      Boolean(u.verificationSelfie && u.verificationSelfie.trim().length > 0) &&
+      (u.selfieStatus === 'pending' || !u.selfieStatus)
+    ).length;
+
+    const count = pendingSelfies + pendingPhotos.length + openReports.length;
+
+    return {
+      ok: true,
+      count,
+      pendingSelfies,
+      pendingPhotos: pendingPhotos.length,
+      openReports: openReports.length
+    };
+  } catch (err) {
+    console.error('getAdminPendingModerationCountAction error:', err);
+    return { ok: false, error: 'Failed to fetch pending moderation count', count: 0, pendingSelfies: 0, pendingPhotos: 0, openReports: 0 };
+  }
+}
+
 export async function getAdminActivityDataAction() {
   try {
     const session = await getSession();

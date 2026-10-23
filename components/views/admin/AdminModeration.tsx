@@ -66,6 +66,7 @@ export function AdminModeration() {
       if (res.ok) {
         setRealSelfies(prev => prev.map(s => s.userId === userId ? { ...s, selfieStatus: status, verificationSelfie: '', photos: [] } : s));
         toast.success(status === 'approved' ? 'Selfie approved & verified!' : 'Selfie rejected');
+        window.dispatchEvent(new CustomEvent('admin-moderation-updated'));
       } else {
         toast.error(res.error || 'Failed to update selfie status');
       }
@@ -373,6 +374,7 @@ export function AdminModeration() {
                           moderatePhoto(photo.id, 'approved');
                           setRealPhotos(prev => prev.filter(p => p.id !== photo.id));
                           toast.success('Photo approved');
+                          window.dispatchEvent(new CustomEvent('admin-moderation-updated'));
                         }}
                       >
                         <CheckIcon className="h-3.5 w-3.5" />
@@ -386,6 +388,7 @@ export function AdminModeration() {
                           moderatePhoto(photo.id, 'rejected');
                           setRealPhotos(prev => prev.filter(p => p.id !== photo.id));
                           toast.success('Photo removed');
+                          window.dispatchEvent(new CustomEvent('admin-moderation-updated'));
                         }}
                       >
                         <XIcon className="h-3.5 w-3.5" />
@@ -452,6 +455,7 @@ export function AdminModeration() {
                           resolveReport(report.id, 'dismissed');
                           setRealReports(prev => prev.map(r => r.id === report.id ? { ...r, status: 'dismissed' } : r));
                           toast.success('Report dismissed');
+                          window.dispatchEvent(new CustomEvent('admin-moderation-updated'));
                         }}
                       >
                         Dismiss
@@ -464,6 +468,7 @@ export function AdminModeration() {
                           resolveReport(report.id, 'resolved');
                           setRealReports(prev => prev.map(r => r.id === report.id ? { ...r, status: 'resolved' } : r));
                           toast.success('Member suspended and report resolved');
+                          window.dispatchEvent(new CustomEvent('admin-moderation-updated'));
                         }}
                       >
                         Suspend member
@@ -474,6 +479,7 @@ export function AdminModeration() {
                           resolveReport(report.id, 'resolved');
                           setRealReports(prev => prev.map(r => r.id === report.id ? { ...r, status: 'resolved' } : r));
                           toast.success('Report resolved');
+                          window.dispatchEvent(new CustomEvent('admin-moderation-updated'));
                         }}
                       >
                         Resolve
