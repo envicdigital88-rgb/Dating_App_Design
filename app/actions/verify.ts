@@ -7,13 +7,20 @@ import { cookies } from 'next/headers';
 import { SignJWT, jwtVerify } from 'jose';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import { formatNotifyPhoneNumber, getPhoneVariants } from '@/lib/notify';
+import {
+  formatNotifyPhoneNumber,
+  getPhoneVariants,
+  validatePhoneNumber,
+  maskPhoneNumber,
+  sendVerificationOtpSms
+} from '@/lib/notify';
 import { Temporal } from 'temporal-polyfill';
 
 const secretKey = process.env.SESSION_SECRET || 'winglemingle_session_jwt_secret_key_2026_super_secure_auth_token_99x';
 const encodedKey = new TextEncoder().encode(secretKey);
 
 const VERIFY_COOKIE_NAME = 'wm_email_verify_token';
+const PHONE_VERIFY_COOKIE_NAME = 'wm_phone_verify_token';
 const PENDING_REG_COOKIE_NAME = 'wm_pending_reg_token';
 
 function getResendClient() {
@@ -24,10 +31,10 @@ function getResendClient() {
   return new Resend(apiKey);
 }
 
-function computeOtpHash(otp: string, email: string, salt: string): string {
+function computeOtpHash(otp: string, identifier: string, salt: string): string {
   return crypto
     .createHmac('sha256', secretKey)
-    .update(`${otp.trim()}:${email.toLowerCase().trim()}:${salt}`)
+    .update(`${otp.trim()}:${identifier.trim().toLowerCase()}:${salt.trim()}`)
     .digest('hex');
 }
 
@@ -118,7 +125,7 @@ async function sendOtpEmail(toEmail: string, otp: string) {
 }
 
 // ==============================================================================
-// 1. PENDING REGISTRATION FLOW (For new signups: NO user saved in DB until verified)
+// 1. PENDING REGISTRATION FLOW (Via Mobile SMS OTP: NO user saved in DB until verified)
 // ==============================================================================
 
 export async function startPendingRegistration(data: {
@@ -142,45 +149,46 @@ export async function startPendingRegistration(data: {
       return { ok: false, error: 'Please enter a valid email address.' };
     }
 
-    const cleanPhone = data.phone?.trim();
-    if (!cleanPhone || cleanPhone.length < 8) {
-      return { ok: false, error: 'Please enter a valid mobile number.' };
+    // Strict phone number validation (Sri Lankan or international format)
+    const phoneValidation = validatePhoneNumber(data.phone);
+    if (!phoneValidation.valid) {
+      return { ok: false, error: phoneValidation.error || 'Please enter a valid mobile number.' };
     }
+    const formattedPhone = phoneValidation.formatted;
+    const maskedPhone = maskPhoneNumber(formattedPhone);
 
     if (!data.password || data.password.length < 8) {
       return { ok: false, error: 'Password must be at least 8 characters.' };
     }
 
-    // Format phone
-    const formattedPhone = formatNotifyPhoneNumber(cleanPhone) || cleanPhone;
-    const phoneVariants = getPhoneVariants(cleanPhone);
-
-    // Check if email already in use
+    // Check if email already in use by an active account
     const existingEmail = await db.orm.public.User.where({ email: cleanEmail }).first();
     if (existingEmail) {
       return { ok: false, error: 'This email is already in use by an active account.' };
     }
 
-    // Check if phone already in use by an active verified user
-    const allUsersWithPhone = await db.orm.public.User.where(u => u.phone.in(phoneVariants)).all();
-    if (allUsersWithPhone.length > 0) {
-      return { ok: false, error: 'This mobile number is already registered. Please sign in.' };
+    // Check if phone already in use across any standard format variant (prevents duplicate accounts)
+    const phoneVariants = getPhoneVariants(formattedPhone);
+    const existingPhone = await db.orm.public.User.where(u => u.phone.in(phoneVariants)).first();
+    if (existingPhone) {
+      return { ok: false, error: 'This mobile number is already registered to an account. Please sign in.' };
     }
 
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpHash = computeOtpHash(otp, cleanEmail, formattedPhone);
+    const otpHash = computeOtpHash(otp, formattedPhone, cleanEmail);
 
     // Hash password
     const hashedPassword = await bcrypt.hash(data.password, 12);
 
     const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-    // Store pending registration data in signed JWT cookie (NO DB ROW CREATED!)
+    // Store pending registration data in signed JWT cookie (NO DB ROW CREATED UNTIL VERIFIED!)
     const token = await new SignJWT({
       name: cleanName,
       email: cleanEmail,
       phone: formattedPhone,
+      maskedPhone,
       hashedPassword,
       age: data.age || 20,
       gender: data.gender || 'woman',
@@ -204,13 +212,22 @@ export async function startPendingRegistration(data: {
       path: '/'
     });
 
-    // Send email via Resend
-    const sendResult = await sendOtpEmail(cleanEmail, otp);
+    // Send 6-digit verification code directly to mobile phone via SMS
+    const sendResult = await sendVerificationOtpSms(formattedPhone, otp);
     if (!sendResult.ok) {
-      return { ok: false, error: sendResult.error };
+      console.error('[SMS Verify] Send error:', sendResult.error);
+      return {
+        ok: false,
+        error: sendResult.error || 'Failed to send SMS verification code. Please check your mobile number.'
+      };
     }
 
-    return { ok: true, email: cleanEmail };
+    return {
+      ok: true,
+      phone: formattedPhone,
+      maskedPhone,
+      email: cleanEmail
+    };
   } catch (error: any) {
     console.error('startPendingRegistration error:', error);
     return { ok: false, error: error?.message || 'Failed to start registration' };
@@ -224,13 +241,15 @@ export async function getPendingRegistrationStatus() {
     if (!token) return { hasPending: false };
 
     const { payload } = await jwtVerify(token, encodedKey, { algorithms: ['HS256'] });
-    if (!payload?.email || (payload.expiresAt && Date.now() > (payload.expiresAt as number))) {
+    if (!payload?.phone || (payload.expiresAt && Date.now() > (payload.expiresAt as number))) {
       return { hasPending: false };
     }
 
     return {
       hasPending: true,
-      email: payload.email as string
+      phone: payload.phone as string,
+      maskedPhone: (payload.maskedPhone as string) || maskPhoneNumber(payload.phone as string),
+      email: (payload.email as string) || ''
     };
   } catch {
     return { hasPending: false };
@@ -246,12 +265,13 @@ export async function resendPendingRegistrationOtp() {
     }
 
     const { payload } = await jwtVerify(token, encodedKey, { algorithms: ['HS256'] });
-    if (!payload?.email || !payload?.phone) {
+    if (!payload?.phone || !payload?.email) {
       return { ok: false, error: 'Invalid registration session. Please sign up again.' };
     }
 
+    const phone = payload.phone as string;
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpHash = computeOtpHash(otp, payload.email as string, payload.phone as string);
+    const otpHash = computeOtpHash(otp, phone, payload.email as string);
     const expiresAt = Date.now() + 10 * 60 * 1000;
 
     const updatedToken = await new SignJWT({
@@ -274,12 +294,16 @@ export async function resendPendingRegistrationOtp() {
       path: '/'
     });
 
-    const sendRes = await sendOtpEmail(payload.email as string, otp);
+    const sendRes = await sendVerificationOtpSms(phone, otp);
     if (!sendRes.ok) {
-      return { ok: false, error: sendRes.error };
+      return { ok: false, error: sendRes.error || 'Failed to resend SMS verification code' };
     }
 
-    return { ok: true, email: payload.email as string };
+    return {
+      ok: true,
+      phone,
+      maskedPhone: (payload.maskedPhone as string) || maskPhoneNumber(phone)
+    };
   } catch (error: any) {
     console.error('resendPendingRegistrationOtp error:', error);
     return { ok: false, error: error?.message || 'Failed to resend code' };
@@ -307,7 +331,7 @@ export async function confirmPendingRegistration(enteredOtp: string) {
       return { ok: false, error: 'Your verification code has expired. Please sign up again.' };
     }
 
-    if (!payload?.email || !payload?.phone || !payload?.hashedPassword) {
+    if (!payload?.phone || !payload?.email || !payload?.hashedPassword) {
       return { ok: false, error: 'Invalid registration session.' };
     }
 
@@ -322,7 +346,7 @@ export async function confirmPendingRegistration(enteredOtp: string) {
       return { ok: false, error: 'Too many incorrect attempts. Please sign up again.' };
     }
 
-    const expectedHash = computeOtpHash(cleanOtp, payload.email, payload.phone);
+    const expectedHash = computeOtpHash(cleanOtp, payload.phone, payload.email);
     if (expectedHash !== payload.otpHash) {
       // Update attempts in cookie
       const updatedToken = await new SignJWT({
@@ -346,18 +370,23 @@ export async function confirmPendingRegistration(enteredOtp: string) {
       const remainingAttempts = 5 - currentAttempts;
       return {
         ok: false,
-        error: `Incorrect verification code. Please check your email and enter the code sent to you. (${remainingAttempts} attempts remaining)`
+        error: `Incorrect verification code. Please check your SMS and enter the code sent to you. (${remainingAttempts} attempts remaining)`
       };
     }
 
     // CODE IS CORRECT!
-    // Now and ONLY now: Check for collisions and create the user in the database!
-    const existing = await db.orm.public.User.where({ email: payload.email }).first();
-    if (existing) {
+    // Strict uniqueness check before creating the user in database
+    const existingEmail = await db.orm.public.User.where({ email: payload.email }).first();
+    if (existingEmail) {
       return { ok: false, error: 'This email is already in use by another account.' };
     }
 
     const phoneVariants = getPhoneVariants(payload.phone);
+    const existingPhone = await db.orm.public.User.where(u => u.phone.in(phoneVariants)).first();
+    if (existingPhone) {
+      return { ok: false, error: 'This mobile number is already registered to an account. Please sign in.' };
+    }
+
     const pendingSecretWingles = await db.orm.public.SecretWingle.where(sw =>
       sw.targetPhone.in(phoneVariants)
     ).all();
@@ -368,7 +397,7 @@ export async function confirmPendingRegistration(enteredOtp: string) {
       const newUser = await tx.orm.public.User.create({
         name: payload.name,
         email: payload.email,
-        phone: payload.phone,
+        phone: payload.phone, // Clean standardized mobile number (e.g. 947XXXXXXXX)
         password: payload.hashedPassword,
         age: payload.age || 20,
         gender: payload.gender || 'woman',
@@ -428,6 +457,7 @@ export async function confirmPendingRegistration(enteredOtp: string) {
     return { ok: false, error: error?.message || 'Failed to complete registration' };
   }
 }
+
 
 // ==============================================================================
 // 2. EXISTING LOGGED-IN USER EMAIL VERIFICATION
@@ -600,3 +630,180 @@ export async function confirmEmailOtp(email: string, enteredOtp: string) {
     return { ok: false, error: error?.message || 'Failed to verify code' };
   }
 }
+
+// ==============================================================================
+// 3. EXISTING LOGGED-IN USER PHONE VERIFICATION
+// ==============================================================================
+
+export async function sendPhoneVerificationOtp(phone: string) {
+  try {
+    const session = await getSession();
+    if (!session?.userId) {
+      return { ok: false, error: 'Unauthorized. Please sign in to verify your mobile number.' };
+    }
+    const userId = session.userId as string;
+
+    const phoneValidation = validatePhoneNumber(phone);
+    if (!phoneValidation.valid) {
+      return { ok: false, error: phoneValidation.error || 'Please enter a valid mobile number.' };
+    }
+    const formattedPhone = phoneValidation.formatted;
+
+    // Check if phone taken by another user
+    const phoneVariants = getPhoneVariants(formattedPhone);
+    const existing = await db.orm.public.User.where(u => u.phone.in(phoneVariants)).all();
+    const takenByOther = existing.some(u => u.id !== userId);
+    if (takenByOther) {
+      return { ok: false, error: 'This mobile number is already in use by another account.' };
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpHash = computeOtpHash(otp, formattedPhone, userId);
+    const expiresAt = Date.now() + 10 * 60 * 1000;
+
+    const token = await new SignJWT({
+      userId,
+      phone: formattedPhone,
+      otpHash,
+      attempts: 0,
+      expiresAt
+    })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('10m')
+      .sign(encodedKey);
+
+    const cookieStore = await cookies();
+    cookieStore.set(PHONE_VERIFY_COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      expires: new Date(expiresAt),
+      maxAge: 10 * 60,
+      sameSite: 'lax',
+      path: '/'
+    });
+
+    const sendRes = await sendVerificationOtpSms(formattedPhone, otp);
+    if (!sendRes.ok) {
+      return { ok: false, error: sendRes.error || 'Failed to send SMS verification code.' };
+    }
+
+    return {
+      ok: true,
+      phone: formattedPhone,
+      maskedPhone: maskPhoneNumber(formattedPhone),
+      message: `Verification code sent to ${maskPhoneNumber(formattedPhone)}`
+    };
+  } catch (error: any) {
+    console.error('sendPhoneVerificationOtp error:', error);
+    return { ok: false, error: error?.message || 'Failed to send SMS verification code.' };
+  }
+}
+
+export async function confirmPhoneOtp(phone: string, enteredOtp: string) {
+  try {
+    const session = await getSession();
+    if (!session?.userId) {
+      return { ok: false, error: 'Unauthorized. Please sign in.' };
+    }
+    const userId = session.userId as string;
+
+    const phoneValidation = validatePhoneNumber(phone);
+    const formattedPhone = phoneValidation.valid ? phoneValidation.formatted : formatNotifyPhoneNumber(phone);
+    const cleanOtp = enteredOtp.trim().replace(/\D/g, '');
+
+    if (cleanOtp.length !== 6) {
+      return { ok: false, error: 'Please enter the complete 6-digit verification code.' };
+    }
+
+    const cookieStore = await cookies();
+    const token = cookieStore.get(PHONE_VERIFY_COOKIE_NAME)?.value;
+
+    if (!token) {
+      return { ok: false, error: 'Verification code not found or expired. Please request a new code.' };
+    }
+
+    let payload: any;
+    try {
+      const verifyResult = await jwtVerify(token, encodedKey, { algorithms: ['HS256'] });
+      payload = verifyResult.payload;
+    } catch {
+      return { ok: false, error: 'Your verification code has expired. Please request a new code.' };
+    }
+
+    if (!payload || payload.userId !== userId) {
+      return { ok: false, error: 'Unauthorized verification request.' };
+    }
+
+    if (payload.phone !== formattedPhone) {
+      return { ok: false, error: 'The mobile number does not match the one the code was sent to.' };
+    }
+
+    if (Date.now() > payload.expiresAt) {
+      cookieStore.set(PHONE_VERIFY_COOKIE_NAME, '', { maxAge: 0, path: '/' });
+      return { ok: false, error: 'Your verification code has expired. Please request a new code.' };
+    }
+
+    const currentAttempts = (payload.attempts || 0) + 1;
+    if (currentAttempts > 5) {
+      cookieStore.set(PHONE_VERIFY_COOKIE_NAME, '', { maxAge: 0, path: '/' });
+      return { ok: false, error: 'Too many incorrect attempts. Please request a new verification code.' };
+    }
+
+    const expectedHash = computeOtpHash(cleanOtp, formattedPhone, userId);
+    if (expectedHash !== payload.otpHash) {
+      const updatedToken = await new SignJWT({
+        ...payload,
+        attempts: currentAttempts
+      })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime(new Date(payload.expiresAt))
+        .sign(encodedKey);
+
+      cookieStore.set(PHONE_VERIFY_COOKIE_NAME, updatedToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        expires: new Date(payload.expiresAt),
+        maxAge: Math.max(0, Math.floor((payload.expiresAt - Date.now()) / 1000)),
+        sameSite: 'lax',
+        path: '/'
+      });
+
+      const remainingAttempts = 5 - currentAttempts;
+      return {
+        ok: false,
+        error: `Incorrect verification code. Please check your SMS. (${remainingAttempts} attempts remaining)`
+      };
+    }
+
+    // Double check phone collision
+    const phoneVariants = getPhoneVariants(formattedPhone);
+    const allMatching = await db.orm.public.User.where(u => u.phone.in(phoneVariants)).all();
+    if (allMatching.some(u => u.id !== userId)) {
+      return { ok: false, error: 'This mobile number is already in use by another account.' };
+    }
+
+    // Update user in DB
+    await db.orm.public.User.where({ id: userId }).update({
+      phone: formattedPhone,
+      verified: true
+    });
+
+    // Update session to verified
+    await createSession(userId, true);
+
+    cookieStore.set(PHONE_VERIFY_COOKIE_NAME, '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 0,
+      path: '/'
+    });
+
+    return { ok: true, message: 'Mobile number verified successfully!' };
+  } catch (error: any) {
+    console.error('Confirm Phone OTP error:', error);
+    return { ok: false, error: error?.message || 'Failed to verify code' };
+  }
+}
+

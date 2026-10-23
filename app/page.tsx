@@ -22,7 +22,7 @@ export default async function Landing(props: {
             redirect('/sign-in?suspended=' + encodeURIComponent(user.suspensionReason || 'Violation of community safety guidelines.'));
           }
           if (!user.verified) {
-            redirect('/verify-email');
+            redirect('/verify-phone');
           } else if (user.role === 'admin') {
             redirect('/admin');
           } else if (!user.onboarded) {

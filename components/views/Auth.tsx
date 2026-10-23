@@ -50,7 +50,7 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
     }
 
     if (!currentUser.verified) {
-      router.replace('/verify-email');
+      router.replace('/verify-phone');
       return;
     }
 
@@ -144,8 +144,8 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
     }
     
     if (isRegister) {
-      toast.success(`Verification code sent to ${email.trim().toLowerCase()}`);
-      window.location.href = '/verify-email';
+      toast.success(result.message || `Verification code sent via SMS to ${result.maskedPhone || phone.trim()}`);
+      window.location.href = '/verify-phone';
       return;
     }
     
@@ -169,8 +169,8 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
     }
     
     if (result.data?.isNewUser) {
-      toast.success('Account created via Google — please verify your email address');
-      window.location.href = '/verify-email';
+      toast.success('Account created via Google — please verify your mobile number');
+      window.location.href = '/verify-phone';
     } else {
       toast.success(`Welcome back, ${result.data?.name?.split(' ')[0] || ''}`);
       window.location.href = result.data?.role === 'admin' ? '/admin' : '/discover';
@@ -269,21 +269,26 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
 
             {/* Phone (for register) */}
             {isRegister && (
-              <div className="relative">
-                <PhoneIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
-                <div className="absolute left-11 top-2.5 text-[10px] font-semibold uppercase tracking-wide text-white/35">Mobile</div>
-                <input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+94 7700 900000"
-                  autoComplete="tel"
-                  required
-                  className="w-full rounded-2xl border border-white/10 pb-3 pl-11 pr-4 pt-7 text-[14px] text-white placeholder-white/20 outline-none transition-all focus:border-[#0ea5e9]/50 focus:ring-1 focus:ring-[#0ea5e9]/25"
-                  style={{ background: 'rgba(255,255,255,0.06)' }}
-                />
+              <div>
+                <div className="relative">
+                  <PhoneIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                  <div className="absolute left-11 top-2.5 text-[10px] font-semibold uppercase tracking-wide text-white/35">Mobile Number</div>
+                  <input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="077 123 4567 or +94 77 123 4567"
+                    autoComplete="tel"
+                    required
+                    className="w-full rounded-2xl border border-white/10 pb-3 pl-11 pr-4 pt-7 text-[14px] text-white placeholder-white/20 outline-none transition-all focus:border-[#0ea5e9]/50 focus:ring-1 focus:ring-[#0ea5e9]/25"
+                    style={{ background: 'rgba(255,255,255,0.06)' }}
+                  />
+                </div>
+                <p className="mt-1.5 px-3 text-[11px] text-white/45">
+                  Enter your mobile number to receive your 6-digit SMS verification code.
+                </p>
               </div>
             )}
 

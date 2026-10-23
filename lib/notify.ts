@@ -46,6 +46,148 @@ export function formatNotifyPhoneNumber(rawPhone: string): string {
 }
 
 /**
+ * Validates a mobile phone number for registration & OTP verification.
+ * Supports Sri Lankan mobile numbers (070, 071, 072, 074, 075, 076, 077, 078)
+ * and international mobile numbers with country codes.
+ * Rejects landlines and invalid/fake repetitive numbers.
+ */
+export function validatePhoneNumber(rawPhone: string): {
+  valid: boolean;
+  formatted: string;
+  error?: string;
+} {
+  if (!rawPhone || !rawPhone.trim()) {
+    return { valid: false, formatted: '', error: 'Mobile number is required.' };
+  }
+
+  const trimmed = rawPhone.trim();
+  const digits = trimmed.replace(/\D/g, '');
+
+  if (digits.length < 9) {
+    return { valid: false, formatted: '', error: 'Mobile number is too short.' };
+  }
+
+  if (digits.length > 15) {
+    return { valid: false, formatted: '', error: 'Mobile number is too long.' };
+  }
+
+  // Detect Sri Lankan number patterns
+  const isSriLankan =
+    trimmed.startsWith('+94') ||
+    trimmed.startsWith('94') ||
+    trimmed.startsWith('0') ||
+    (trimmed.startsWith('7') && digits.length === 9);
+
+  if (isSriLankan) {
+    let standardLkDigits = '';
+    if (digits.startsWith('94')) {
+      standardLkDigits = digits.slice(2);
+    } else if (digits.startsWith('0')) {
+      standardLkDigits = digits.slice(1);
+    } else if (digits.startsWith('7') && digits.length === 9) {
+      standardLkDigits = digits;
+    }
+
+    if (!standardLkDigits || standardLkDigits.length !== 9) {
+      return {
+        valid: false,
+        formatted: '',
+        error: 'Please enter a valid 10-digit Sri Lankan mobile number (e.g. 077 123 4567).'
+      };
+    }
+
+    // Sri Lankan mobile operator codes: 70, 71, 72, 74, 75, 76, 77, 78
+    const mobilePrefix = standardLkDigits.slice(0, 2);
+    const validPrefixes = ['70', '71', '72', '74', '75', '76', '77', '78'];
+
+    if (!validPrefixes.includes(mobilePrefix)) {
+      if (
+        digits.startsWith('011') ||
+        digits.startsWith('02') ||
+        digits.startsWith('03') ||
+        digits.startsWith('08') ||
+        digits.startsWith('05') ||
+        digits.startsWith('06')
+      ) {
+        return {
+          valid: false,
+          formatted: '',
+          error: 'Landline numbers cannot receive SMS verification codes. Please provide a mobile number (07X XXX XXXX).'
+        };
+      }
+      return {
+        valid: false,
+        formatted: '',
+        error: 'Please enter a valid mobile number starting with 070, 071, 072, 074, 075, 076, 077, or 078.'
+      };
+    }
+
+    // Reject obvious fake/dummy numbers (e.g., all identical digits or sequence 1234567)
+    const subscriberNumber = standardLkDigits.slice(2);
+    if (/^(\d)\1{6}$/.test(subscriberNumber) || subscriberNumber === '1234567') {
+      return {
+        valid: false,
+        formatted: '',
+        error: 'Please enter a valid, active mobile number.'
+      };
+    }
+
+    return { valid: true, formatted: '94' + standardLkDigits };
+  }
+
+  // Non-LK international numbers:
+  if (digits.length >= 10 && digits.length <= 15) {
+    return { valid: true, formatted: digits };
+  }
+
+  return {
+    valid: false,
+    formatted: '',
+    error: 'Please enter a valid mobile number.'
+  };
+}
+
+/**
+ * Masks a phone number for user privacy on verification screen (e.g. "+94 77 ••• ••67" or "077 ••• ••67").
+ */
+export function maskPhoneNumber(phone: string): string {
+  if (!phone) return '';
+  const digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('94') && digits.length === 11) {
+    const operator = digits.slice(2, 4);
+    const last2 = digits.slice(9);
+    return `+94 ${operator} ••• ••${last2}`;
+  }
+  if (digits.startsWith('0') && digits.length === 10) {
+    const operator = digits.slice(1, 3);
+    const last2 = digits.slice(8);
+    return `0${operator} ••• ••${last2}`;
+  }
+  if (digits.length >= 7) {
+    const prefix = digits.slice(0, 3);
+    const last2 = digits.slice(-2);
+    return `+${prefix} ••• ••${last2}`;
+  }
+  return phone;
+}
+
+/**
+ * Sends a 6-digit verification code OTP via SMS using Notify.lk.
+ */
+export async function sendVerificationOtpSms(
+  phone: string,
+  otp: string
+): Promise<SendSmsResult> {
+  const formattedPhone = formatNotifyPhoneNumber(phone);
+  const message = `Your Wingle Mingle verification code is: ${otp}. Valid for 10 minutes. Do not share this code with anyone.`;
+  return sendNotifySms({
+    to: formattedPhone,
+    message
+  });
+}
+
+
+/**
  * Generates various phone number formats to reliably match users across the database.
  */
 export function getPhoneVariants(phone: string): string[] {

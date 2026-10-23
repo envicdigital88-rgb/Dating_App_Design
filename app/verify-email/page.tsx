@@ -9,8 +9,6 @@ import { MailIcon, ArrowRightIcon, ShieldCheckIcon, RotateCwIcon, ArrowLeftIcon 
 import { useStore } from '@/lib/contexts/StoreContext';
 import {
   getPendingRegistrationStatus,
-  resendPendingRegistrationOtp,
-  confirmPendingRegistration,
   verifyEmailAddress,
   confirmEmailOtp
 } from '@/app/actions/verify';
@@ -23,7 +21,6 @@ export default function VerifyEmailPage() {
   const [otp, setOtp] = useState('');
   const [busy, setBusy] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
-  const [isPendingReg, setIsPendingReg] = useState(false);
   const [checkingPending, setCheckingPending] = useState(true);
 
   // Check pending registration status or existing user on mount
@@ -33,12 +30,8 @@ export default function VerifyEmailPage() {
     async function checkPending() {
       try {
         const pending = await getPendingRegistrationStatus();
-        if (mounted && pending.hasPending && pending.email) {
-          setIsPendingReg(true);
-          setEmail(pending.email);
-          setStep('otp');
-          setResendCooldown(60);
-          setCheckingPending(false);
+        if (mounted && pending.hasPending) {
+          window.location.href = '/verify-phone';
           return;
         }
       } catch (err) {
@@ -67,18 +60,23 @@ export default function VerifyEmailPage() {
       return;
     }
 
-    // If neither pending registration nor a signed-in user exists, redirect to sign-up
-    if (!isPendingReg && !currentUser) {
+    if (currentUser && !currentUser.verified) {
+      window.location.href = '/verify-phone';
+      return;
+    }
+
+    // If not signed in, redirect to sign-up
+    if (!currentUser) {
       window.location.href = '/sign-up';
     }
-  }, [currentUser, isHydrated, isPendingReg, checkingPending]);
+  }, [currentUser, isHydrated, checkingPending]);
 
   // Pre-fill email for signed-in users with non-temp emails
   useEffect(() => {
-    if (!isPendingReg && currentUser?.email && !currentUser.email.includes('@temp.winglemingle.com')) {
+    if (currentUser?.email && !currentUser.email.includes('@temp.winglemingle.com')) {
       setEmail(currentUser.email);
     }
-  }, [currentUser, isPendingReg]);
+  }, [currentUser]);
 
   // Resend cooldown timer
   useEffect(() => {
@@ -114,12 +112,7 @@ export default function VerifyEmailPage() {
     if (resendCooldown > 0 || busy) return;
     setBusy(true);
 
-    let result;
-    if (isPendingReg) {
-      result = await resendPendingRegistrationOtp();
-    } else {
-      result = await verifyEmailAddress(email.trim().toLowerCase());
-    }
+    const result = await verifyEmailAddress(email.trim().toLowerCase());
     setBusy(false);
 
     if (result.ok) {
@@ -140,12 +133,7 @@ export default function VerifyEmailPage() {
     }
     setBusy(true);
     
-    let result;
-    if (isPendingReg) {
-      result = await confirmPendingRegistration(cleanOtp);
-    } else {
-      result = await confirmEmailOtp(email.trim().toLowerCase(), cleanOtp);
-    }
+    const result = await confirmEmailOtp(email.trim().toLowerCase(), cleanOtp);
     setBusy(false);
 
     if (result.ok) {
