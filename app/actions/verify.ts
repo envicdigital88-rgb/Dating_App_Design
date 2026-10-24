@@ -176,7 +176,7 @@ export async function startPendingRegistration(data: {
 
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpHash = computeOtpHash(otp, formattedPhone, cleanEmail);
+    const otpHash = computeOtpHash(otp, cleanEmail, cleanEmail);
 
     // Hash password
     const hashedPassword = await bcrypt.hash(data.password, 12);
@@ -212,13 +212,13 @@ export async function startPendingRegistration(data: {
       path: '/'
     });
 
-    // Send 6-digit verification code directly to mobile phone via SMS
-    const sendResult = await sendVerificationOtpSms(formattedPhone, otp);
+    // Send 6-digit verification code directly to email
+    const sendResult = await sendOtpEmail(cleanEmail, otp);
     if (!sendResult.ok) {
-      console.error('[SMS Verify] Send error:', sendResult.error);
+      console.error('[Email Verify] Send error:', sendResult.error);
       return {
         ok: false,
-        error: sendResult.error || 'Failed to send SMS verification code. Please check your mobile number.'
+        error: sendResult.error || 'Failed to send verification email. Please check your email address.'
       };
     }
 
@@ -227,7 +227,7 @@ export async function startPendingRegistration(data: {
       phone: formattedPhone,
       maskedPhone,
       email: cleanEmail,
-      message: `Verification code sent via SMS to ${maskedPhone}`
+      message: `Verification code sent to ${cleanEmail}`
     };
   } catch (error: any) {
     console.error('startPendingRegistration error:', error);
@@ -242,15 +242,15 @@ export async function getPendingRegistrationStatus() {
     if (!token) return { hasPending: false };
 
     const { payload } = await jwtVerify(token, encodedKey, { algorithms: ['HS256'] });
-    if (!payload?.phone || (payload.expiresAt && Date.now() > (payload.expiresAt as number))) {
+    if (!payload?.email || (payload.expiresAt && Date.now() > (payload.expiresAt as number))) {
       return { hasPending: false };
     }
 
     return {
       hasPending: true,
-      phone: payload.phone as string,
-      maskedPhone: (payload.maskedPhone as string) || maskPhoneNumber(payload.phone as string),
-      email: (payload.email as string) || ''
+      email: payload.email as string,
+      phone: (payload.phone as string) || '',
+      maskedPhone: (payload.maskedPhone as string) || (payload.phone ? maskPhoneNumber(payload.phone as string) : '')
     };
   } catch {
     return { hasPending: false };
@@ -266,13 +266,13 @@ export async function resendPendingRegistrationOtp() {
     }
 
     const { payload } = await jwtVerify(token, encodedKey, { algorithms: ['HS256'] });
-    if (!payload?.phone || !payload?.email) {
+    if (!payload?.email) {
       return { ok: false, error: 'Invalid registration session. Please sign up again.' };
     }
 
-    const phone = payload.phone as string;
+    const email = payload.email as string;
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpHash = computeOtpHash(otp, phone, payload.email as string);
+    const otpHash = computeOtpHash(otp, email, email);
     const expiresAt = Date.now() + 10 * 60 * 1000;
 
     const updatedToken = await new SignJWT({
@@ -295,15 +295,16 @@ export async function resendPendingRegistrationOtp() {
       path: '/'
     });
 
-    const sendRes = await sendVerificationOtpSms(phone, otp);
+    const sendRes = await sendOtpEmail(email, otp);
     if (!sendRes.ok) {
-      return { ok: false, error: sendRes.error || 'Failed to resend SMS verification code' };
+      return { ok: false, error: sendRes.error || 'Failed to resend verification email' };
     }
 
     return {
       ok: true,
-      phone,
-      maskedPhone: (payload.maskedPhone as string) || maskPhoneNumber(phone)
+      email,
+      phone: (payload.phone as string) || '',
+      maskedPhone: (payload.maskedPhone as string) || (payload.phone ? maskPhoneNumber(payload.phone as string) : '')
     };
   } catch (error: any) {
     console.error('resendPendingRegistrationOtp error:', error);
@@ -332,7 +333,7 @@ export async function confirmPendingRegistration(enteredOtp: string) {
       return { ok: false, error: 'Your verification code has expired. Please sign up again.' };
     }
 
-    if (!payload?.phone || !payload?.email || !payload?.hashedPassword) {
+    if (!payload?.email || !payload?.hashedPassword) {
       return { ok: false, error: 'Invalid registration session.' };
     }
 
@@ -347,8 +348,10 @@ export async function confirmPendingRegistration(enteredOtp: string) {
       return { ok: false, error: 'Too many incorrect attempts. Please sign up again.' };
     }
 
-    const expectedHash = computeOtpHash(cleanOtp, payload.phone, payload.email);
-    if (expectedHash !== payload.otpHash) {
+    const expectedHash = computeOtpHash(cleanOtp, payload.email, payload.email);
+    const legacyHash = payload.phone ? computeOtpHash(cleanOtp, payload.phone, payload.email) : null;
+
+    if (expectedHash !== payload.otpHash && legacyHash !== payload.otpHash) {
       // Update attempts in cookie
       const updatedToken = await new SignJWT({
         ...payload,
@@ -371,7 +374,7 @@ export async function confirmPendingRegistration(enteredOtp: string) {
       const remainingAttempts = 5 - currentAttempts;
       return {
         ok: false,
-        error: `Incorrect verification code. Please check your SMS and enter the code sent to you. (${remainingAttempts} attempts remaining)`
+        error: `Incorrect verification code. Please check your email and enter the code sent to you. (${remainingAttempts} attempts remaining)`
       };
     }
 

@@ -46,7 +46,7 @@ export function LandingView() {
 
     if (currentUser && !currentUser.suspended) {
       if (!currentUser.verified) {
-        router.replace('/verify-phone');
+        router.replace('/verify-email');
       } else if (currentUser.role === 'admin') {
         router.replace('/admin');
       } else if (!currentUser.onboarded) {

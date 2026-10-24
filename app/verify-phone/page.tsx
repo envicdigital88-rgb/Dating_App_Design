@@ -9,8 +9,6 @@ import { PhoneIcon, ArrowRightIcon, ShieldCheckIcon, RotateCwIcon, ArrowLeftIcon
 import { useStore } from '@/lib/contexts/StoreContext';
 import {
   getPendingRegistrationStatus,
-  resendPendingRegistrationOtp,
-  confirmPendingRegistration,
   sendPhoneVerificationOtp,
   confirmPhoneOtp
 } from '@/app/actions/verify';
@@ -25,7 +23,6 @@ export default function VerifyPhonePage() {
   const [otp, setOtp] = useState('');
   const [busy, setBusy] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
-  const [isPendingReg, setIsPendingReg] = useState(false);
   const [checkingPending, setCheckingPending] = useState(true);
 
   // Check pending registration status or existing user on mount
@@ -35,13 +32,8 @@ export default function VerifyPhonePage() {
     async function checkPending() {
       try {
         const pending = await getPendingRegistrationStatus();
-        if (mounted && pending.hasPending && pending.phone) {
-          setIsPendingReg(true);
-          setPhone(pending.phone);
-          setMaskedPhone(pending.maskedPhone || maskPhoneNumber(pending.phone));
-          setStep('otp');
-          setResendCooldown(60);
-          setCheckingPending(false);
+        if (mounted && pending.hasPending) {
+          window.location.href = '/verify-email';
           return;
         }
       } catch (err) {
@@ -70,19 +62,19 @@ export default function VerifyPhonePage() {
       return;
     }
 
-    // If neither pending registration nor a signed-in user exists, redirect to sign-up
-    if (!isPendingReg && !currentUser) {
+    // If no signed-in user exists, redirect to sign-up
+    if (!currentUser) {
       window.location.href = '/sign-up';
     }
-  }, [currentUser, isHydrated, isPendingReg, checkingPending]);
+  }, [currentUser, isHydrated, checkingPending]);
 
   // Pre-fill phone for signed-in users
   useEffect(() => {
-    if (!isPendingReg && currentUser?.phone) {
+    if (currentUser?.phone) {
       setPhone(currentUser.phone);
       setMaskedPhone(maskPhoneNumber(currentUser.phone));
     }
-  }, [currentUser, isPendingReg]);
+  }, [currentUser]);
 
   // Resend cooldown timer
   useEffect(() => {
@@ -119,13 +111,8 @@ export default function VerifyPhonePage() {
     if (resendCooldown > 0 || busy) return;
     setBusy(true);
 
-    let result;
-    if (isPendingReg) {
-      result = await resendPendingRegistrationOtp();
-    } else {
-      const validation = validatePhoneNumber(phone);
-      result = await sendPhoneVerificationOtp(validation.valid ? validation.formatted : phone);
-    }
+    const validation = validatePhoneNumber(phone);
+    const result = await sendPhoneVerificationOtp(validation.valid ? validation.formatted : phone);
     setBusy(false);
 
     if (result.ok) {
@@ -146,12 +133,7 @@ export default function VerifyPhonePage() {
     }
     setBusy(true);
     
-    let result;
-    if (isPendingReg) {
-      result = await confirmPendingRegistration(cleanOtp);
-    } else {
-      result = await confirmPhoneOtp(phone, cleanOtp);
-    }
+    const result = await confirmPhoneOtp(phone, cleanOtp);
     setBusy(false);
 
     if (result.ok) {

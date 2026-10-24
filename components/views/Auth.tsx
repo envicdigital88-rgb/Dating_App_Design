@@ -50,7 +50,7 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
     }
 
     if (!currentUser.verified) {
-      router.replace('/verify-phone');
+      router.replace('/verify-email');
       return;
     }
 
@@ -144,8 +144,8 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
     }
     
     if (isRegister) {
-      toast.success(result.message || `Verification code sent via SMS to ${result.maskedPhone || phone.trim()}`);
-      window.location.href = '/verify-phone';
+      toast.success(result.message || `Verification code sent to ${email.trim().toLowerCase()}`);
+      window.location.href = '/verify-email';
       return;
     }
     
@@ -169,8 +169,8 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
     }
     
     if (result.data?.isNewUser) {
-      toast.success('Account created via Google — please verify your mobile number');
-      window.location.href = '/verify-phone';
+      toast.success('Account created via Google — please verify your email');
+      window.location.href = '/verify-email';
     } else {
       toast.success(`Welcome back, ${result.data?.name?.split(' ')[0] || ''}`);
       window.location.href = result.data?.role === 'admin' ? '/admin' : '/discover';
@@ -287,7 +287,7 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
                   />
                 </div>
                 <p className="mt-1.5 px-3 text-[11px] text-white/45">
-                  Enter your mobile number to receive your 6-digit SMS verification code.
+                  Enter your mobile number for your account profile.
                 </p>
               </div>
             )}

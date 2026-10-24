@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
     const { name, email, phone, password, age, gender, intention } = validated.data;
 
-    // Start pending registration (sends 6-digit verification code via SMS to phone, DOES NOT save user in DB until code is confirmed!)
+    // Start pending registration (sends 6-digit verification code to email, DOES NOT save user in DB until code is confirmed!)
     const result = await startPendingRegistration({
       name,
       email,
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       phone: result.phone,
       maskedPhone: result.maskedPhone,
       email: result.email,
-      message: result.message || 'Verification code sent to your mobile phone via SMS'
+      message: result.message || `Verification code sent to your email (${result.email})`
     });
   } catch (error: any) {
     console.error("Registration API error:", error);

@@ -27,11 +27,11 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // If user is unverified and trying to access any route other than verify-phone or verify-email
+  // If user is unverified and trying to access any route other than verify-email or verify-phone
   if (payload?.userId && payload.verified === false) {
-    if (pathname !== '/verify-phone' && pathname !== '/verify-email') {
+    if (pathname !== '/verify-email' && pathname !== '/verify-phone') {
       const url = request.nextUrl.clone();
-      url.pathname = '/verify-phone';
+      url.pathname = '/verify-email';
       url.search = '';
       return NextResponse.redirect(url);
     }
