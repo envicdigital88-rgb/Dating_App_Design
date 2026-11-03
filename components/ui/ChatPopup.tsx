@@ -84,7 +84,7 @@ export function ChatPopup() {
             <span className="flex items-center gap-1 truncate font-medium text-ink leading-tight">
               <span className="truncate">{other?.name}</span>
               {(other?.selfieStatus === 'approved' || other?.isUnlimited) && (
-                <span title="Photo Verified" className="inline-flex shrink-0">
+                <span title="Selfie Verified" className="inline-flex shrink-0">
                   <ShieldCheckIcon className="h-3.5 w-3.5 text-blue-600" />
                 </span>
               )}

@@ -29,9 +29,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Update in database
-    await db.orm.public.User.where({ id: userId }).update({
-      isUnlimited: isUnlimited
-    });
+    const updatePayload: Record<string, any> = { isUnlimited: Boolean(isUnlimited) };
+    if (isUnlimited) {
+      updatePayload.selfieStatus = 'approved';
+      updatePayload.verified = true;
+    }
+    await db.orm.public.User.where({ id: userId }).update(updatePayload);
 
     return NextResponse.json({
       ok: true,

@@ -441,7 +441,12 @@ export async function setUserUnlimitedAction(userId: string, isUnlimited: boolea
     const admin = await db.orm.public.User.where({ id: session.userId as string }).first();
     if (admin?.role !== 'admin') return { ok: false, error: 'Forbidden' };
 
-    await db.orm.public.User.where({ id: userId }).update({ isUnlimited: Boolean(isUnlimited) });
+    const updateData: Record<string, any> = { isUnlimited: Boolean(isUnlimited) };
+    if (isUnlimited) {
+      updateData.selfieStatus = 'approved';
+      updateData.verified = true;
+    }
+    await db.orm.public.User.where({ id: userId }).update(updateData);
     return { ok: true, isUnlimited: Boolean(isUnlimited) };
   } catch (err: any) {
     console.error('setUserUnlimitedAction error:', err);
@@ -506,7 +511,7 @@ export async function getAdminModerationDataAction() {
     const users = await db.orm.public.User.where((u) => u.id.in(Array.from(userIds))).all();
     
     // Fetch only pending members with live selfies
-    const selfieUsers = await db.orm.public.User.where({ role: 'member', selfieStatus: 'pending' }).limit(100).all();
+    const selfieUsers = await db.orm.public.User.where({ role: 'member', selfieStatus: 'pending', isUnlimited: false }).limit(100).all();
     const selfieUserIds = selfieUsers.map(u => u.id);
     const allPhotos = selfieUserIds.length > 0
       ? await db.orm.public.Photo.where(p => p.userId.in(selfieUserIds)).select('id', 'userId', 'url', 'order', 'isPrimary').all()
@@ -572,7 +577,7 @@ export async function getAdminPendingModerationCountAction() {
     const [openReportsCount, pendingPhotosCount, pendingSelfiesCount] = await Promise.all([
       db.orm.public.Report.where({ status: 'open' }).aggregate(a => ({ count: a.count() })).then(r => r.count),
       db.orm.public.Photo.where({ moderation: 'pending' }).aggregate(a => ({ count: a.count() })).then(r => r.count),
-      db.orm.public.User.where({ role: 'member', selfieStatus: 'pending' }).aggregate(a => ({ count: a.count() })).then(r => r.count)
+      db.orm.public.User.where({ role: 'member', selfieStatus: 'pending', isUnlimited: false }).aggregate(a => ({ count: a.count() })).then(r => r.count)
     ]);
 
     const count = pendingSelfiesCount + pendingPhotosCount + openReportsCount;

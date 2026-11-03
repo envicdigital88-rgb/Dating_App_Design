@@ -263,5 +263,5 @@ export type ServerResult<T = void> =
 export function isSelfieVerified(user: User | null | undefined): boolean {
   if (!user) return false;
   if (user.isUnlimited) return true;
-  return Boolean(user.verificationSelfie) && user.selfieStatus === 'approved';
+  return user.selfieStatus === 'approved';
 }

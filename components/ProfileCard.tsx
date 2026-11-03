@@ -203,7 +203,7 @@ export function ProfileCard({
           {(user.selfieStatus === 'approved' || user.isUnlimited) && (
             <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-blue-600/90 px-3 py-1 text-xs font-bold text-white shadow-md backdrop-blur-md border border-white/20">
               <ShieldCheckIcon className="h-3.5 w-3.5 text-white" />
-              Photo Verified
+              Selfie Verified
             </div>
           )}
 

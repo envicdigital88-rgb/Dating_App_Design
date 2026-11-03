@@ -276,7 +276,7 @@ export function Chat() {
               <span className="flex items-center gap-1.5 truncate font-medium text-ink">
                 <span className="truncate">{other?.name}</span>
                 {(other?.selfieStatus === 'approved' || other?.isUnlimited) && (
-                  <span title="Photo Verified" className="inline-flex shrink-0">
+                  <span title="Selfie Verified" className="inline-flex shrink-0">
                     <ShieldCheckIcon className="h-4 w-4 text-blue-600" />
                   </span>
                 )}

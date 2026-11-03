@@ -71,7 +71,7 @@ export function AdminUsers() {
   };
 
   // Track recent local overrides with a timestamp to avoid background polling reverts
-  const recentOverridesRef = useRef<Map<string, { isUnlimited?: boolean; verified?: boolean; suspended?: boolean; suspensionReason?: string | null; isDeleted?: boolean; timestamp: number }>>(new Map());
+  const recentOverridesRef = useRef<Map<string, { isUnlimited?: boolean; verified?: boolean; selfieStatus?: 'pending' | 'approved' | 'rejected'; suspended?: boolean; suspensionReason?: string | null; isDeleted?: boolean; timestamp: number }>>(new Map());
 
   useEffect(() => {
     setPage(1);
@@ -104,6 +104,7 @@ export function AdminUsers() {
               return {
                 ...u,
                 ...(override.isUnlimited !== undefined ? { isUnlimited: override.isUnlimited } : {}),
+                ...(override.selfieStatus !== undefined ? { selfieStatus: override.selfieStatus } : {}),
                 ...(override.verified !== undefined ? { verified: override.verified } : {}),
                 ...(override.suspended !== undefined ? { suspended: override.suspended } : {}),
               };
@@ -177,10 +178,11 @@ export function AdminUsers() {
     recentOverridesRef.current.set(user.id, {
       ...(recentOverridesRef.current.get(user.id) || {}),
       isUnlimited: targetUnlimited,
+      ...(targetUnlimited ? { verified: true, selfieStatus: 'approved' } : {}),
       timestamp: Date.now()
     });
 
-    setRealUsers(prev => prev ? prev.map(u => u.id === user.id ? { ...u, isUnlimited: targetUnlimited } : u) : null);
+    setRealUsers(prev => prev ? prev.map(u => u.id === user.id ? { ...u, isUnlimited: targetUnlimited, ...(targetUnlimited ? { verified: true, selfieStatus: 'approved' } : {}) } : u) : null);
 
     try {
       const apiRes = await fetch('/api/admin/users/unlimited', {
@@ -434,13 +436,22 @@ export function AdminUsers() {
                         </div>
                       )}
                     </div>
-                  ) : user.verified ? (
-                    <Badge tone="moss">Verified</Badge>
                   ) : (
-                    <Badge tone="amber">Unverified</Badge>
-                  )}
-                  {user.isUnlimited && (
-                    <Badge tone="indigo" className="ml-2">Unlimited</Badge>
+                    <div className="flex flex-wrap gap-1.5 items-center">
+                      {user.verified ? (
+                        <Badge tone="moss">Verified</Badge>
+                      ) : (
+                        <Badge tone="amber">Unverified</Badge>
+                      )}
+                      {(user.isUnlimited || user.selfieStatus === 'approved') && (
+                        <Badge tone="moss" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                          Selfie Verified
+                        </Badge>
+                      )}
+                      {user.isUnlimited && (
+                        <Badge tone="indigo">Unlimited</Badge>
+                      )}
+                    </div>
                   )}
                 </td>
                 <td className="px-5 py-3.5">
@@ -573,26 +584,28 @@ export function AdminUsers() {
             </ul>
 
             {/* Live Verification Selfie Preview for Admins with Action Buttons */}
-            {detailUser.verificationSelfie || detailUser.selfieStatus === 'approved' || detailUser.selfieStatus === 'rejected' ? (
+            {detailUser.isUnlimited || detailUser.verificationSelfie || detailUser.selfieStatus === 'approved' || detailUser.selfieStatus === 'rejected' ? (
               <div className="rounded-2xl border border-berry-200 bg-berry-50/40 p-4">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-1.5 text-[12px] font-semibold text-berry-700">
                     <ShieldCheckIcon className="h-4 w-4 text-berry-600" />
                     Live Selfie Verification
                   </div>
-                  <Badge tone={detailUser.selfieStatus === 'approved' ? 'moss' : detailUser.selfieStatus === 'rejected' ? 'red' : 'amber'}>
-                    {detailUser.selfieStatus === 'approved' ? 'Verified' : detailUser.selfieStatus === 'rejected' ? 'Rejected' : 'Pending Review'}
+                  <Badge tone={(detailUser.isUnlimited || detailUser.selfieStatus === 'approved') ? 'moss' : detailUser.selfieStatus === 'rejected' ? 'red' : 'amber'}>
+                    {(detailUser.isUnlimited || detailUser.selfieStatus === 'approved') ? 'Selfie Verified' : detailUser.selfieStatus === 'rejected' ? 'Rejected' : 'Pending Review'}
                   </Badge>
                 </div>
 
-                {detailUser.selfieStatus === 'approved' || detailUser.selfieStatus === 'rejected' ? (
+                {detailUser.isUnlimited || detailUser.selfieStatus === 'approved' || detailUser.selfieStatus === 'rejected' ? (
                   <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                     <div className="space-y-0.5">
                       <p className="text-[13px] font-medium text-ink">
                         Selfie verification completed for <strong className="font-semibold">{detailUser.name}</strong>
                       </p>
                       <p className="text-[12px] text-ink-muted">
-                        {detailUser.selfieStatus === 'approved'
+                        {detailUser.isUnlimited
+                          ? 'This account has VIP Unlimited access and is automatically Selfie Verified.'
+                          : detailUser.selfieStatus === 'approved'
                           ? 'This user is verified. The selfie photo has been reviewed and is hidden from admin display.'
                           : 'This user verification was rejected. The selfie photo is hidden from admin display.'}
                       </p>
@@ -609,7 +622,7 @@ export function AdminUsers() {
                           Approve
                         </Button>
                       )}
-                      {detailUser.selfieStatus === 'approved' && (
+                      {(detailUser.selfieStatus === 'approved' || detailUser.isUnlimited) && !detailUser.isUnlimited && (
                         <Button
                           size="sm"
                           variant="danger"
@@ -674,7 +687,8 @@ export function AdminUsers() {
                 ['Intention', detailUser.intention || '—'],
                 ['Unlimited access', detailUser.isUnlimited ? 'Active (Unlimited)' : 'No (Standard)'],
                 ['Wingits balance', detailUser.wingitsBalance?.toString() || '0'],
-                ['Verification', detailUser.verified ? 'Verified' : 'Unverified'],
+                ['Email / Account', detailUser.verified ? 'Verified' : 'Unverified'],
+                ['Selfie Verification', (detailUser.isUnlimited || detailUser.selfieStatus === 'approved') ? 'Selfie Verified' : detailUser.selfieStatus === 'pending' ? 'Pending Review' : 'Unverified'],
                 ['Account state', detailUser.suspended ? 'Suspended' : 'Active'],
                 ...(detailUser.suspended && detailUser.suspensionReason ? [['Suspension reason', detailUser.suspensionReason]] : [])
               ].map(([label, value]) =>
@@ -693,8 +707,12 @@ export function AdminUsers() {
                       >
                         {value}
                       </Badge>
-                    ) : label === 'Verification' ? (
+                    ) : label === 'Email / Account' ? (
                       <Badge tone={detailUser.verified ? 'moss' : 'amber'}>
+                        {value}
+                      </Badge>
+                    ) : label === 'Selfie Verification' ? (
+                      <Badge tone={(detailUser.isUnlimited || detailUser.selfieStatus === 'approved') ? 'moss' : detailUser.selfieStatus === 'rejected' ? 'red' : 'amber'}>
                         {value}
                       </Badge>
                     ) : label === 'Account state' ? (

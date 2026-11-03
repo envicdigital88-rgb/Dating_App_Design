@@ -129,7 +129,7 @@ export function ProfileDetail() {
                 {(user.selfieStatus === 'approved' || user.isUnlimited) && (
                   <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-semibold text-blue-600 border border-blue-500/20">
                     <ShieldCheckIcon className="h-3.5 w-3.5 text-blue-600" />
-                    Photo Verified
+                    Selfie Verified
                   </span>
                 )}
                 {user.heartReacts && user.heartReacts > 0 && (

@@ -16,7 +16,7 @@ interface SelfieVerificationModalProps {
 export function SelfieVerificationModal({ open, onClose, currentUser }: SelfieVerificationModalProps) {
   const router = useRouter();
 
-  if (!currentUser) return null;
+  if (!currentUser || currentUser.isUnlimited) return null;
 
   const isPending = currentUser.selfieStatus === 'pending' && Boolean(currentUser.verificationSelfie);
   const isRejected = currentUser.selfieStatus === 'rejected';
