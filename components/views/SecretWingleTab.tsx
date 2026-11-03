@@ -13,8 +13,7 @@ import {
   Heart,
   MessageSquare,
   History,
-  Inbox,
-  Coins
+  Inbox
 } from 'lucide-react';
 import { Page, PageHeader } from '@/components/AppShell';
 import { Button } from '@/components/ui/Button';
@@ -84,7 +83,7 @@ export function SecretWingleTab() {
         }
         setPendingLedgerId(null);
         setPendingPaymentUrl(null);
-        toast.success('🎉 Payment Confirmed! Secret Wingle dispatched & 20 Wingits awarded!');
+        toast.success('🎉 Payment Confirmed! Secret Wingle dispatched successfully!');
         setPhone('');
         setMessage('');
         setRecipientName('');
@@ -550,13 +549,6 @@ export function SecretWingleTab() {
                         <span>Genie Payment Gateway</span>
                       </span>
                       <span className="font-bold text-gray-900 dark:text-white">Rs. {SECRET_WINGLE_PRICE_LKR} LKR</span>
-                    </div>
-                    <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
-                      <span className="flex items-center gap-1.5">
-                        <Coins className="w-3.5 h-3.5 text-amber-500" />
-                        <span>Wingits Rewards</span>
-                      </span>
-                      <span>+20 for you & +20 for them</span>
                     </div>
                     <p className="text-[10px] text-gray-400 dark:text-gray-500 pt-0.5 leading-normal">
                       🔒 An anonymous SMS is sent immediately after successful Genie payment.

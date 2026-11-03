@@ -44,7 +44,7 @@ function fixture(options: {
     id: ledgerId,
     userId: 'buyer',
     amountLKR: options.secret ? 50 : 100,
-    wingitsCredited: options.secret ? 20 : 100,
+    wingitsCredited: options.secret ? 0 : 100,
     status: 'PENDING',
     createdAt: new Date('2026-10-16T06:30:00.000Z'),
     transactionReference: options.secret
@@ -275,15 +275,15 @@ await check('legacy list without matching purchase stays pending', async () => {
   assert.equal(state.invoices, 0);
 });
 
-await check('Secret Wingle metadata, both rewards, SMS and notifications settle once', async () => {
+await check('Secret Wingle metadata, settlement, SMS and notifications settle once', async () => {
   const { api, state } = fixture({ secret: true });
   const first = await api.checkPendingGeniePayment(ledgerId);
   const duplicate = await api.settleGenieWebhook(transactionId);
   assert.equal(first.ok && first.isSecretWingle && duplicate.ok && duplicate.isSecretWingle, true);
   assert.equal(first.invoiceSent, true);
   assert.equal(duplicate.invoiceSent, undefined);
-  assert.equal(state.users[0].wingitsBalance, 40);
-  assert.equal(state.users[1].wingitsBalance, 25);
+  assert.equal(state.users[0].wingitsBalance, 20);
+  assert.equal(state.users[1].wingitsBalance, 5);
   assert.equal(state.records.filter(record => record.model === 'SecretWingle').length, 1);
   assert.equal(state.records.filter(record => record.model === 'Notification').length, 1);
   assert.equal(state.sms, 1);
@@ -313,7 +313,7 @@ await check('both purchase types invoice the stored account using stable ledger 
     assert.equal(input.date, state.ledger.createdAt.toString());
     assert.equal(input.purchaseType, secret ? 'secret_wingle' : 'wingits');
     assert.equal(input.amount, secret ? 50 : 100);
-    assert.equal(input.wingitsCredited, secret ? 20 : 100);
+    assert.equal(input.wingitsCredited, secret ? 0 : 100);
     assert.ok(!Object.values(input).includes(state.gateway.customerEmail));
   }
 });
@@ -329,7 +329,7 @@ await check('invoice failures preserve confirmed payment, credits, and duplicate
       assert.equal(duplicate.ok, true);
       assert.equal(duplicate.invoiceSent, undefined);
       assert.equal(state.ledger.status, 'SUCCESS');
-      assert.equal(state.users[0].wingitsBalance, secret ? 40 : 120);
+      assert.equal(state.users[0].wingitsBalance, secret ? 20 : 120);
       assert.equal(state.claims, 1);
       assert.equal(state.invoices, 1);
       assert.ok(!JSON.stringify({ first, duplicate, errors: state.errors }).includes('synthetic-private-email-provider-marker'));
@@ -342,7 +342,7 @@ await check('Secret Wingle SMS failures happen after invoice and cannot change p
   const result = await api.checkPendingGeniePayment(ledgerId);
   assert.equal(result.ok, true);
   assert.equal(result.invoiceSent, true);
-  assert.equal(state.users[0].wingitsBalance, 40);
+  assert.equal(state.users[0].wingitsBalance, 20);
   assert.deepEqual(state.events, ['invoice', 'sms']);
   assert.equal(state.invoices, 1);
   assert.ok(!JSON.stringify({ result, errors: state.errors }).includes('synthetic-private-sms-provider-marker'));

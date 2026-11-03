@@ -131,7 +131,7 @@ export async function initiateSecretWinglePaymentAction(
 
 
   const AMOUNT_LKR = 50;
-  const WINGITS_REWARD = 20;
+  const WINGITS_REWARD = 0;
 
   const resolvedRecipientName = options?.recipientName?.trim() || options?.senderName?.trim() || null;
 

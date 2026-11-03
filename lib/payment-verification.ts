@@ -95,7 +95,7 @@ function validateTransaction(ledger: Ledger, transaction: GenieTransaction, tran
     ((ledger.amountLKR >= 100 && ledger.wingitsCredited >= 20 && ledger.amountLKR === ledger.wingitsCredited * 5) ||
      (ledger.amountLKR >= 100 && ledger.wingitsCredited === ledger.amountLKR));
   const validTerms = metadata
-    ? ledger.amountLKR === 50 && ledger.wingitsCredited === 20
+    ? ledger.amountLKR === 50 && (ledger.wingitsCredited === 0 || ledger.wingitsCredited === 20)
     : validWingitPurchase;
   if (ledger.status !== 'SUCCESS' && !validTerms) throw new PaymentMismatch('This purchase has invalid payment details.');
 }
@@ -147,21 +147,23 @@ async function settlePayment(ledgerId: string, transactionId: string, transactio
 
     const sender = await tx.orm.public.User.where({ id: ledger.userId }).first();
     if (!sender) throw new PaymentMismatch('The account for this purchase is unavailable.');
-    await creditWingits(tx, sender.id, ledger.wingitsCredited);
-    await tx.orm.public.WingitsTransaction.create({
-      id: crypto.randomUUID(),
-      userId: sender.id,
-      amount: ledger.wingitsCredited,
-      type: metadata ? 'bonus' : 'purchase',
-      description: metadata
-        ? 'Secret Wingle sender bonus (+20 Wingits)'
-        : `Purchased ${ledger.wingitsCredited} Wingits (LKR ${ledger.amountLKR})`,
-    });
+    if (ledger.wingitsCredited > 0) {
+      await creditWingits(tx, sender.id, ledger.wingitsCredited);
+      await tx.orm.public.WingitsTransaction.create({
+        id: crypto.randomUUID(),
+        userId: sender.id,
+        amount: ledger.wingitsCredited,
+        type: metadata ? 'bonus' : 'purchase',
+        description: metadata
+          ? `Secret Wingle sender bonus (+${ledger.wingitsCredited} Wingits)`
+          : `Purchased ${ledger.wingitsCredited} Wingits (LKR ${ledger.amountLKR})`,
+      });
+    }
 
     let existingRecipientId: string | null = null;
     if (metadata) {
       const { getPhoneVariants } = await import('@/lib/notify');
-      const secretWingle = await tx.orm.public.SecretWingle.create({
+      await tx.orm.public.SecretWingle.create({
         senderId: ledger.userId,
         targetPhone: metadata.targetPhone,
         message: metadata.message,
@@ -171,19 +173,11 @@ async function settlePayment(ledgerId: string, transactionId: string, transactio
         .first();
       if (recipient && recipient.id !== sender.id) {
         existingRecipientId = recipient.id;
-        await creditWingits(tx, recipient.id, 20);
-        await tx.orm.public.WingitsTransaction.create({
-          id: crypto.randomUUID(),
-          userId: recipient.id,
-          amount: 20,
-          type: 'bonus',
-          description: `Secret Wingle recipient bonus for ${secretWingle.id} (+20 Wingits)`,
-        });
         await tx.orm.public.Notification.create({
           userId: recipient.id,
           type: 'secret_wingle',
-          title: 'Secret Wingle Received! 🤫🎁',
-          body: 'Someone sent you a Secret Wingle and gifted you 20 free Wingits! Check your Secret Wingles tab.',
+          title: 'Secret Wingle Received! 🤫',
+          body: 'Someone sent you a Secret Wingle! Check your Secret Wingles tab.',
           href: '/secret-wingles',
         });
       }
@@ -239,8 +233,8 @@ async function settlePayment(ledgerId: string, transactionId: string, transactio
         try {
           const { sendPushNotificationAction } = await import('@/app/actions/push');
           await sendPushNotificationAction(outcome.existingRecipientId, {
-            title: 'Secret Wingle Received! 🤫🎁',
-            body: 'Someone sent you a Secret Wingle and gifted you 20 free Wingits!',
+            title: 'Secret Wingle Received! 🤫',
+            body: 'Someone sent you a Secret Wingle! Check your Secret Wingles tab.',
             url: '/secret-wingles',
           });
           const { pusherServer } = await import('@/lib/pusher');

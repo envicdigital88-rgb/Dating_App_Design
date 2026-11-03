@@ -392,12 +392,6 @@ export async function confirmPendingRegistration(enteredOtp: string) {
       return { ok: false, error: 'This mobile number is already registered to an account. Please sign in.' };
     }
 
-    const pendingSecretWingles = await db.orm.public.SecretWingle.where(sw =>
-      sw.targetPhone.in(phoneVariants)
-    ).all();
-
-    const secretBonus = pendingSecretWingles.length * 20;
-
     const user = await db.transaction(async (tx) => {
       const newUser = await tx.orm.public.User.create({
         name: payload.name,
@@ -409,7 +403,7 @@ export async function confirmPendingRegistration(enteredOtp: string) {
         intention: payload.intention || 'Long-term relationship',
         verified: true, // VERIFIED IS TRUE!
         onboarded: false,
-        wingitsBalance: secretBonus,
+        wingitsBalance: 0,
         lastDailyBonusAt: Temporal.Instant.from(new Date().toISOString()),
         interests: '[]',
         traits: '[]',
@@ -423,16 +417,6 @@ export async function confirmPendingRegistration(enteredOtp: string) {
           work: ''
         })
       });
-
-      if (secretBonus > 0) {
-        await tx.orm.public.WingitsTransaction.create({
-          id: crypto.randomUUID(),
-          userId: newUser.id,
-          amount: secretBonus,
-          type: 'bonus',
-          description: `Secret Wingle welcome gift (+${secretBonus} Wingits)`
-        });
-      }
 
       return newUser;
     });

@@ -93,7 +93,7 @@ export const InvoiceEmail: React.FC<InvoiceEmailProps> = ({
                 <Text style={itemName}>{isSecretWingle ? 'Secret Wingle' : 'Wingits purchase'}</Text>
                 <Text style={itemDescription}>
                   {isSecretWingle
-                    ? `+${wingitsCredited} Wingits sender bonus`
+                    ? (wingitsCredited > 0 ? `+${wingitsCredited} Wingits sender bonus` : 'Secret Wingle message dispatched')
                     : `${wingitsCredited} Wingits credited to your account`}
                 </Text>
               </Column>

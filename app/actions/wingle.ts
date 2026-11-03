@@ -385,31 +385,10 @@ export async function getReceivedSecretWinglesAction() {
       sw.targetPhone.in(phoneVariants)
     ).all();
 
-    // Mark as unlocked and ensure recipient received their 20 Wingits gift
+    // Mark as unlocked
     for (const sw of secretWingles) {
       if (!sw.unlocked) {
         await db.orm.public.SecretWingle.where({ id: sw.id }).update({ unlocked: true });
-
-        const alreadyCredited = await db.orm.public.WingitsTransaction.where({
-          userId: currentUser.id,
-          description: `Secret Wingle recipient bonus for ${sw.id} (+20 Wingits)`
-        }).first();
-
-        if (!alreadyCredited) {
-          const freshUser = await db.orm.public.User.where({ id: currentUser.id }).first();
-          const currentBal = freshUser?.wingitsBalance || 0;
-          await db.orm.public.User.where({ id: currentUser.id }).update({
-            wingitsBalance: currentBal + 20
-          });
-
-          await db.orm.public.WingitsTransaction.create({
-            id: crypto.randomUUID(),
-            userId: currentUser.id,
-            amount: 20,
-            type: 'bonus',
-            description: `Secret Wingle recipient bonus for ${sw.id} (+20 Wingits)`
-          });
-        }
       }
     }
 
