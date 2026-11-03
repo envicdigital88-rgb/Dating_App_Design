@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { AdminHeader, StatTile } from './AdminShell';
 import { Badge } from '@/components/ui/Bits';
+import { RefreshCwIcon } from 'lucide-react';
 import { money, relativeTime } from '@/lib/utils/format';
 import { getAdminOverviewStatsAction } from '@/app/actions/admin';
 
@@ -36,25 +37,26 @@ interface AdminStats {
 }
 export function AdminOverview() {
   const [stats, setStats] = useState<AdminStats | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
-    const fetchStats = async () => {
+  const fetchStats = async (isManual = false) => {
+    if (isManual) setRefreshing(true);
+    try {
       const res = await getAdminOverviewStatsAction();
-      if (res.ok && res.data && mounted) {
+      if (res.ok && res.data) {
         const d = res.data;
 
-        const acceptedWingles = d.wingles.filter((w: any) => w.status === 'accepted').length;
-        const succeeded = d.payments.filter((p: any) => p.status === 'succeeded');
-        const revenue = succeeded.reduce((t: number, p: any) => t + p.amount, 0);
-        const activeSubs = d.subscriptions.filter(
+        const acceptedWingles = d.acceptedWingles ?? d.wingles?.filter((w: any) => w.status === 'accepted').length ?? 0;
+        const succeeded = d.payments?.filter((p: any) => p.status === 'succeeded') || [];
+        const revenue = d.revenue ?? succeeded.reduce((t: number, p: any) => t + (Number(p.amount) || 0), 0);
+        const activeSubs = d.activeSubs ?? d.subscriptions?.filter(
           (s: any) => s.status === 'active' && new Date(s.expiresAt) > new Date()
-        ).length;
+        ).length ?? 0;
 
-        const popular = d.packages.map((pkg: any) => ({
+        const popular = d.popular ?? d.packages?.map((pkg: any) => ({
           pkg,
           count: succeeded.filter((p: any) => p.packageId === pkg.id).length
-        })).sort((a: any, b: any) => b.count - a.count);
+        })).sort((a: any, b: any) => b.count - a.count) ?? [];
 
         setStats({
           totalMembers: d.totalMembers,
@@ -64,25 +66,44 @@ export function AdminOverview() {
           newThisMonth: d.newThisMonth,
           activeToday: d.activeToday,
           revenue,
-          succeededCount: succeeded.length,
+          succeededCount: d.succeededCount ?? succeeded.length,
           activeSubs,
-          totalWingles: d.wingles.length,
+          totalWingles: d.totalWingles ?? d.wingles?.length ?? 0,
           acceptedWingles,
           minglesCount: d.minglesCount,
           connectionsCount: d.connectionsCount,
-          openReports: d.reports.filter((r: any) => r.status === 'open').length,
-          totalReports: d.reports.length,
+          openReports: d.openReports ?? d.reports?.filter((r: any) => r.status === 'open').length ?? 0,
+          totalReports: d.totalReports ?? d.reports?.length ?? 0,
           popular,
           latestWingles: d.latestActivity
         });
       }
-    };
+    } finally {
+      if (isManual) setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
 
     fetchStats();
-    const interval = setInterval(fetchStats, 5000);
+    const interval = setInterval(() => {
+      if (mounted && typeof document !== 'undefined' && !document.hidden) {
+        fetchStats();
+      }
+    }, 25000);
+
+    const handleVisibility = () => {
+      if (!document.hidden && mounted) fetchStats();
+    };
+    window.addEventListener('focus', handleVisibility);
+    document.addEventListener('visibilitychange', handleVisibility);
+
     return () => {
       mounted = false;
       clearInterval(interval);
+      window.removeEventListener('focus', handleVisibility);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
 
@@ -105,7 +126,18 @@ export function AdminOverview() {
     <div>
       <AdminHeader
         title="Overview"
-        body="Live platform activity. Real-time updates active." />
+        body="Live platform activity. Real-time updates active."
+        action={
+          <button
+            onClick={() => fetchStats(true)}
+            disabled={refreshing}
+            className="inline-flex items-center gap-1.5 rounded-full border border-sand bg-cream-deep px-3.5 py-1.5 text-[12px] font-medium text-ink hover:border-sand-deep transition-all shadow-sm active:scale-95 disabled:opacity-50"
+            title="Refresh dashboard stats"
+          >
+            <RefreshCwIcon className={`h-3.5 w-3.5 text-ink-muted ${refreshing ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </button>
+        } />
       
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

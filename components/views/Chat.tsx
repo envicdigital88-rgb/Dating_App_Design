@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useParams, useRouter, redirect } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'sonner';
 import {
@@ -62,7 +62,8 @@ export function Chat() {
     hasReported,
     typingIn,
     conversationsOf,
-    viewImage
+    viewImage,
+    isHydrated
   } = useStore();
 
   const [draft, setDraft] = useState('');
@@ -105,7 +106,27 @@ export function Chat() {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [mingles.length, typingIn]);
 
-  if (!conversation || !currentUser || !entitlements) { redirect("/mingles"); return null as any; }
+  useEffect(() => {
+    if (isHydrated && !conversation) {
+      router.replace('/mingles');
+    }
+  }, [isHydrated, conversation, router]);
+
+  if (!isHydrated || !currentUser || !entitlements || !conversation) {
+    return (
+      <div className="flex h-screen w-full flex-col bg-cream-deep/40">
+        <div className="h-16 border-b border-sand bg-white/50 animate-pulse px-6 flex items-center gap-4">
+          <div className="h-10 w-10 rounded-full bg-sand animate-pulse" />
+          <div className="h-4 w-32 rounded bg-sand animate-pulse" />
+        </div>
+        <div className="flex-1 p-6 space-y-4">
+          <div className="h-12 w-48 rounded-2xl bg-sand/60 animate-pulse" />
+          <div className="h-12 w-64 rounded-2xl bg-berry-500/10 ml-auto animate-pulse" />
+          <div className="h-12 w-56 rounded-2xl bg-sand/60 animate-pulse" />
+        </div>
+      </div>
+    );
+  }
 
   const otherId = conversation.userIds.find((uid) => uid !== currentUser.id) as string;
   const other = userById(otherId);

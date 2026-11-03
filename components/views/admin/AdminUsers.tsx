@@ -116,11 +116,24 @@ export function AdminUsers() {
     };
     fetchUsers();
     
-    // Poll every 10 seconds to keep the list fresh
-    const interval = setInterval(fetchUsers, 10000);
+    // Smart poll every 30 seconds when tab is active
+    const interval = setInterval(() => {
+      if (mounted && typeof document !== 'undefined' && !document.hidden) {
+        fetchUsers();
+      }
+    }, 30000);
+
+    const handleVisibility = () => {
+      if (!document.hidden && mounted) fetchUsers();
+    };
+    window.addEventListener('focus', handleVisibility);
+    document.addEventListener('visibilitychange', handleVisibility);
+
     return () => {
       mounted = false;
       clearInterval(interval);
+      window.removeEventListener('focus', handleVisibility);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
 

@@ -83,16 +83,24 @@ export function AdminActivity() {
     let mounted = true;
     fetchData();
 
-    // Auto-refresh every 8 seconds
+    // Smart poll every 30 seconds when tab is active
     const interval = setInterval(() => {
-      if (mounted) {
+      if (mounted && typeof document !== 'undefined' && !document.hidden) {
         fetchData();
       }
-    }, 8000);
+    }, 30000);
+
+    const handleVisibility = () => {
+      if (!document.hidden && mounted) fetchData();
+    };
+    window.addEventListener('focus', handleVisibility);
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       mounted = false;
       clearInterval(interval);
+      window.removeEventListener('focus', handleVisibility);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
 

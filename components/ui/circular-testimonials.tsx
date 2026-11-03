@@ -196,6 +196,8 @@ export const CircularTestimonials = ({
               data-index={index}
               style={getImageStyle(index)}
               draggable={false}
+              loading={index === 0 ? "eager" : "lazy"}
+              decoding="async"
             />
           ))}
         </div>

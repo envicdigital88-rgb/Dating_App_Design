@@ -63,17 +63,29 @@ export function AdminShell({ children }: { children?: React.ReactNode }) {
     };
 
     fetchPendingCount();
-    const interval = setInterval(fetchPendingCount, 10000);
+    const interval = setInterval(() => {
+      if (mounted && typeof document !== 'undefined' && !document.hidden) {
+        fetchPendingCount();
+      }
+    }, 25000);
 
     const handleUpdate = () => {
       fetchPendingCount();
     };
+    const handleVisibility = () => {
+      if (!document.hidden && mounted) fetchPendingCount();
+    };
+
     window.addEventListener('admin-moderation-updated', handleUpdate);
+    window.addEventListener('focus', handleVisibility);
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       mounted = false;
       clearInterval(interval);
       window.removeEventListener('admin-moderation-updated', handleUpdate);
+      window.removeEventListener('focus', handleVisibility);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [router]);
 

@@ -66,7 +66,7 @@ self.addEventListener('notificationclick', function(event) {
   );
 });
 
-const CACHE = 'winglemingle-v3';
+const CACHE = 'winglemingle-v4';
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
@@ -107,13 +107,18 @@ self.addEventListener('fetch', (event) => {
   // the server immediately redirects them to '/discover', rather than serving
   // a stale cached landing page HTML!
   if (event.request.mode === 'navigate') {
+    const networkWithTimeout = Promise.race([
+      fetch(event.request),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Navigation timeout')), 4000))
+    ]);
+
     event.respondWith(
-      fetch(event.request).catch(async () => {
+      networkWithTimeout.catch(async () => {
         const cached = await caches.match(event.request);
         if (cached) return cached;
         const offlineLanding = await caches.match('/');
         if (offlineLanding) return offlineLanding;
-        return new Response('You are offline. Please reconnect to use Wingle Mingle.', {
+        return new Response('Connection is low or offline. Please reconnect to use Wingle Mingle.', {
           status: 503,
           headers: { 'Content-Type': 'text/plain; charset=utf-8' }
         });
@@ -128,7 +133,7 @@ self.addEventListener('fetch', (event) => {
       if (cachedResponse) {
         event.waitUntil(
           fetch(event.request).then((response) => {
-            if (response && response.status === 200 && response.type === 'basic') {
+            if (response && (response.status === 200 || response.type === 'opaque') && (response.type === 'basic' || response.type === 'cors' || response.type === 'opaque')) {
               const toCache = response.clone();
               caches.open(CACHE).then((cache) => cache.put(event.request, toCache));
             }
@@ -138,7 +143,7 @@ self.addEventListener('fetch', (event) => {
       }
 
       return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200 || response.type !== 'basic') {
+        if (!response || (response.status !== 200 && response.type !== 'opaque') || (response.type !== 'basic' && response.type !== 'cors' && response.type !== 'opaque')) {
           return response;
         }
 

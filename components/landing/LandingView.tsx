@@ -37,6 +37,15 @@ export function LandingView() {
   }, []);
 
   useEffect(() => {
+    if (hasLocalSession && !currentUser) {
+      const timer = setTimeout(() => {
+        setHasLocalSession(false);
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [hasLocalSession, currentUser]);
+
+  useEffect(() => {
     if (!isHydrated) return;
 
     // Allow intentional preview mode if specified in search query (?preview=true)

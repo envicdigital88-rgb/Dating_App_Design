@@ -152,8 +152,25 @@ export function Discover() {
 
   const rawFeed = discoverFeed();
   const rawFeedLength = rawFeed.length;
+  const isInitialMount = useRef(true);
+
+  const activeFilterCount = useMemo(() => {
+    let c = 0;
+    if (filters.ageMin !== 18 || filters.ageMax !== 60) c++;
+    if (filters.gender !== 'any') c++;
+    if (filters.intention !== 'any') c++;
+    if (filters.onlineOnly) c++;
+    return c;
+  }, [filters]);
 
   useEffect(() => { 
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      // Skip redundant fetch on first mount if StoreContext already loaded discover profiles
+      if (rawFeedLength > 0 && activeFilterCount === 0) {
+        return;
+      }
+    }
     setHasMore(true);
     // Fetch users from backend with current filters
     fetchDiscoverUsers(filters).then((count) => {
@@ -170,15 +187,6 @@ export function Discover() {
       });
     }
   }, [rawFeedLength, tab, hasMore, isDiscoverFetching, filters, fetchDiscoverUsers]);
-
-  const activeFilterCount = useMemo(() => {
-    let c = 0;
-    if (filters.ageMin !== 18 || filters.ageMax !== 60) c++;
-    if (filters.gender !== 'any') c++;
-    if (filters.intention !== 'any') c++;
-    if (filters.onlineOnly) c++;
-    return c;
-  }, [filters]);
 
   const filteredFeed = useMemo(() => rawFeed.filter(u => {
     if (u.age < filters.ageMin || u.age > filters.ageMax) return false;

@@ -1,6 +1,6 @@
 "use client";
-import React, { useState } from 'react';
-import { useParams, useRouter, redirect } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   ArrowLeftIcon,
@@ -47,7 +47,8 @@ export function ProfileDetail() {
     hasReported,
     openChatPopup,
     entitlements,
-    currentUser
+    currentUser,
+    isHydrated
   } = useStore();
 
   const [reporting, setReporting] = useState(false);
@@ -57,8 +58,31 @@ export function ProfileDetail() {
   const [showSelfieModal, setShowSelfieModal] = useState(false);
 
   const user = userId ? userById(userId) : undefined;
-  if (!user || !currentUser || !entitlements) { redirect("/discover"); return null as any; }
-  if (user.id === currentUser.id) { redirect("/profile"); return null as any; }
+
+  useEffect(() => {
+    if (isHydrated && currentUser) {
+      if (user && user.id === currentUser.id) {
+        router.replace('/profile');
+      } else if (!user) {
+        router.replace('/discover');
+      }
+    }
+  }, [isHydrated, user, currentUser, router]);
+
+  if (!isHydrated || !currentUser || !entitlements || !user) {
+    return (
+      <Page>
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:gap-12 animate-pulse">
+          <div className="h-96 w-full rounded-3xl bg-sand/60" />
+          <div className="space-y-4">
+            <div className="h-8 w-48 rounded-full bg-sand" />
+            <div className="h-4 w-64 rounded-full bg-sand/60" />
+            <div className="h-24 w-full rounded-2xl bg-sand/40" />
+          </div>
+        </div>
+      </Page>
+    );
+  }
 
   const photos = photosOf(user.id);
   const wingle = wingleStatusWith(user.id);

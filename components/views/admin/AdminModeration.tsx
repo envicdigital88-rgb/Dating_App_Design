@@ -52,10 +52,23 @@ export function AdminModeration() {
     };
     fetchData();
     
-    const interval = setInterval(fetchData, 10000);
+    const interval = setInterval(() => {
+      if (mounted && typeof document !== 'undefined' && !document.hidden) {
+        fetchData();
+      }
+    }, 25000);
+
+    const handleVisibility = () => {
+      if (!document.hidden && mounted) fetchData();
+    };
+    window.addEventListener('focus', handleVisibility);
+    document.addEventListener('visibilitychange', handleVisibility);
+
     return () => {
       mounted = false;
       clearInterval(interval);
+      window.removeEventListener('focus', handleVisibility);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
 

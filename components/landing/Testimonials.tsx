@@ -10,7 +10,7 @@ export function Testimonials() {
     <section className="relative overflow-hidden border-b border-white/5 py-20 lg:py-32">
       {/* ── Background Image & Dark Overlays ── */}
       <div className="absolute inset-0">
-        <img src="/testimonials-bg.jpg" alt="Friends having fun at the beach" className="absolute right-0 h-full w-full object-cover object-[70%_center] lg:w-[80%]" />
+        <img src="/testimonials-bg.jpg" alt="Friends having fun at the beach" className="absolute right-0 h-full w-full object-cover object-[70%_center] lg:w-[80%]" loading="lazy" decoding="async" />
         {/* Gradient that is dark only on the left where text is, quickly fading to transparent */}
         <div className="absolute inset-0 bg-gradient-to-r from-black from-20% via-black/50 via-50% to-transparent" />
         {/* Very subtle fade at top and bottom edges only */}
@@ -44,7 +44,7 @@ export function Testimonials() {
                 {lead.quote}
               </blockquote>
               <div className="mt-10 flex items-center gap-4">
-                <img src="/download.jpg" alt="" className="h-14 w-14 rounded-full border-2 border-white/20 object-cover shadow-lg" />
+                <img src="/download.jpg" alt="" className="h-14 w-14 rounded-full border-2 border-white/20 object-cover shadow-lg" loading="lazy" decoding="async" />
                 <div>
                   <p className="font-semibold text-white">{lead.name}</p>
                   <p className="text-[12px] text-white/50">{lead.detail}</p>
@@ -68,7 +68,7 @@ export function Testimonials() {
                   {t.quote}
                 </blockquote>
                 <div className="mt-6 flex items-center gap-3">
-                  <img src={facePhotos[i + 1].url} alt="" className="h-11 w-11 rounded-full border-2 border-white/20 object-cover shadow-md" />
+                  <img src={facePhotos[i + 1].url} alt="" className="h-11 w-11 rounded-full border-2 border-white/20 object-cover shadow-md" loading="lazy" decoding="async" />
                   <div>
                     <p className="font-semibold text-white text-[14px]">{t.name}</p>
                     <p className="text-[12px] text-white/50">{t.detail}</p>

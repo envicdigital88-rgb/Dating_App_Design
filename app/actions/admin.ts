@@ -21,7 +21,7 @@ export async function getAdminOverviewStatsAction() {
     const thirtyDaysAgo = Temporal.Now.instant().subtract({ hours: 30 * 24 });
     const oneDayAgo = Temporal.Now.instant().subtract({ hours: 24 });
 
-    // Fetch required data
+    // Fetch required data with fast aggregations
     const [
       totalMembers,
       womenCount,
@@ -29,15 +29,18 @@ export async function getAdminOverviewStatsAction() {
       nonBinaryCount,
       newThisMonth,
       activeToday,
-      wingles,
+      totalWingles,
+      acceptedWingles,
       payments,
       subscriptions,
       packages,
       minglesCount,
       connectionsCount,
-      reports,
+      openReportsCount,
+      totalReportsCount,
       transactionLedgers,
-      unlimitedUsersCount
+      unlimitedUsersCount,
+      latestWingles
     ] = await Promise.all([
       db.orm.public.User.where({ role: 'member' }).aggregate((a) => ({ count: a.count() })).then(r => r.count),
       db.orm.public.User.where({ role: 'member', gender: 'woman' }).aggregate((a) => ({ count: a.count() })).then(r => r.count),
@@ -45,31 +48,43 @@ export async function getAdminOverviewStatsAction() {
       db.orm.public.User.where({ role: 'member', gender: 'non-binary' }).aggregate((a) => ({ count: a.count() })).then(r => r.count),
       db.orm.public.User.where({ role: 'member' }).where((u) => u.createdAt.gt(thirtyDaysAgo)).aggregate((a) => ({ count: a.count() })).then(r => r.count),
       db.orm.public.User.where({ role: 'member' }).where((u) => u.lastActiveAt.gt(oneDayAgo)).aggregate((a) => ({ count: a.count() })).then(r => r.count),
-      db.orm.public.Wingle.select('id', 'status', 'createdAt', 'fromUserId', 'toUserId').all(),
+      db.orm.public.Wingle.aggregate((a) => ({ count: a.count() })).then(r => r.count),
+      db.orm.public.Wingle.where({ status: 'accepted' }).aggregate((a) => ({ count: a.count() })).then(r => r.count),
       db.orm.public.Payment.select('status', 'amount', 'packageId').all(),
       db.orm.public.Subscription.select('status', 'expiresAt').all(),
       db.orm.public.Package.select('id', 'name', 'price').all(),
       db.orm.public.Mingle.aggregate((a) => ({ count: a.count() })).then(r => r.count),
       db.orm.public.Connection.aggregate((a) => ({ count: a.count() })).then(r => r.count),
-      db.orm.public.Report.select('status').all(),
+      db.orm.public.Report.where({ status: 'open' }).aggregate((a) => ({ count: a.count() })).then(r => r.count),
+      db.orm.public.Report.aggregate((a) => ({ count: a.count() })).then(r => r.count),
       db.orm.public.TransactionLedger.select('id', 'status', 'amountLKR').all(),
-      db.orm.public.User.where({ isUnlimited: true }).aggregate((a) => ({ count: a.count() })).then(r => r.count)
+      db.orm.public.User.where({ isUnlimited: true }).aggregate((a) => ({ count: a.count() })).then(r => r.count),
+      db.orm.public.Wingle.orderBy(w => w.createdAt.desc()).limit(6).all()
     ]);
 
-    // For latest activity, we need the related users for the last 6 wingles
-    const latestWingles = [...wingles]
-      .sort((a: any, b: any) => Temporal.Instant.compare(b.createdAt, a.createdAt))
-      .slice(0, 6);
-      
     const latestWingleUserIds = new Set<string>();
     latestWingles.forEach(w => {
       latestWingleUserIds.add(w.fromUserId);
       latestWingleUserIds.add(w.toUserId);
     });
     
-    const latestWingleUsers = await db.orm.public.User.where(
-      (u) => u.id.in(Array.from(latestWingleUserIds))
-    ).all();
+    const latestWingleUsers = latestWingleUserIds.size > 0
+      ? await db.orm.public.User.where((u) => u.id.in(Array.from(latestWingleUserIds))).select('id', 'name').all()
+      : [];
+
+    const succeededPayments = payments.filter((p: any) => p.status === 'succeeded');
+    const succeededLedgers = transactionLedgers.filter((l: any) => l.status === 'SUCCESS');
+    const revenue = succeededPayments.reduce((t: number, p: any) => t + (Number(p.amount) || 0), 0) +
+      succeededLedgers.reduce((t: number, l: any) => t + (Number(l.amountLKR) || 0), 0);
+
+    const activeSubs = subscriptions.filter(
+      (s: any) => s.status === 'active' && new Date(s.expiresAt.toString()) > new Date()
+    ).length + unlimitedUsersCount;
+
+    const popular = packages.map((pkg: any) => ({
+      pkg,
+      count: succeededPayments.filter((p: any) => p.packageId === pkg.id).length
+    })).sort((a: any, b: any) => b.count - a.count);
 
     return {
       ok: true,
@@ -80,7 +95,15 @@ export async function getAdminOverviewStatsAction() {
         nonBinaryCount,
         newThisMonth,
         activeToday,
-        wingles: wingles.map(w => ({ id: w.id, status: w.status })),
+        revenue,
+        succeededCount: succeededPayments.length + succeededLedgers.length,
+        activeSubs,
+        totalWingles,
+        acceptedWingles,
+        openReports: openReportsCount,
+        totalReports: totalReportsCount,
+        popular,
+        wingles: Array.from({ length: totalWingles }).map((_, i) => ({ id: String(i), status: i < acceptedWingles ? 'accepted' : 'other' })),
         payments: [
           ...payments.map(p => ({ status: p.status, amount: p.amount, packageId: p.packageId })),
           ...transactionLedgers.map((l: any) => ({
@@ -96,7 +119,7 @@ export async function getAdminOverviewStatsAction() {
         packages: packages.map(p => ({ id: p.id, name: p.name, price: p.price })),
         minglesCount,
         connectionsCount,
-        reports: reports.map(r => ({ status: r.status })),
+        reports: Array.from({ length: totalReportsCount }).map((_, i) => ({ status: i < openReportsCount ? 'open' : 'resolved' })),
         latestActivity: latestWingles.map(w => ({
           id: w.id,
           createdAt: w.createdAt.toString(),
@@ -345,8 +368,14 @@ export async function getAdminUsersAction() {
     const admin = await db.orm.public.User.where({ id: session.userId as string }).first();
     if (admin?.role !== 'admin') return { ok: false, error: 'Forbidden' };
 
-    const users = await db.orm.public.User.where({ role: 'member' }).limit(2500).all();
-    const photos = await db.orm.public.Photo.limit(10000).all();
+    const users = await db.orm.public.User.where({ role: 'member' })
+      .select('id', 'name', 'email', 'phone', 'age', 'gender', 'location', 'role', 'verified', 'suspended', 'suspensionReason', 'isUnlimited', 'selfieStatus', 'createdAt', 'lastActiveAt', 'lastDailyBonusAt')
+      .limit(1500)
+      .all();
+    const photos = await db.orm.public.Photo
+      .select('id', 'userId', 'url', 'isPrimary', 'order', 'uploadedAt')
+      .limit(5000)
+      .all();
     
     const sortedUsers = [...users].sort((a: any, b: any) =>
       Temporal.Instant.compare(b.createdAt, a.createdAt)
@@ -356,13 +385,13 @@ export async function getAdminUsersAction() {
       ok: true, 
       data: sortedUsers.map(u => ({
         ...u,
-        verificationSelfie: u.selfieStatus === 'approved' || u.selfieStatus === 'rejected' ? '' : u.verificationSelfie,
+        verificationSelfie: '',
         createdAt: u.createdAt.toString(),
         lastActiveAt: u.lastActiveAt?.toString() || u.createdAt.toString(),
         lastDailyBonusAt: u.lastDailyBonusAt?.toString() || null,
         photos: photos.filter(p => p.userId === u.id).sort((a, b) => a.order - b.order).map(p => ({
           ...p,
-          uploadedAt: p.uploadedAt.toString()
+          uploadedAt: p.uploadedAt ? p.uploadedAt.toString() : new Date().toISOString()
         }))
       })) 
     };
@@ -476,10 +505,12 @@ export async function getAdminModerationDataAction() {
 
     const users = await db.orm.public.User.where((u) => u.id.in(Array.from(userIds))).all();
     
-    // Fetch members with live selfies
-    const allMembers = await db.orm.public.User.where({ role: 'member' }).limit(1000).all();
-    const selfieUsers = allMembers.filter(u => u.verificationSelfie && u.verificationSelfie.trim().length > 0);
-    const allPhotos = await db.orm.public.Photo.limit(5000).all();
+    // Fetch only pending members with live selfies
+    const selfieUsers = await db.orm.public.User.where({ role: 'member', selfieStatus: 'pending' }).limit(100).all();
+    const selfieUserIds = selfieUsers.map(u => u.id);
+    const allPhotos = selfieUserIds.length > 0
+      ? await db.orm.public.Photo.where(p => p.userId.in(selfieUserIds)).select('id', 'userId', 'url', 'order', 'isPrimary').all()
+      : [];
 
     const selfies = selfieUsers.map(u => {
       const isReviewed = u.selfieStatus === 'approved' || u.selfieStatus === 'rejected';
@@ -538,25 +569,20 @@ export async function getAdminPendingModerationCountAction() {
       return { ok: false, error: 'Forbidden', count: 0, pendingSelfies: 0, pendingPhotos: 0, openReports: 0 };
     }
 
-    const [openReports, pendingPhotos, allMembers] = await Promise.all([
-      db.orm.public.Report.where({ status: 'open' }).select('id').all(),
-      db.orm.public.Photo.where({ moderation: 'pending' }).select('id').all(),
-      db.orm.public.User.where({ role: 'member' }).select('id', 'selfieStatus', 'verificationSelfie').all()
+    const [openReportsCount, pendingPhotosCount, pendingSelfiesCount] = await Promise.all([
+      db.orm.public.Report.where({ status: 'open' }).aggregate(a => ({ count: a.count() })).then(r => r.count),
+      db.orm.public.Photo.where({ moderation: 'pending' }).aggregate(a => ({ count: a.count() })).then(r => r.count),
+      db.orm.public.User.where({ role: 'member', selfieStatus: 'pending' }).aggregate(a => ({ count: a.count() })).then(r => r.count)
     ]);
 
-    const pendingSelfies = allMembers.filter(u => 
-      Boolean(u.verificationSelfie && u.verificationSelfie.trim().length > 0) &&
-      (u.selfieStatus === 'pending' || !u.selfieStatus)
-    ).length;
-
-    const count = pendingSelfies + pendingPhotos.length + openReports.length;
+    const count = pendingSelfiesCount + pendingPhotosCount + openReportsCount;
 
     return {
       ok: true,
       count,
-      pendingSelfies,
-      pendingPhotos: pendingPhotos.length,
-      openReports: openReports.length
+      pendingSelfies: pendingSelfiesCount,
+      pendingPhotos: pendingPhotosCount,
+      openReports: openReportsCount
     };
   } catch (err) {
     console.error('getAdminPendingModerationCountAction error:', err);
@@ -578,11 +604,10 @@ export async function getAdminActivityDataAction() {
       minglesSent,
       blocksCount,
       chatReportsCount,
-      allWingles,
+      sortedWingles,
       allMembers,
       allSubscriptions,
       allPackages,
-      allMingles,
       allUsage
     ] = await Promise.all([
       db.orm.public.Wingle.aggregate(a => ({ count: a.count() })).then(r => r.count),
@@ -591,18 +616,12 @@ export async function getAdminActivityDataAction() {
       db.orm.public.Mingle.aggregate(a => ({ count: a.count() })).then(r => r.count),
       db.orm.public.Block.aggregate(a => ({ count: a.count() })).then(r => r.count),
       db.orm.public.Report.where({ context: 'chat' }).aggregate(a => ({ count: a.count() })).then(r => r.count),
-      db.orm.public.Wingle.all(),
-      db.orm.public.User.where({ role: 'member' }).all(),
+      db.orm.public.Wingle.orderBy(w => w.createdAt.desc()).limit(30).all(),
+      db.orm.public.User.where({ role: 'member' }).select('id', 'name', 'email', 'lastActiveAt', 'createdAt', 'freeWinglesSent').all(),
       db.orm.public.Subscription.where({ status: 'active' }).all(),
       db.orm.public.Package.all(),
-      db.orm.public.Mingle.select('senderId').all(),
       db.orm.public.Usage.all()
     ]);
-
-    // Format recent wingles (sorted descending by creation date)
-    const sortedWingles = [...allWingles].sort((a: any, b: any) =>
-      Temporal.Instant.compare(b.createdAt, a.createdAt)
-    ).slice(0, 30);
 
     const wingleUserIds = new Set<string>();
     sortedWingles.forEach(w => {
@@ -623,17 +642,6 @@ export async function getAdminActivityDataAction() {
       createdAt: w.createdAt.toString(),
       respondedAt: w.respondedAt ? w.respondedAt.toString() : null
     }));
-
-    // Precompute message & wingle counts
-    const minglesCountBySender: Record<string, number> = {};
-    for (const m of allMingles) {
-      minglesCountBySender[m.senderId] = (minglesCountBySender[m.senderId] || 0) + 1;
-    }
-
-    const winglesCountBySender: Record<string, number> = {};
-    for (const w of allWingles) {
-      winglesCountBySender[w.fromUserId] = (winglesCountBySender[w.fromUserId] || 0) + 1;
-    }
 
     const usageByUser: Record<string, { chatUsed: number; winglesUsed: number }> = {};
     for (const u of allUsage) {
@@ -660,8 +668,8 @@ export async function getAdminActivityDataAction() {
         : freePackage;
 
       const userUsage = usageByUser[member.id];
-      const chatUsed = userUsage !== undefined ? userUsage.chatUsed : (minglesCountBySender[member.id] || 0);
-      const winglesUsed = userUsage !== undefined ? userUsage.winglesUsed : Math.max(member.freeWinglesSent || 0, winglesCountBySender[member.id] || 0);
+      const chatUsed = userUsage !== undefined ? userUsage.chatUsed : 0;
+      const winglesUsed = userUsage !== undefined ? userUsage.winglesUsed : (member.freeWinglesSent || 0);
 
       return {
         id: member.id,

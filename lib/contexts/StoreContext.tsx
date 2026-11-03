@@ -234,6 +234,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   const timers = useRef<number[]>([]);
   const sessionIdRef = useRef<string | null>(null);
   sessionIdRef.current = sessionId;
+  const isFetchingStateRef = useRef<boolean>(false);
   const peerRef = useRef<any>(null);
   const connsRef = useRef<{ [userId: string]: any }>({});
 
@@ -264,6 +265,26 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed)) {
             setDb(d => ({ ...d, mingles: parsed }));
+          }
+        }
+      } catch (e) {}
+
+      // Instant local cache hydration for zero-lag startup on slow connections
+      try {
+        const cachedUserStr = localStorage.getItem('winglemingle_user_cache');
+        if (cachedUserStr) {
+          const cachedUser = JSON.parse(cachedUserStr);
+          if (cachedUser && cachedUser.id) {
+            setDb(d => {
+              const allUsers = [...d.users];
+              if (!allUsers.find(u => u.id === cachedUser.id)) {
+                allUsers.push(cachedUser);
+              }
+              const allPhotos = allUsers.flatMap((u: any) => u.photos || []);
+              return { ...d, users: allUsers, photos: allPhotos };
+            });
+            setSessionId(cachedUser.id);
+            setIsHydrated(true);
           }
         }
       } catch (e) {}
@@ -324,13 +345,19 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
           } as unknown as User;
           setDb(d => {
             const allUsers = [...d.users];
-            if (!allUsers.find(u => u.id === mappedUser.id)) {
+            const existingIdx = allUsers.findIndex(u => u.id === mappedUser.id);
+            if (existingIdx >= 0) {
+              allUsers[existingIdx] = { ...allUsers[existingIdx], ...mappedUser };
+            } else {
               allUsers.push(mappedUser);
             }
             const allPhotos = allUsers.flatMap((u: any) => u.photos || []);
             return { ...d, users: allUsers, photos: allPhotos };
           });
           setSessionId(user.id);
+          try {
+            localStorage.setItem('winglemingle_user_cache', JSON.stringify(mappedUser));
+          } catch (e) {}
         } else {
           setSessionId(null);
         }
@@ -472,10 +499,10 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         setIsHydrated(true);
       });
 
-      // Safety timeout: Only as a last resort if network completely stalls
+      // Safety timeout: Fast fallback if network completely stalls
       const safetyTimer = setTimeout(() => {
         setIsHydrated(true);
-      }, 8000);
+      }, 3500);
 
       return () => clearTimeout(safetyTimer);
     }
@@ -496,6 +523,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     if (!sessionId || !isHydrated) return;
 
     const fetchState = () => {
+      if (isFetchingStateRef.current) return;
+      isFetchingStateRef.current = true;
       import('@/app/actions/chat').then(({ getConversationsAction }) => {
         import('@/app/actions/user').then(({ getUserStateAction }) => {
           Promise.all([getConversationsAction(), getUserStateAction()]).then(([chatRes, stateRes]) => {
@@ -614,9 +643,11 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
 
               return changed ? nextDb : d;
             });
-          }).catch(console.error);
-        });
-      });
+          }).catch(console.error).finally(() => {
+            isFetchingStateRef.current = false;
+          });
+        }).catch(() => { isFetchingStateRef.current = false; });
+      }).catch(() => { isFetchingStateRef.current = false; });
     };
 
     // Initial fetch to ensure we're synced up when component mounts
@@ -696,6 +727,11 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     import('peerjs').then(({ default: Peer }) => {
       peer = new Peer(sessionId);
       peerRef.current = peer;
+
+      peer.on('error', (err: any) => {
+        // Silently handle P2P cloud disconnects/firewalls on low connection
+        console.warn('P2P connection notice:', err?.type || err);
+      });
 
       peer.on('connection', (conn: any) => {
         conn.on('data', (data: any) => {
@@ -1009,6 +1045,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('winglemingle_last_path');
       localStorage.removeItem('winglemingle_session');
+      localStorage.removeItem('winglemingle_user_cache');
     }
     import('@/app/actions/auth').then(({ logoutUser }) => {
       logoutUser().then(() => {

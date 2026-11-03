@@ -90,12 +90,20 @@ export function AdminManagement() {
     fetchAdmins();
     
     const interval = setInterval(() => {
-      if (mounted) fetchAdmins();
-    }, 10000);
+      if (mounted && typeof document !== 'undefined' && !document.hidden) fetchAdmins();
+    }, 30000);
+
+    const handleVisibility = () => {
+      if (!document.hidden && mounted) fetchAdmins();
+    };
+    window.addEventListener('focus', handleVisibility);
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       mounted = false;
       clearInterval(interval);
+      window.removeEventListener('focus', handleVisibility);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
 
