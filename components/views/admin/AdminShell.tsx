@@ -142,7 +142,6 @@ export function AdminShell({ children }: { children?: React.ReactNode }) {
             <button
               onClick={() => {
                 logout();
-                router.push('/');
               }}
               className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm text-white/65 transition-colors duration-150 ease-soft hover:bg-white/10 hover:text-white">
               
@@ -174,7 +173,6 @@ export function AdminShell({ children }: { children?: React.ReactNode }) {
                 <button
                   onClick={() => {
                     logout();
-                    router.push('/');
                   }}
                   className="p-1.5 rounded-full bg-cream-deep border border-sand text-ink-soft hover:text-red-600 hover:border-red-200 transition-colors shadow-sm"
                   title="Sign out"

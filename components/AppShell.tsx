@@ -259,9 +259,9 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
                 }
                 </Link>
                 <button
+                  type="button"
                   onClick={() => {
                     logout();
-                    router.push('/');
                   }}
                   aria-label="Sign out"
                   className="rounded-full p-2 text-ink-soft transition-colors duration-150 ease-soft hover:bg-cream-deep hover:text-ink">

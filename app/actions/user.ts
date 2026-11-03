@@ -1,7 +1,7 @@
 'use server'
 
 import { db } from '@/lib/db'
-import { getSession } from '@/lib/session'
+import { getSession, deleteSession } from '@/lib/session'
 import { not, or } from '@prisma/orm-postgres/orm-client'
 
 export async function getCurrentUser() {
@@ -90,6 +90,7 @@ export async function deleteUserProfile() {
     if (!session?.userId) return { ok: false, error: 'Unauthorized' }
 
     await db.orm.public.User.where({ id: session.userId as string }).delete()
+    await deleteSession()
     return { ok: true }
   } catch (err) {
     console.error('Delete profile error:', err)

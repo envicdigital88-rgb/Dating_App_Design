@@ -107,10 +107,10 @@ interface StoreValue {
   // auth
   login: (email: string, password: string) => ServerResult<User>;
   register: (input: RegisterInput) => ServerResult<User>;
-  logout: () => void;
+  logout: () => Promise<void> | void;
   completeOnboarding: (input: OnboardingInput) => void;
   updateProfile: (patch: Partial<User>) => void;
-  deleteAccount: () => void;
+  deleteAccount: () => Promise<void> | void;
   submitVerificationSelfie: (selfie: string) => Promise<boolean>;
   // photos
   photosOf: (userId: string) => Photo[];
@@ -1037,24 +1037,42 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     [db.users]
   );
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     timers.current.forEach(window.clearTimeout);
     timers.current = [];
+    if (peerRef.current) {
+      try {
+        peerRef.current.destroy();
+      } catch (e) {}
+      peerRef.current = null;
+    }
+
     setSessionId(null);
     setDiscoverIds([]);
-    setDb(initialDb); // Clear local store state
+    setDb(initialDb);
+
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('winglemingle_last_path');
-      localStorage.removeItem('winglemingle_session');
-      localStorage.removeItem('winglemingle_user_cache');
+      try {
+        localStorage.removeItem('winglemingle_last_path');
+        localStorage.removeItem('winglemingle_session');
+        localStorage.removeItem('winglemingle_user_cache');
+        localStorage.removeItem('winglemingle_mingles');
+        sessionStorage.clear();
+      } catch (e) {}
     }
-    import('@/app/actions/auth').then(({ logoutUser }) => {
-      logoutUser().then(() => {
-        if (typeof window !== 'undefined') {
-          window.location.href = '/';
-        }
-      }).catch(console.error);
-    });
+
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include', cache: 'no-store' });
+    } catch (e) {
+      try {
+        const { logoutUser } = await import('@/app/actions/auth');
+        await logoutUser();
+      } catch (err) {}
+    }
+
+    if (typeof window !== 'undefined') {
+      window.location.replace('/sign-in');
+    }
   }, []);
 
   useEffect(() => {
@@ -1126,15 +1144,15 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     });
   }, []);
 
-  const deleteAccount = useCallback(() => {
-    const uid = sessionIdRef.current;
-    setSessionId(null);
-    setDb((d) => ({
-      ...d,
-      users: d.users.filter((u) => u.id !== uid),
-      photos: d.photos.filter((p) => p.userId !== uid)
-    }));
-  }, []);
+  const deleteAccount = useCallback(async () => {
+    try {
+      const { deleteUserProfile } = await import('@/app/actions/user');
+      await deleteUserProfile();
+    } catch (e) {
+      console.error('deleteAccount server action error:', e);
+    }
+    await logout();
+  }, [logout]);
 
   const submitVerificationSelfie = useCallback<StoreValue['submitVerificationSelfie']>(async (selfie: string) => {
     try {

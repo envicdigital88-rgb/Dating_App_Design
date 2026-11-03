@@ -32,6 +32,8 @@ export function LandingView() {
       const session = localStorage.getItem('winglemingle_session');
       if (session && !isPreview) {
         setHasLocalSession(true);
+      } else {
+        setHasLocalSession(false);
       }
     }
   }, []);

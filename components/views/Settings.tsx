@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { BanIcon, BellIcon, DownloadIcon, LogOutIcon, ShieldCheckIcon } from 'lucide-react';
 import { Page, PageHeader } from '@/components/AppShell';
@@ -12,7 +11,6 @@ import { useStore } from '@/lib/contexts/StoreContext';
 import { usePwa } from '@/components/PwaProvider';
 
 export function Settings() {
-  const router = useRouter();
   const { currentUser, db, updateProfile, unblockUser, userById, logout, deleteAccount } = useStore();
   const { promptInstall, installed, notificationsEnabled, enableNotifications } = usePwa();
   const [deleting, setDeleting] = useState(false);
@@ -217,9 +215,7 @@ export function Settings() {
               block
               onClick={() => {
                 logout();
-                router.push('/');
               }}>
-              
               <LogOutIcon className="h-4 w-4" />
               Sign out
             </Button>
@@ -242,12 +238,10 @@ export function Settings() {
             </Button>
             <Button
             variant="danger"
-            onClick={() => {
-              deleteAccount();
+            onClick={async () => {
               toast.success('Your account has been deleted');
-              router.push('/');
+              await deleteAccount();
             }}>
-            
               Delete permanently
             </Button>
           </>
