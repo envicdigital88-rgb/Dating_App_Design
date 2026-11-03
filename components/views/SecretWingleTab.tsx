@@ -240,6 +240,10 @@ export function SecretWingleTab() {
         setTimeout(() => window.location.reload(), 500);
         return;
       }
+      if (msg.includes('Minified React error') || msg.includes('react.dev/errors')) {
+        toast.error('Payment gateway is temporarily busy. Please try again shortly.');
+        return;
+      }
       toast.error(msg || 'An unexpected error occurred');
     } finally {
       setLoading(false);

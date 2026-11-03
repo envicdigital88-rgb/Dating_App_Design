@@ -67,34 +67,39 @@ async function initializePayment(input: {
       await db.orm.public.TransactionLedger.where({ id: ledger.id }).update({ transactionReference });
     }
     return { ok: true, redirectUrl, ledgerId: ledger.id };
-  } catch (error) {
-    if (error instanceof GenieError) return { ok: false, error: error.message };
-    console.error('Payment initialization could not complete.');
-    return { ok: false, error: 'Could not initialize the payment. Please try again shortly.' };
+  } catch (error: any) {
+    if (error instanceof GenieError || error?.name === 'GenieError') return { ok: false, error: error.message };
+    console.error('Payment initialization could not complete:', error);
+    return { ok: false, error: error?.message || 'Could not initialize the payment. Please try again shortly.' };
   }
 }
 
 export async function buyWingitsAction(packageAmountLKR: number, wingitsAmount: number): Promise<PaymentInitResult> {
-  const session = await getSession();
-  if (!session?.userId) return { ok: false, error: 'Unauthorized' };
-  // Rate: 20 Wingits = LKR 100 (5 LKR per Wingit). Minimum purchase is 20 Wingits (100 LKR).
-  const WINGIT_PRICE_LKR = 5;
-  const MIN_WINGITS = 20;
+  try {
+    const session = await getSession();
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
+    // Rate: 20 Wingits = LKR 100 (5 LKR per Wingit). Minimum purchase is 20 Wingits (100 LKR).
+    const WINGIT_PRICE_LKR = 5;
+    const MIN_WINGITS = 20;
 
-  if (!Number.isSafeInteger(wingitsAmount) || wingitsAmount < MIN_WINGITS) {
-    return { ok: false, error: `Enter a whole Wingits amount of at least ${MIN_WINGITS} (20 Wingits = Rs. 100).` };
+    if (!Number.isSafeInteger(wingitsAmount) || wingitsAmount < MIN_WINGITS) {
+      return { ok: false, error: `Enter a whole Wingits amount of at least ${MIN_WINGITS} (20 Wingits = Rs. 100).` };
+    }
+
+    const expectedAmountLKR = wingitsAmount * WINGIT_PRICE_LKR;
+    if (!Number.isSafeInteger(packageAmountLKR) || packageAmountLKR !== expectedAmountLKR) {
+      return { ok: false, error: 'Payment amount does not match the Wingits rate (20 Wingits = Rs. 100).' };
+    }
+
+    return await initializePayment({
+      userId: session.userId as string,
+      amountLKR: expectedAmountLKR,
+      wingitsCredited: wingitsAmount,
+    });
+  } catch (err: any) {
+    console.error('buyWingitsAction error:', err);
+    return { ok: false, error: err?.message || 'Could not initialize payment' };
   }
-
-  const expectedAmountLKR = wingitsAmount * WINGIT_PRICE_LKR;
-  if (!Number.isSafeInteger(packageAmountLKR) || packageAmountLKR !== expectedAmountLKR) {
-    return { ok: false, error: 'Payment amount does not match the Wingits rate (20 Wingits = Rs. 100).' };
-  }
-
-  return initializePayment({
-    userId: session.userId as string,
-    amountLKR: expectedAmountLKR,
-    wingitsCredited: wingitsAmount,
-  });
 }
 
 export async function initiateSecretWinglePaymentAction(
@@ -107,55 +112,68 @@ export async function initiateSecretWinglePaymentAction(
     language?: 'en' | 'si' | 'ta';
   }
 ): Promise<PaymentInitResult> {
-  const session = await getSession();
-  if (!session?.userId) return { ok: false, error: 'Unauthorized' };
-  const userId = session.userId as string;
+  try {
+    const session = await getSession();
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
+    const userId = session.userId as string;
 
-  if (!targetPhone?.trim() || !message?.trim()) {
-    return { ok: false, error: 'Phone number and message are required' };
+    if (!targetPhone?.trim() || !message?.trim()) {
+      return { ok: false, error: 'Phone number and message are required' };
+    }
+
+    const { formatNotifyPhoneNumber } = await import('@/lib/notify');
+    const formattedPhone = formatNotifyPhoneNumber(targetPhone);
+    if (!formattedPhone || formattedPhone.length < 9) {
+      return { ok: false, error: 'Please enter a valid mobile number' };
+    }
+
+    const currentUser = await db.orm.public.User.where({ id: userId }).first();
+    if (!currentUser) return { ok: false, error: 'User not found' };
+
+    if (currentUser.phone && formatNotifyPhoneNumber(currentUser.phone) === formattedPhone) {
+      return { ok: false, error: 'You cannot send a Secret Wingle to your own phone number!' };
+    }
+
+    const AMOUNT_LKR = 50;
+    const WINGITS_REWARD = 0;
+
+    const resolvedRecipientName = options?.recipientName?.trim() || options?.senderName?.trim() || null;
+
+    // Metadata saved in transactionReference during PENDING state
+    const metadata = JSON.stringify({
+      type: 'secret_wingle',
+      targetPhone: formattedPhone,
+      message: message.trim(),
+      recipientName: resolvedRecipientName
+    });
+
+    return await initializePayment({
+      userId,
+      amountLKR: AMOUNT_LKR,
+      wingitsCredited: WINGITS_REWARD,
+      transactionReference: metadata,
+      secretWingle: true,
+    });
+  } catch (err: any) {
+    console.error('initiateSecretWinglePaymentAction error:', err);
+    return { ok: false, error: err?.message || 'Failed to initiate secret wingle payment' };
   }
-
-  const { formatNotifyPhoneNumber } = await import('@/lib/notify');
-  const formattedPhone = formatNotifyPhoneNumber(targetPhone);
-  if (!formattedPhone || formattedPhone.length < 9) {
-    return { ok: false, error: 'Please enter a valid mobile number' };
-  }
-
-  const currentUser = await db.orm.public.User.where({ id: userId }).first();
-  if (!currentUser) return { ok: false, error: 'User not found' };
-
-  if (currentUser.phone && formatNotifyPhoneNumber(currentUser.phone) === formattedPhone) {
-    return { ok: false, error: 'You cannot send a Secret Wingle to your own phone number!' };
-  }
-
-
-
-  const AMOUNT_LKR = 50;
-  const WINGITS_REWARD = 0;
-
-  const resolvedRecipientName = options?.recipientName?.trim() || options?.senderName?.trim() || null;
-
-  // Metadata saved in transactionReference during PENDING state
-  const metadata = JSON.stringify({
-    type: 'secret_wingle',
-    targetPhone: formattedPhone,
-    message: message.trim(),
-    recipientName: resolvedRecipientName
-  });
-
-  return initializePayment({
-    userId,
-    amountLKR: AMOUNT_LKR,
-    wingitsCredited: WINGITS_REWARD,
-    transactionReference: metadata,
-    secretWingle: true,
-  });
 }
 
 export async function checkAndVerifyPendingPaymentAction(ledgerId: string) {
-  return checkPendingGeniePayment(ledgerId);
+  try {
+    return await checkPendingGeniePayment(ledgerId);
+  } catch (err: any) {
+    console.error('checkAndVerifyPendingPaymentAction error:', err);
+    return { ok: false, error: err?.message || 'Failed to verify payment status' };
+  }
 }
 
 export async function verifyPaymentAction(ledgerId: string, transactionId: string) {
-  return verifyGeniePayment(ledgerId, transactionId);
+  try {
+    return await verifyGeniePayment(ledgerId, transactionId);
+  } catch (err: any) {
+    console.error('verifyPaymentAction error:', err);
+    return { ok: false, error: err?.message || 'Failed to verify payment' };
+  }
 }

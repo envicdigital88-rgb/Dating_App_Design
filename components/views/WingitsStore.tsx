@@ -183,6 +183,10 @@ export default function WingitsStore() {
         setTimeout(() => window.location.reload(), 500);
         return;
       }
+      if (msg.includes('Minified React error') || msg.includes('react.dev/errors')) {
+        toast.error('Payment gateway is temporarily busy. Please try again shortly.');
+        return;
+      }
       toast.error(msg || 'Failed to connect to payment gateway');
     } finally {
       setLoadingPkg(null);
