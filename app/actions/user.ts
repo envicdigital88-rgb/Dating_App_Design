@@ -236,6 +236,20 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
       selectedUsers = shuffleArray(eligible).slice(0, BATCH_SIZE);
     }
 
+    // Sort active Spotlight Boosted users to the very top (1st place)
+    const isUserBoosted = (u: any) => {
+      try {
+        const ls = typeof u.lifestyle === 'string' ? JSON.parse(u.lifestyle || '{}') : (u.lifestyle || {});
+        return Boolean(ls?.boostedUntil && new Date(ls.boostedUntil).getTime() > Date.now());
+      } catch {
+        return false;
+      }
+    };
+
+    const boostedInEligible = eligible.filter(isUserBoosted);
+    const nonBoostedSelected = selectedUsers.filter(u => !isUserBoosted(u));
+    selectedUsers = Array.from(new Set([...boostedInEligible, ...nonBoostedSelected])).slice(0, BATCH_SIZE);
+
     const userIds = selectedUsers.map(u => u.id);
 
     if (userIds.length === 0) return { ok: true, data: [] };
@@ -263,6 +277,18 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
         interests: typeof user.interests === 'string' ? JSON.parse(user.interests) : (user.interests || []),
         traits: typeof user.traits === 'string' ? JSON.parse(user.traits) : (user.traits || []),
         lifestyle: typeof user.lifestyle === 'string' ? JSON.parse(user.lifestyle) : (user.lifestyle || {}),
+        boostedUntil: (() => {
+          try {
+            const ls = typeof user.lifestyle === 'string' ? JSON.parse(user.lifestyle) : (user.lifestyle || {});
+            return ls?.boostedUntil || null;
+          } catch { return null; }
+        })(),
+        isBoosted: (() => {
+          try {
+            const ls = typeof user.lifestyle === 'string' ? JSON.parse(user.lifestyle) : (user.lifestyle || {});
+            return Boolean(ls?.boostedUntil && new Date(ls.boostedUntil).getTime() > Date.now());
+          } catch { return false; }
+        })(),
         photos: photos
           .filter(p => p.userId === user.id && p.moderation === 'approved')
           .sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0) || a.order - b.order)
@@ -647,3 +673,60 @@ export async function submitVerificationSelfieAction(verificationSelfie: string)
 }
 
 
+
+export async function boostUserProfileAction() {
+  try {
+    const session = await getSession();
+    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
+    const userId = session.userId as string;
+
+    const user = await db.orm.public.User.where({ id: userId }).first();
+    if (!user) return { ok: false, error: 'User not found' };
+
+    const BOOST_COST = 20;
+    if (!user.isUnlimited && (user.wingitsBalance ?? 0) < BOOST_COST) {
+      return {
+        ok: false,
+        error: `You need ${BOOST_COST} Wingits to activate 24-hour Profile Spotlight.`,
+        reason: 'insufficient_wingits'
+      };
+    }
+
+    const currentLifestyle = typeof user.lifestyle === 'string' ? JSON.parse(user.lifestyle || '{}') : (user.lifestyle || {});
+    const currentBoostEnd = currentLifestyle.boostedUntil ? new Date(currentLifestyle.boostedUntil).getTime() : 0;
+    const baseTime = currentBoostEnd > Date.now() ? currentBoostEnd : Date.now();
+    const newBoostedUntil = new Date(baseTime + 24 * 60 * 60 * 1000).toISOString();
+
+    const newLifestyle = {
+      ...currentLifestyle,
+      boostedUntil: newBoostedUntil
+    };
+
+    const newBalance = user.isUnlimited ? user.wingitsBalance : Math.max(0, user.wingitsBalance - BOOST_COST);
+
+    await db.transaction(async (tx) => {
+      await tx.orm.public.User.where({ id: userId }).update({
+        lifestyle: JSON.stringify(newLifestyle),
+        wingitsBalance: newBalance
+      });
+
+      if (!user.isUnlimited) {
+        await tx.orm.public.WingitsTransaction.create({
+          userId,
+          amount: -BOOST_COST,
+          type: 'spend',
+          description: 'Profile Spotlight Boost (24 Hours)'
+        });
+      }
+    });
+
+    return {
+      ok: true,
+      boostedUntil: newBoostedUntil,
+      remainingBalance: newBalance
+    };
+  } catch (err: any) {
+    console.error('boostUserProfileAction error:', err);
+    return { ok: false, error: err?.message || 'Failed to boost profile' };
+  }
+}

@@ -5,7 +5,14 @@ import { getSession } from '@/lib/session'
 import { Temporal } from 'temporal-polyfill'
 import { formatNotifyPhoneNumber, getPhoneVariants, sendNotifySms } from '@/lib/notify'
 
-export async function sendWingle(toUserId: string, note: string) {
+export const GIFT_META: Record<string, { cost: number; label: string; icon: string }> = {
+  rose: { cost: 5, label: 'Red Rose', icon: '🌹' },
+  chocolates: { cost: 8, label: 'Chocolates', icon: '🍫' },
+  coffee: { cost: 10, label: 'Coffee', icon: '☕' },
+  teddy: { cost: 15, label: 'Cute Teddy', icon: '🧸' }
+};
+
+export async function sendWingle(toUserId: string, note: string, gift?: string) {
   try {
     const session = await getSession()
     if (!session?.userId) return { ok: false, error: 'Unauthorized' }
@@ -20,6 +27,9 @@ export async function sendWingle(toUserId: string, note: string) {
       return { ok: false, error: 'Wingle already sent' }
     }
 
+    const selectedGift = gift && GIFT_META[gift] ? gift : null;
+    const giftCost = selectedGift ? GIFT_META[selectedGift].cost : 0;
+
     const newWingle = await db.transaction(async (tx) => {
       const user = await tx.orm.public.User.where({ id: session.userId as string }).first();
       if (!user) throw new Error('User not found');
@@ -28,52 +38,62 @@ export async function sendWingle(toUserId: string, note: string) {
         throw new Error('Selfie verification required. Please complete selfie verification to activate your account before sending Wingles.');
       }
       
-      let wingitsCost = 8;
+      let baseWingleCost = 8;
       if (user.isUnlimited) {
-        wingitsCost = 0;
+        baseWingleCost = 0;
       } else if (user.freeWinglesSent < 5) {
-        wingitsCost = 0;
+        baseWingleCost = 0;
       }
 
-      if (user.wingitsBalance < wingitsCost) {
-        throw new Error('Not enough Wingits to send Wingle.');
+      const totalCost = baseWingleCost + giftCost;
+
+      if (user.wingitsBalance < totalCost) {
+        throw new Error(`Not enough Wingits to send Wingle ${selectedGift ? `with ${GIFT_META[selectedGift].label}` : ''}. Required: ${totalCost} Wingits.`);
       }
 
       const updates: any = {};
-      if (wingitsCost > 0) updates.wingitsBalance = user.wingitsBalance - wingitsCost;
-      if (wingitsCost === 0) updates.freeWinglesSent = user.freeWinglesSent + 1;
+      if (totalCost > 0) updates.wingitsBalance = Math.max(0, user.wingitsBalance - totalCost);
+      if (baseWingleCost === 0) updates.freeWinglesSent = user.freeWinglesSent + 1;
       
       await tx.orm.public.User.where({ id: user.id }).update(updates);
       
-      if (wingitsCost > 0) {
+      if (totalCost > 0) {
         await tx.orm.public.WingitsTransaction.create({
           userId: user.id,
-          amount: -wingitsCost,
+          amount: -totalCost,
           type: 'spend',
-          description: 'Sent a Wingle'
+          description: selectedGift ? `Sent Wingle with ${GIFT_META[selectedGift].label} Gift` : 'Sent a Wingle'
         });
       }
+
+      const storedNote = selectedGift ? `[GIFT:${selectedGift}] ${note.trim()}` : note.trim();
 
       return await tx.orm.public.Wingle.create({
         fromUserId: user.id,
         toUserId: toUserId,
-        note: note
+        note: storedNote
       });
     });
+
+    const giftLabel = selectedGift ? GIFT_META[selectedGift].label : null;
+    const notifTitle = giftLabel ? `New Wingle with ${GIFT_META[selectedGift!].icon} ${giftLabel}!` : 'New Wingle!';
+    const notifBody = giftLabel 
+      ? `Someone sent you a special ${giftLabel} gift with their Wingle!` 
+      : 'Someone sent you a Wingle. Check it out!';
 
     await db.orm.public.Notification.create({
       userId: toUserId,
       type: 'wingle_received',
-      title: 'New Wingle!',
-      body: 'Someone sent you a Wingle. Check it out!',
+      title: notifTitle,
+      body: notifBody,
       href: '/wingles'
     })
 
     try {
       const { sendPushNotificationAction } = await import('@/app/actions/push');
       await sendPushNotificationAction(toUserId, {
-        title: 'New Wingle!',
-        body: 'Someone sent you a Wingle. Check it out!',
+        title: notifTitle,
+        body: notifBody,
         url: '/wingles'
       });
       const { pusherServer } = await import('@/lib/pusher');

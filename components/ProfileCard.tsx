@@ -199,6 +199,14 @@ export function ProfileCard({
 
         {/* Badges container */}
         <div className="absolute left-4 top-6 z-10 flex flex-col gap-2 pointer-events-none">
+          {/* Spotlight Boost Badge */}
+          {user.isBoosted && (
+            <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 via-rose-500 to-purple-600 px-3 py-1 text-xs font-bold text-white shadow-lg backdrop-blur-md border border-white/30 animate-pulse">
+              <ZapIcon className="h-3.5 w-3.5 fill-white text-white" />
+              Spotlight Boost
+            </div>
+          )}
+
           {/* Photo Verified Badge */}
           {(user.selfieStatus === 'approved' || user.isUnlimited) && (
             <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-blue-600/90 px-3 py-1 text-xs font-bold text-white shadow-md backdrop-blur-md border border-white/20">

@@ -2,12 +2,13 @@
 
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CompassIcon, SparklesIcon, FlameIcon, HeartIcon, Trash2Icon, ShoppingBagIcon, SlidersHorizontalIcon, XIcon, ChevronDownIcon, ShieldCheckIcon, LockIcon } from 'lucide-react';
+import { CompassIcon, SparklesIcon, ZapIcon, FlameIcon, HeartIcon, Trash2Icon, ShoppingBagIcon, SlidersHorizontalIcon, XIcon, ChevronDownIcon, ShieldCheckIcon, LockIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Page, PageHeader } from '@/components/AppShell';
 import { ProfileCard } from '@/components/ProfileCard';
 import { WingleDialog } from '@/components/WingleDialog';
+import { SpotlightBoostModal } from '@/components/SpotlightBoostModal';
 import { UpgradeDialog, type UpgradeReason } from '@/components/UpgradeDialog';
 import { SelfieVerificationModal } from '@/components/SelfieVerificationModal';
 import { Button } from '@/components/ui/Button';
@@ -141,6 +142,7 @@ export function Discover() {
   const [tab, setTab] = useState<'nearby' | 'daily5'>('nearby');
   const [wingleTarget, setWingleTarget] = useState<User | null>(null);
   const [upgrade, setUpgrade] = useState<UpgradeReason | null>(null);
+  const [boostModalOpen, setBoostModalOpen] = useState(false);
   const [showSelfieModal, setShowSelfieModal] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
@@ -241,9 +243,30 @@ export function Discover() {
       <PageHeader
         title="Discover"
         body={tab === 'nearby' ? "Real profiles from people near you, most recently active first." : "Your top 5 highly compatible matches for today, based on your Vibe Score."}
-        action={entitlements.subscriptionStatus === 'free' ? (
-          <Button variant="outline" onClick={() => router.push('/packages')}><SparklesIcon className="h-4 w-4" /> Upgrade package</Button>
-        ) : undefined}
+        action={
+          <div className="flex items-center gap-2">
+            {currentUser?.isBoosted ? (
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500/20 via-rose-500/20 to-purple-500/20 px-3.5 py-1.5 text-xs font-bold text-amber-700 dark:text-amber-300 border border-amber-500/30 backdrop-blur-sm">
+                <ZapIcon className="h-3.5 w-3.5 fill-amber-500 text-amber-500 animate-pulse" />
+                <span>Spotlight Active</span>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                className="bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-purple-500/10 hover:from-amber-500/20 hover:to-purple-500/20 border-amber-500/30 text-ink text-xs font-semibold"
+                onClick={() => setBoostModalOpen(true)}
+              >
+                <ZapIcon className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+                Boost Profile
+              </Button>
+            )}
+            {entitlements.subscriptionStatus === 'free' && (
+              <Button variant="outline" onClick={() => router.push('/packages')}>
+                <SparklesIcon className="h-4 w-4" /> Upgrade
+              </Button>
+            )}
+          </div>
+        }
       />
 
       {/* ── Pending Verification: Private Profile Banner ── */}
@@ -488,6 +511,10 @@ export function Discover() {
 
       <WingleDialog open={!!wingleTarget} target={wingleTarget} onClose={() => setWingleTarget(null)} onLimitReached={() => setUpgrade('wingle_limit')} />
       <UpgradeDialog open={!!upgrade} reason={upgrade ?? 'wingle_limit'} onClose={() => setUpgrade(null)} />
+      <SpotlightBoostModal
+        open={boostModalOpen}
+        onClose={() => setBoostModalOpen(false)}
+      />
       <SelfieVerificationModal
         open={showSelfieModal}
         onClose={() => setShowSelfieModal(false)}

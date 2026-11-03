@@ -140,7 +140,8 @@ interface StoreValue {
   unreadBrokenHeartCount: () => number;
   markBrokenHeartViewed: () => void;
   // wingles
-  sendWingle: (toUserId: string, note: string) => ServerResult<WinglingWingle>;
+  sendWingle: (toUserId: string, note: string, gift?: import('@/lib/types').WingleGift) => ServerResult<WinglingWingle>;
+  boostProfile: () => Promise<ServerResult<{ boostedUntil: string; remainingBalance: number }>>;
   respondToWingle: (wingleId: string, status: 'accepted' | 'declined') => void;
   sentWingles: () => WinglingWingle[];
   incomingWingles: () => WinglingWingle[];
@@ -1672,7 +1673,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   /* ------------------------------------------------------------ wingles */
 
   const sendWingle = useCallback<StoreValue['sendWingle']>(
-    (toUserId, note) => {
+    (toUserId, note, gift) => {
       if (!currentUser || !entitlements) return { ok: false, error: 'Sign in first.' };
       if (!currentUser.isUnlimited && (!currentUser.verificationSelfie || currentUser.selfieStatus !== 'approved')) {
         return {
@@ -1689,11 +1690,19 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         error: 'You have used every wingling wingle in your package.',
         reason: 'wingle_limit'
       };
+
+      const GIFT_COSTS: Record<string, number> = { rose: 5, chocolates: 8, coffee: 10, teddy: 15 };
+      const giftCost = gift && GIFT_COSTS[gift] ? GIFT_COSTS[gift] : 0;
+      const baseCost = currentUser.isUnlimited ? 0 : (currentUser.freeWinglesSent >= 5 ? 8 : 0);
+      const totalCost = baseCost + giftCost;
+
+      const storedNote = gift ? `[GIFT:${gift}] ${note.trim()}` : note.trim();
       const wingle: WinglingWingle = {
         id: makeId('rq'),
         fromUserId: currentUser.id,
         toUserId,
-        note: note.trim(),
+        note: storedNote,
+        gift: gift || null,
         status: 'pending',
         createdAt: new Date().toISOString()
       };
@@ -1705,18 +1714,18 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         ),
         users: d.users.map((u) => {
           if (u.id === currentUser.id && !u.isUnlimited) {
-            if (u.freeWinglesSent >= 5) {
-              return { ...u, wingitsBalance: Math.max(0, u.wingitsBalance - 8) };
-            } else {
-              return { ...u, freeWinglesSent: u.freeWinglesSent + 1 };
-            }
+            return {
+              ...u,
+              wingitsBalance: Math.max(0, u.wingitsBalance - totalCost),
+              freeWinglesSent: baseCost === 0 ? u.freeWinglesSent + 1 : u.freeWinglesSent
+            };
           }
           return u;
         })
       }));
 
       import('@/app/actions/wingle').then(({ sendWingle: serverSendWingle }) => {
-        serverSendWingle(toUserId, note).then((res) => {
+        serverSendWingle(toUserId, note, gift).then((res) => {
           if (res.ok && res.wingleId) {
             setDb(d => ({
               ...d,
@@ -1732,6 +1741,30 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     },
     [currentUser, db.wingles, entitlements]
   );
+
+
+  const boostProfile = useCallback(async (): Promise<ServerResult<{ boostedUntil: string; remainingBalance: number }>> => {
+    if (!currentUser) return { ok: false, error: 'Sign in first.' };
+    const { boostUserProfileAction } = await import('@/app/actions/user');
+    const res = await boostUserProfileAction();
+    if (res.ok && res.boostedUntil) {
+      setDb(d => ({
+        ...d,
+        users: d.users.map(u => u.id === currentUser.id ? {
+          ...u,
+          wingitsBalance: res.remainingBalance,
+          boostedUntil: res.boostedUntil,
+          isBoosted: true,
+          lifestyle: {
+            ...u.lifestyle,
+            boostedUntil: res.boostedUntil
+          }
+        } : u)
+      }));
+      return { ok: true, data: { boostedUntil: res.boostedUntil, remainingBalance: res.remainingBalance } };
+    }
+    return { ok: false, error: res.error || 'Failed to boost profile' };
+  }, [currentUser]);
 
   const respondToWingle = useCallback<StoreValue['respondToWingle']>(
     (wingleId, status) => {
@@ -2628,6 +2661,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     unreadBrokenHeartCount,
     markBrokenHeartViewed,
     sendWingle,
+    boostProfile,
     respondToWingle,
     sentWingles,
     incomingWingles,

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { EyeIcon, ImageIcon, PencilIcon, SparklesIcon, ShieldCheckIcon, LockIcon, CameraIcon, AlertCircleIcon } from 'lucide-react';
+import { EyeIcon, ImageIcon, PencilIcon, SparklesIcon, ZapIcon, ShieldCheckIcon, LockIcon, CameraIcon, AlertCircleIcon } from 'lucide-react';
 import { Page, PageHeader } from '@/components/AppShell';
 import { PhotoGallery } from '@/components/PhotoGallery';
 import { Button } from '@/components/ui/Button';
@@ -12,6 +12,7 @@ import { Input, Label, Select, Textarea } from '@/components/ui/Field';
 import { UsageMeter } from '@/components/UsageMeter';
 import { Modal } from '@/components/ui/Modal';
 import { LiveSelfieCapture } from '@/components/LiveSelfieCapture';
+import { SpotlightBoostModal } from '@/components/SpotlightBoostModal';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { interestOptions, intentionOptions, lifestyleFields } from '@/lib/data/interests';
 import type { WinglingIntention, Lifestyle } from '@/lib/types';
@@ -21,6 +22,7 @@ export function MyProfile() {
   const { db, currentUser, photosOf, updateProfile, entitlements, likesReceived, sentWingles, userById, unblockUser, submitVerificationSelfie } =
   useStore();
   const [activeTab, setActiveTab] = useState<'profile' | 'edit' | 'blocked'>('profile');
+  const [boostModalOpen, setBoostModalOpen] = useState(false);
   const [isVerifyingSelfie, setIsVerifyingSelfie] = useState(false);
   const [capturedSelfie, setCapturedSelfie] = useState<string | null>(null);
   const [isSubmittingSelfie, setIsSubmittingSelfie] = useState(false);
@@ -249,6 +251,37 @@ export function MyProfile() {
               onClick={() => router.push('/packages')}>
               
               {entitlements.subscriptionStatus === 'free' ? 'Upgrade package' : 'Manage package'}
+            </Button>
+          </div>
+
+          {/* Spotlight Boost Card */}
+          <div className="rounded-4xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-rose-500/10 to-purple-500/10 p-5 shadow-card">
+            <div className="flex items-center justify-between">
+              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-500">
+                <ZapIcon className="h-5 w-5 fill-amber-500" />
+              </span>
+              {currentUser.isBoosted && (
+                <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                  Active
+                </span>
+              )}
+            </div>
+            <h3 className="mt-3 font-display text-lg font-bold text-ink">
+              Profile Spotlight
+            </h3>
+            <p className="mt-1 text-[13px] leading-relaxed text-ink-soft">
+              {currentUser.isBoosted
+                ? 'Your profile is currently #1 on Discover and receiving maximum visibility!'
+                : 'Put your profile at #1 on Discover for 24 hours to get up to 3x more matches!'}
+            </p>
+            <Button
+              size="sm"
+              block
+              className="mt-4 bg-gradient-to-r from-amber-500 via-rose-500 to-purple-600 hover:from-amber-600 hover:to-purple-700 text-white font-bold shadow-md shadow-rose-500/20"
+              onClick={() => setBoostModalOpen(true)}
+            >
+              <ZapIcon className="h-4 w-4 fill-white mr-1.5" />
+              {currentUser.isBoosted ? 'Extend Spotlight' : 'Boost Profile (20 Wingits)'}
             </Button>
           </div>
           <dl className="grid grid-cols-3 gap-3">
@@ -510,6 +543,7 @@ export function MyProfile() {
           </div>
         </div>
       </Modal>
+      <SpotlightBoostModal open={boostModalOpen} onClose={() => setBoostModalOpen(false)} />
     </Page>);
 
 }

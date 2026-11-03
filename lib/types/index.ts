@@ -71,6 +71,8 @@ export interface User {
   showOnline: boolean;
   showDistance: boolean;
   readReceipts: boolean;
+  boostedUntil?: string | null;
+  isBoosted?: boolean;
 }
 
 export interface WingitsTransaction {
@@ -139,6 +141,19 @@ export interface Like {
   viewed?: boolean;
 }
 
+export type WingleGift = 'rose' | 'coffee' | 'chocolates' | 'teddy';
+
+export function parseWingleNote(rawNote: string): { gift: WingleGift | null; text: string } {
+  if (!rawNote) return { gift: null, text: '' };
+  const match = rawNote.match(/^\[GIFT:([a-z]+)\]\s*(.*)$/i);
+  if (match) {
+    const giftName = match[1].toLowerCase() as WingleGift;
+    if (['rose', 'coffee', 'chocolates', 'teddy'].includes(giftName)) {
+      return { gift: giftName, text: match[2] };
+    }
+  }
+  return { gift: null, text: rawNote };
+}
 export interface WinglingWingle {
   id: string;
   fromUserId: string;
@@ -148,6 +163,7 @@ export interface WinglingWingle {
   createdAt: string;
   respondedAt?: string;
   viewed?: boolean;
+  gift?: WingleGift | null;
 }
 
 export interface Connection {
