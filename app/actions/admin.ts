@@ -511,7 +511,8 @@ export async function getAdminModerationDataAction() {
     const users = await db.orm.public.User.where((u) => u.id.in(Array.from(userIds))).all();
     
     // Fetch only pending members with live selfies
-    const selfieUsers = await db.orm.public.User.where({ role: 'member', selfieStatus: 'pending', isUnlimited: false }).limit(100).all();
+    const rawSelfieUsers = await db.orm.public.User.where({ role: 'member', selfieStatus: 'pending', isUnlimited: false }).all();
+    const selfieUsers = rawSelfieUsers.filter(u => u.verificationSelfie && u.verificationSelfie.trim().length > 0).slice(0, 100);
     const selfieUserIds = selfieUsers.map(u => u.id);
     const allPhotos = selfieUserIds.length > 0
       ? await db.orm.public.Photo.where(p => p.userId.in(selfieUserIds)).select('id', 'userId', 'url', 'order', 'isPrimary').all()
@@ -574,12 +575,13 @@ export async function getAdminPendingModerationCountAction() {
       return { ok: false, error: 'Forbidden', count: 0, pendingSelfies: 0, pendingPhotos: 0, openReports: 0 };
     }
 
-    const [openReportsCount, pendingPhotosCount, pendingSelfiesCount] = await Promise.all([
+    const [openReportsCount, pendingPhotosCount, rawSelfieUsers] = await Promise.all([
       db.orm.public.Report.where({ status: 'open' }).aggregate(a => ({ count: a.count() })).then(r => r.count),
       db.orm.public.Photo.where({ moderation: 'pending' }).aggregate(a => ({ count: a.count() })).then(r => r.count),
-      db.orm.public.User.where({ role: 'member', selfieStatus: 'pending', isUnlimited: false }).aggregate(a => ({ count: a.count() })).then(r => r.count)
+      db.orm.public.User.where({ role: 'member', selfieStatus: 'pending', isUnlimited: false }).select('id', 'verificationSelfie').all()
     ]);
 
+    const pendingSelfiesCount = rawSelfieUsers.filter(u => u.verificationSelfie && u.verificationSelfie.trim().length > 0).length;
     const count = pendingSelfiesCount + pendingPhotosCount + openReportsCount;
 
     return {

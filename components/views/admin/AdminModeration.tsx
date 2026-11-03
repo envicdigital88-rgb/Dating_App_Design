@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { CheckIcon, FlagIcon, XIcon, ShieldCheckIcon, CameraIcon, Loader2Icon, CheckCircle2Icon, XCircleIcon } from 'lucide-react';
+import { CheckIcon, FlagIcon, XIcon, ShieldCheckIcon, CameraIcon, Loader2Icon, CheckCircle2Icon, XCircleIcon, ClockIcon } from 'lucide-react';
 import { AdminHeader } from './AdminShell';
 import { Button } from '@/components/ui/Button';
 import { Badge, EmptyState } from '@/components/ui/Bits';
@@ -326,6 +326,17 @@ export function AdminModeration() {
                           )}
                         </div>
                       </div>
+                    ) : item.selfieStatus === 'pending' && !item.verificationSelfie ? (
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sand bg-cream/40 px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-2 text-[13px] font-medium text-amber-700">
+                            <ClockIcon className="h-4 w-4 text-amber-600 shrink-0" />
+                            <span>
+                              No live selfie uploaded yet for <strong className="font-semibold text-ink">{item.name}</strong>. (Member registered before live verification was enabled).
+                            </span>
+                          </span>
+                        </div>
+                      </div>
                     ) : (
                       /* Approved or Rejected - Photo is hidden, only user's name & status shown */
                       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sand bg-cream/40 px-4 py-3">
@@ -337,14 +348,14 @@ export function AdminModeration() {
                                 Verification approved for <strong className="font-semibold text-ink">{item.name}</strong>. Selfie photo is hidden from admin display.
                               </span>
                             </span>
-                          ) : (
+                          ) : item.selfieStatus === 'rejected' ? (
                             <span className="inline-flex items-center gap-2 text-[13px] font-medium text-rose-700">
                               <XCircleIcon className="h-4 w-4 text-rose-600 shrink-0" />
                               <span>
                                 Verification rejected for <strong className="font-semibold text-ink">{item.name}</strong>. Selfie photo is hidden from admin display.
                               </span>
                             </span>
-                          )}
+                          ) : null}
                         </div>
                         <span className="text-[11px] font-medium text-ink-muted">
                           Photo privacy protected

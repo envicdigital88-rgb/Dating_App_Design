@@ -136,7 +136,7 @@ export function MyProfile() {
       />
 
       {/* ── Pending Verification: Private Profile / Under Review Banner ── */}
-      {currentUser.selfieStatus === 'pending' && !currentUser.isUnlimited && (
+      {currentUser.selfieStatus === 'pending' && Boolean(currentUser.verificationSelfie) && !currentUser.isUnlimited && (
         <div className="mb-6 rounded-3xl border border-amber-500/30 bg-amber-500/10 p-5 backdrop-blur-sm">
           <div className="flex flex-col sm:flex-row items-start gap-4">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-500">
