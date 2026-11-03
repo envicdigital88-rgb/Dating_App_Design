@@ -345,11 +345,20 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
             return;
           }
 
+          const userLs = typeof (user as any).lifestyle === 'string'
+            ? (() => { try { return JSON.parse((user as any).lifestyle || '{}'); } catch { return {}; } })()
+            : ((user as any).lifestyle || {});
+          const boostedUntil = (user as any).boostedUntil || userLs?.boostedUntil || null;
+          const isBoosted = Boolean(boostedUntil && new Date(boostedUntil).getTime() > Date.now());
+
           const mappedUser = {
             ...user,
             lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
             createdAt: user.createdAt?.toString() || new Date().toISOString(),
-            isUnlimited: (user as any).isUnlimited ?? false
+            isUnlimited: (user as any).isUnlimited ?? false,
+            lifestyle: userLs,
+            boostedUntil,
+            isBoosted,
           } as unknown as User;
           setDb(d => {
             const allUsers = [...d.users];
@@ -1500,6 +1509,13 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       }
     }
 
+    // Ensure any actively boosted users in feed are always prioritized at the top (1st place)
+    feed.sort((a, b) => {
+      const aBoosted = (a.isBoosted || (a.boostedUntil && new Date(a.boostedUntil).getTime() > Date.now())) ? 1 : 0;
+      const bBoosted = (b.isBoosted || (b.boostedUntil && new Date(b.boostedUntil).getTime() > Date.now())) ? 1 : 0;
+      return bBoosted - aBoosted;
+    });
+
     return feed;
   }, [db.blocks, db.packages, db.passes, db.heartBucket, db.likes, db.subscriptions, db.users, discoverIds, sessionId]);
 
@@ -1815,19 +1831,44 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     const { boostUserProfileAction } = await import('@/app/actions/user');
     const res = await boostUserProfileAction();
     if (res.ok && res.boostedUntil) {
-      setDb(d => ({
-        ...d,
-        users: d.users.map(u => u.id === currentUser.id ? {
-          ...u,
-          wingitsBalance: res.remainingBalance,
-          boostedUntil: res.boostedUntil,
-          isBoosted: true,
-          lifestyle: {
-            ...u.lifestyle,
-            boostedUntil: res.boostedUntil
+      setDb(d => {
+        const nextUsers = d.users.map(u => {
+          if (u.id !== currentUser.id) return u;
+          const currentLs = typeof u.lifestyle === 'string'
+            ? (() => { try { return JSON.parse(u.lifestyle); } catch { return {}; } })()
+            : (u.lifestyle || {});
+          return {
+            ...u,
+            wingitsBalance: res.remainingBalance,
+            boostedUntil: res.boostedUntil,
+            isBoosted: true,
+            lifestyle: {
+              ...currentLs,
+              boostedUntil: res.boostedUntil
+            }
+          };
+        });
+        return {
+          ...d,
+          users: nextUsers
+        };
+      });
+
+      // Update local storage user cache so immediate reloads retain active boost
+      try {
+        const cached = localStorage.getItem('winglemingle_user_cache');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          parsed.boostedUntil = res.boostedUntil;
+          parsed.isBoosted = true;
+          parsed.wingitsBalance = res.remainingBalance;
+          if (parsed.lifestyle && typeof parsed.lifestyle === 'object') {
+            parsed.lifestyle.boostedUntil = res.boostedUntil;
           }
-        } : u)
-      }));
+          localStorage.setItem('winglemingle_user_cache', JSON.stringify(parsed));
+        }
+      } catch (e) {}
+
       return { ok: true, data: { boostedUntil: res.boostedUntil, remainingBalance: res.remainingBalance } };
     }
     return { ok: false, error: res.error || 'Failed to boost profile' };

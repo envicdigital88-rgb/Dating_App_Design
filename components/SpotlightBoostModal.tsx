@@ -36,9 +36,12 @@ export function SpotlightBoostModal({ open, onClose }: SpotlightBoostModalProps)
       const res = await boostProfile();
       if (res.ok) {
         onClose();
-        toast.success("🚀 Profile Spotlight Activated! You're now #1 on Discover for the next 24 hours!", {
-          duration: 5000
-        });
+        toast.success(
+          currentUser.isBoosted
+            ? "🚀 Spotlight Extended! Your profile is boosted at #1 on Discover for another 24 hours!"
+            : "🚀 Profile Spotlight Activated! You're now #1 on Discover for the next 24 hours!",
+          { duration: 5000 }
+        );
       } else {
         toast.error(res.error || 'Failed to activate profile boost');
       }
@@ -67,7 +70,9 @@ export function SpotlightBoostModal({ open, onClose }: SpotlightBoostModalProps)
             >
               <ZapIcon className="h-4 w-4 fill-white mr-1.5" />
               {currentUser.isUnlimited
-                ? 'Activate Spotlight (VIP Free)'
+                ? (currentUser.isBoosted ? 'Extend Spotlight (VIP Free)' : 'Activate Spotlight (VIP Free)')
+                : currentUser.isBoosted
+                ? `Extend for 24 Hours (${BOOST_COST} Wingits)`
                 : hasEnough
                 ? `Activate for 24 Hours (${BOOST_COST} Wingits)`
                 : `Get Wingits to Boost (${BOOST_COST} Wingits)`}

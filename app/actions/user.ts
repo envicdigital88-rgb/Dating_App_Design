@@ -1,5 +1,6 @@
 'use server'
 
+import crypto from 'node:crypto'
 import { db } from '@/lib/db'
 import { getSession, deleteSession } from '@/lib/session'
 import { not, or } from '@prisma/orm-postgres/orm-client'
@@ -36,6 +37,14 @@ export async function getCurrentUser() {
     }
 
     // Ensure plain object for Next.js Client Components (Prisma 8 Temporal serialization)
+    const parsedLifestyle = typeof user.lifestyle === 'string' ? (() => {
+      try { return JSON.parse(user.lifestyle); } catch { return {}; }
+    })() : (user.lifestyle || {});
+
+    const isBoosted = Boolean(
+      parsedLifestyle?.boostedUntil && new Date(parsedLifestyle.boostedUntil).getTime() > Date.now()
+    );
+
     return {
       ...user,
       lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
@@ -43,7 +52,9 @@ export async function getCurrentUser() {
       lastDailyBonusAt: user.lastDailyBonusAt?.toString() || null,
       interests: typeof user.interests === 'string' ? JSON.parse(user.interests) : user.interests,
       traits: typeof user.traits === 'string' ? JSON.parse(user.traits) : user.traits,
-      lifestyle: typeof user.lifestyle === 'string' ? JSON.parse(user.lifestyle) : user.lifestyle,
+      lifestyle: parsedLifestyle,
+      boostedUntil: parsedLifestyle?.boostedUntil || null,
+      isBoosted,
       photos: user.photos?.map((p: any) => ({
         ...p,
         uploadedAt: p.uploadedAt?.toString() || new Date().toISOString()
@@ -58,11 +69,20 @@ export async function getCurrentUser() {
 export async function getUserProfile(userId: string) {
   const user = await db.orm.public.User.where({ id: userId }).first()
   if (!user) return null;
+  const parsedLifestyle = typeof user.lifestyle === 'string' ? (() => {
+    try { return JSON.parse(user.lifestyle); } catch { return {}; }
+  })() : (user.lifestyle || {});
+  const isBoosted = Boolean(
+    parsedLifestyle?.boostedUntil && new Date(parsedLifestyle.boostedUntil).getTime() > Date.now()
+  );
   return {
     ...user,
     lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
     createdAt: user.createdAt?.toString() || new Date().toISOString(),
     lastDailyBonusAt: user.lastDailyBonusAt?.toString() || null,
+    lifestyle: parsedLifestyle,
+    boostedUntil: parsedLifestyle?.boostedUntil || null,
+    isBoosted,
   };
 }
 
@@ -576,19 +596,29 @@ export async function getUserStateAction() {
       }));
     }
 
-    const mappedRelatedUsers = relatedUsers.map((user: any) => ({
-      ...user,
-      lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
-      createdAt: user.createdAt?.toString() || new Date().toISOString(),
-      lastDailyBonusAt: user.lastDailyBonusAt?.toString() || null,
-      interests: typeof user.interests === 'string' ? JSON.parse(user.interests) : user.interests,
-      traits: typeof user.traits === 'string' ? JSON.parse(user.traits) : user.traits,
-      lifestyle: typeof user.lifestyle === 'string' ? JSON.parse(user.lifestyle) : user.lifestyle,
-      photos: user.photos?.map((p: any) => ({
-        ...p,
-        uploadedAt: p.uploadedAt?.toString() || new Date().toISOString()
-      })) || []
-    }));
+    const mappedRelatedUsers = relatedUsers.map((user: any) => {
+      const parsedLifestyle = typeof user.lifestyle === 'string' ? (() => {
+        try { return JSON.parse(user.lifestyle); } catch { return {}; }
+      })() : (user.lifestyle || {});
+      const isBoosted = Boolean(
+        parsedLifestyle?.boostedUntil && new Date(parsedLifestyle.boostedUntil).getTime() > Date.now()
+      );
+      return {
+        ...user,
+        lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
+        createdAt: user.createdAt?.toString() || new Date().toISOString(),
+        lastDailyBonusAt: user.lastDailyBonusAt?.toString() || null,
+        interests: typeof user.interests === 'string' ? JSON.parse(user.interests) : user.interests,
+        traits: typeof user.traits === 'string' ? JSON.parse(user.traits) : user.traits,
+        lifestyle: parsedLifestyle,
+        boostedUntil: parsedLifestyle?.boostedUntil || null,
+        isBoosted,
+        photos: user.photos?.map((p: any) => ({
+          ...p,
+          uploadedAt: p.uploadedAt?.toString() || new Date().toISOString()
+        })) || []
+      };
+    });
 
     const payload = {
       likes: likes.map(l => ({ ...l, createdAt: l.createdAt.toString() })),
@@ -750,6 +780,7 @@ export async function boostUserProfileAction() {
 
       if (!user.isUnlimited) {
         await tx.orm.public.WingitsTransaction.create({
+          id: crypto.randomUUID(),
           userId,
           amount: -BOOST_COST,
           type: 'spend',
