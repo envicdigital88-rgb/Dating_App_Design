@@ -177,7 +177,7 @@ export async function sendAdminInviteEmail(options: AdminInviteEmailOptions): Pr
     }
 
     const resend = new Resend(apiKey);
-    const fromAddress = 'Wingle Mingle <noreply@winglemingle.com>';
+    const fromAddress = process.env.RESEND_FROM_EMAIL?.trim() || 'Wingle Mingle <noreply@winglemingle.com>';
 
     const sendRes = await resend.emails.send({
       from: fromAddress,

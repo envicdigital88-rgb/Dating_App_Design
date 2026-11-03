@@ -106,8 +106,9 @@ async function sendOtpEmail(toEmail: string, otp: string) {
   `;
 
   try {
+    const fromEmail = process.env.RESEND_FROM_EMAIL?.trim() || 'Wingle Mingle <no-reply@winglemingle.com>';
     const sendRes = await resend.emails.send({
-      from: 'Wingle Mingle <no-reply@winglemingle.com>',
+      from: fromEmail,
       to: toEmail,
       subject: `${otp} is your Wingle Mingle verification code`,
       html: htmlContent
