@@ -392,6 +392,7 @@ export async function getAdminUsersAction() {
         lastDailyBonusAt: u.lastDailyBonusAt?.toString() || null,
         photos: photos.filter(p => p.userId === u.id).sort((a, b) => a.order - b.order).map(p => ({
           ...p,
+          url: p.url.startsWith('data:') ? `/api/photo/${p.id}` : p.url,
           uploadedAt: p.uploadedAt ? p.uploadedAt.toString() : new Date().toISOString()
         }))
       })) 
@@ -535,6 +536,9 @@ export async function getAdminModerationDataAction() {
       : [];
 
     const selfies = sortedSelfieUsers.map(u => {
+      const selfieUrl = u.verificationSelfie
+        ? (u.verificationSelfie.startsWith('data:') ? `/api/selfie/${u.id}` : u.verificationSelfie)
+        : '';
       return {
         userId: u.id,
         name: u.name,
@@ -542,7 +546,7 @@ export async function getAdminModerationDataAction() {
         age: u.age,
         gender: u.gender,
         location: u.location,
-        verificationSelfie: (u.verificationSelfie as string) || '',
+        verificationSelfie: selfieUrl,
         selfieStatus: (u.selfieStatus as 'pending' | 'approved' | 'rejected') || 'pending',
         createdAt: u.createdAt ? u.createdAt.toString() : new Date().toISOString(),
         photos: allPhotos
@@ -550,7 +554,7 @@ export async function getAdminModerationDataAction() {
           .sort((a, b) => a.order - b.order)
           .map(p => ({
             id: p.id,
-            url: p.url,
+            url: p.url.startsWith('data:') ? `/api/photo/${p.id}` : p.url,
             order: p.order,
             isPrimary: p.isPrimary
           }))
@@ -566,6 +570,7 @@ export async function getAdminModerationDataAction() {
       })),
       photos: photos.map(p => ({
         ...p,
+        url: p.url.startsWith('data:') ? `/api/photo/${p.id}` : p.url,
         uploadedAt: p.uploadedAt ? p.uploadedAt.toString() : new Date().toISOString(),
         ownerName: users.find(u => u.id === p.userId)?.name || 'Member'
       })),

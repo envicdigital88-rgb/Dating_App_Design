@@ -45,8 +45,13 @@ export async function getCurrentUser() {
       parsedLifestyle?.boostedUntil && new Date(parsedLifestyle.boostedUntil).getTime() > Date.now()
     );
 
+    const selfieUrl = user.verificationSelfie
+      ? (user.verificationSelfie.startsWith('data:') ? `/api/selfie/${user.id}` : user.verificationSelfie)
+      : null;
+
     return {
       ...user,
+      verificationSelfie: selfieUrl,
       lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
       createdAt: user.createdAt?.toString() || new Date().toISOString(),
       lastDailyBonusAt: user.lastDailyBonusAt?.toString() || null,
@@ -57,6 +62,7 @@ export async function getCurrentUser() {
       isBoosted,
       photos: user.photos?.map((p: any) => ({
         ...p,
+        url: p.url?.startsWith('data:') ? `/api/photo/${p.id}` : p.url,
         uploadedAt: p.uploadedAt?.toString() || new Date().toISOString()
       }))
     }
@@ -77,6 +83,9 @@ export async function getUserProfile(userId: string) {
   );
   return {
     ...user,
+    verificationSelfie: user.verificationSelfie
+      ? (user.verificationSelfie.startsWith('data:') ? `/api/selfie/${user.id}` : user.verificationSelfie)
+      : null,
     lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
     createdAt: user.createdAt?.toString() || new Date().toISOString(),
     lastDailyBonusAt: user.lastDailyBonusAt?.toString() || null,
@@ -321,10 +330,13 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
       const fakeCount = ((user.id.charCodeAt(0) + user.id.charCodeAt(user.id.length - 1)) % 50) + 1;
 
       // Exclude sensitive credentials and private push notification keys
-      const { password, pushSubscription, ...safeUser } = user;
+      const { password, pushSubscription, verificationSelfie, ...safeUser } = user;
 
       return {
         ...safeUser,
+        verificationSelfie: verificationSelfie
+          ? (verificationSelfie.startsWith('data:') ? `/api/selfie/${user.id}` : verificationSelfie)
+          : null,
         lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
         createdAt: user.createdAt?.toString() || new Date().toISOString(),
         lastDailyBonusAt: user.lastDailyBonusAt?.toString() || null,
@@ -349,7 +361,7 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
           .map((p: any) => ({
             id: p.id,
             userId: p.userId,
-            url: p.url,
+            url: p.url.startsWith('data:') ? `/api/photo/${p.id}` : p.url,
             order: p.order,
             isPrimary: p.isPrimary,
             moderation: p.moderation,
@@ -433,12 +445,19 @@ export async function updateUserProfileAction(data: {
       ok: true,
       data: {
         ...updatedUser,
+        verificationSelfie: updatedUser.verificationSelfie
+          ? (updatedUser.verificationSelfie.startsWith('data:') ? `/api/selfie/${updatedUser.id}` : updatedUser.verificationSelfie)
+          : null,
         lastActiveAt: updatedUser.lastActiveAt?.toString() || new Date().toISOString(),
         createdAt: updatedUser.createdAt?.toString() || new Date().toISOString(),
         interests: typeof updatedUser.interests === 'string' ? JSON.parse(updatedUser.interests) : (updatedUser.interests || []),
         traits: typeof updatedUser.traits === 'string' ? JSON.parse(updatedUser.traits) : (updatedUser.traits || []),
         lifestyle: typeof updatedUser.lifestyle === 'string' ? JSON.parse(updatedUser.lifestyle) : (updatedUser.lifestyle || {}),
-        photos: (updatedUser.photos || []).map((p: any) => ({ ...p, uploadedAt: p.uploadedAt?.toString() || new Date().toISOString() })),
+        photos: (updatedUser.photos || []).map((p: any) => ({
+          ...p,
+          url: p.url?.startsWith('data:') ? `/api/photo/${p.id}` : p.url,
+          uploadedAt: p.uploadedAt?.toString() || new Date().toISOString()
+        })),
       }
     };
   } catch (err) {
@@ -626,7 +645,7 @@ export async function getUserStateAction() {
         photos: (user.photos || []).map((p: any) => ({
           id: p.id,
           userId: p.userId,
-          url: p.url,
+          url: p.url?.startsWith('data:') ? `/api/photo/${p.id}` : p.url,
           order: p.order,
           isPrimary: Boolean(p.isPrimary),
           moderation: p.moderation,
@@ -743,7 +762,14 @@ export async function addPhotoAction(url: string) {
       moderation: 'pending',
     });
 
-    return { ok: true, data: { ...photo, uploadedAt: photo.uploadedAt.toString() } };
+    return {
+      ok: true,
+      data: {
+        ...photo,
+        url: photo.url.startsWith('data:') ? `/api/photo/${photo.id}` : photo.url,
+        uploadedAt: photo.uploadedAt.toString()
+      }
+    };
   } catch (err) {
     return { ok: false, error: 'Failed to add photo' };
   }
