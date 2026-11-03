@@ -378,7 +378,8 @@ export async function getAdminUsersAction() {
       .all();
     
     const sortedUsers = [...users].sort((a: any, b: any) =>
-      Temporal.Instant.compare(b.createdAt, a.createdAt)
+      new Date(b.createdAt ? b.createdAt.toString() : 0).getTime() -
+      new Date(a.createdAt ? a.createdAt.toString() : 0).getTime()
     );
     
     return { 
@@ -610,12 +611,7 @@ export async function getAdminActivityDataAction() {
       declinedWingles,
       minglesSent,
       blocksCount,
-      chatReportsCount,
-      sortedWingles,
-      allMembers,
-      allSubscriptions,
-      allPackages,
-      allUsage
+      chatReportsCount
     ] = await Promise.all([
       db.orm.public.Wingle.aggregate(a => ({ count: a.count() })).then(r => r.count),
       db.orm.public.Wingle.where({ status: 'accepted' }).aggregate(a => ({ count: a.count() })).then(r => r.count),
@@ -623,6 +619,15 @@ export async function getAdminActivityDataAction() {
       db.orm.public.Mingle.aggregate(a => ({ count: a.count() })).then(r => r.count),
       db.orm.public.Block.aggregate(a => ({ count: a.count() })).then(r => r.count),
       db.orm.public.Report.where({ context: 'chat' }).aggregate(a => ({ count: a.count() })).then(r => r.count),
+    ]);
+
+    const [
+      sortedWingles,
+      allMembers,
+      allSubscriptions,
+      allPackages,
+      allUsage
+    ] = await Promise.all([
       db.orm.public.Wingle.orderBy(w => w.createdAt.desc()).limit(30).all(),
       db.orm.public.User.where({ role: 'member' }).select('id', 'name', 'email', 'lastActiveAt', 'createdAt', 'freeWinglesSent').all(),
       db.orm.public.Subscription.where({ status: 'active' }).all(),
@@ -636,7 +641,9 @@ export async function getAdminActivityDataAction() {
       wingleUserIds.add(w.toUserId);
     });
 
-    const wingleUsers = await db.orm.public.User.where(u => u.id.in(Array.from(wingleUserIds))).all();
+    const wingleUsers = wingleUserIds.size > 0
+      ? await db.orm.public.User.where(u => u.id.in(Array.from(wingleUserIds))).all()
+      : [];
 
     const recentWingles = sortedWingles.map(w => ({
       id: w.id,
@@ -646,7 +653,7 @@ export async function getAdminActivityDataAction() {
       toUserName: wingleUsers.find(u => u.id === w.toUserId)?.name || 'Member',
       note: w.note || '',
       status: w.status,
-      createdAt: w.createdAt.toString(),
+      createdAt: w.createdAt ? w.createdAt.toString() : new Date().toISOString(),
       respondedAt: w.respondedAt ? w.respondedAt.toString() : null
     }));
 
@@ -663,11 +670,12 @@ export async function getAdminActivityDataAction() {
       price: 0
     };
 
-    const now = Temporal.Now.instant();
+    const nowMs = Date.now();
     const usageRows = allMembers.map(member => {
       const userSub = allSubscriptions.find(s => {
         if (s.userId !== member.id) return false;
-        return Temporal.Instant.compare(s.expiresAt, now) > 0;
+        const expiresAtMs = s.expiresAt ? new Date(s.expiresAt.toString()).getTime() : 0;
+        return expiresAtMs > nowMs;
       });
 
       const pkg = userSub
@@ -682,7 +690,7 @@ export async function getAdminActivityDataAction() {
         id: member.id,
         name: member.name,
         email: member.email,
-        lastActiveAt: member.lastActiveAt ? member.lastActiveAt.toString() : member.createdAt.toString(),
+        lastActiveAt: member.lastActiveAt ? member.lastActiveAt.toString() : (member.createdAt ? member.createdAt.toString() : new Date().toISOString()),
         pkg: {
           id: pkg.id,
           name: pkg.name,
@@ -767,7 +775,8 @@ export async function getAdminListAction() {
 
     const admins = await db.orm.public.User.where({ role: 'admin' }).all();
     const sortedAdmins = [...admins].sort((a: any, b: any) =>
-      Temporal.Instant.compare(b.createdAt, a.createdAt)
+      new Date(b.createdAt ? b.createdAt.toString() : 0).getTime() -
+      new Date(a.createdAt ? a.createdAt.toString() : 0).getTime()
     );
 
     return {
