@@ -1343,8 +1343,13 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         return newUsers.length;
       }
       return 0;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to fetch filtered discover users', err);
+      const msg = String(err?.message || err || '');
+      if (msg.includes('Failed to find Server Action') || msg.includes('older deployment')) {
+        console.warn('Stale deployment detected, reloading page for latest build assets...');
+        if (typeof window !== 'undefined') window.location.reload();
+      }
     } finally {
       setIsDiscoverFetching(false);
     }
@@ -1429,6 +1434,24 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       });
 
       for (const u of candidates) {
+        feed.push(maskUser(u, sessionId));
+      }
+    }
+
+    // 3. Fallback: If user has passed all candidates in the queue, recycle passed profiles (never liked/hearted/blocked)
+    if (feed.length === 0) {
+      const isEligibleRecycled = (u: User) =>
+        u.id !== sessionId &&
+        u.role === 'member' &&
+        u.onboarded &&
+        !u.suspended &&
+        !blocked.has(u.id) &&
+        !hearted.has(u.id) &&
+        !liked.has(u.id) &&
+        (u.isUnlimited || (Boolean(u.verificationSelfie) && u.selfieStatus === 'approved'));
+
+      const recycledCandidates = db.users.filter((u) => isEligibleRecycled(u) && !included.has(u.id));
+      for (const u of recycledCandidates) {
         feed.push(maskUser(u, sessionId));
       }
     }

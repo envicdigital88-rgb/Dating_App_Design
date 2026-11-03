@@ -180,9 +180,9 @@ export function Discover() {
     });
   }, [tab, filters, fetchDiscoverUsers]);
 
-  // Paginate only when running low on profiles (between 1 and 3 left)
+  // Paginate when running low on profiles (fewer than 3 left, or empty)
   useEffect(() => {
-    if (tab === 'nearby' && hasMore && !isDiscoverFetching && rawFeedLength > 0 && rawFeedLength < 3) {
+    if (tab === 'nearby' && hasMore && !isDiscoverFetching && rawFeedLength < 3) {
       const seenIds = rawFeed.map(u => u.id);
       fetchDiscoverUsers(filters, seenIds).then((count) => {
         if (typeof count === 'number' && count < 20) setHasMore(false);
@@ -394,10 +394,24 @@ export function Discover() {
             ) : feed.length === 0 ? (
               <EmptyState icon={<SlidersHorizontalIcon className="h-5 w-5" />}
                 title={activeFilterCount > 0 ? "No profiles match your filters" : (tab === 'nearby' ? "That is everyone for now" : "No Daily 5 available")}
-                body={activeFilterCount > 0 ? "Try adjusting your filters to see more people." : "You have been through every profile in your area."}
+                body={activeFilterCount > 0 ? "Try adjusting your filters to see more people." : "You have reached the end of new profiles nearby. Explore again to discover new and refreshed matches!"}
                 action={activeFilterCount > 0
                   ? <Button onClick={() => setFilters(DEFAULT_FILTERS)}>Clear all filters</Button>
-                  : <Button onClick={() => router.push('/likes')}>See who liked you</Button>} />
+                  : (
+                    <div className="flex flex-col sm:flex-row items-center gap-2">
+                      <Button onClick={() => {
+                        setHasMore(true);
+                        fetchDiscoverUsers(DEFAULT_FILTERS);
+                        toast.success('Discover refreshed with new profiles!');
+                      }}>
+                        Explore again
+                      </Button>
+                      <Button variant="outline" onClick={() => router.push('/likes')}>
+                        See who liked you
+                      </Button>
+                    </div>
+                  )
+                } />
             ) : (
               <AnimatePresence mode="wait">
                 <ProfileCard key={current.id} user={current} liked={hasLiked(current.id)} wingleed={!!wingleStatusWith(current.id)}

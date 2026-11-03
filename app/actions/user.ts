@@ -155,7 +155,7 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
     
     const tenDaysAgo = new Date();
     tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
-    const recentPasses = passes.filter((p: any) => new Date(p.createdAt?.toString() || 0) >= tenDaysAgo);
+    const recentPasses = passes.filter((p: any) => p.createdAt && new Date(p.createdAt.toString()) >= tenDaysAgo);
 
     const excludedIds = [
       userId,
@@ -196,6 +196,36 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
         }
         return true;
       });
+    }
+
+    // Graceful fallback: If eligible is empty because user passed all profiles or exhausted queue, recycle passed profiles (never liked/hearted/blocked)
+    if (eligible.length === 0 && (passes.length > 0 || seenIds.length > 0)) {
+      const hardExcludedIds = new Set([
+        userId,
+        ...likes.map((l: any) => l.toUserId),
+        ...heartBucket.map((h: any) => h.targetUserId),
+        ...blocks.map((b: any) => b.blockerId === userId ? b.blockedUserId : b.blockerId),
+      ]);
+      eligible = rawUsers.filter(u => {
+        if (hardExcludedIds.has(u.id)) return false;
+        if (u.discoverable === false) return false;
+        if (u.isUnlimited) return true;
+        if (!u.verificationSelfie || u.selfieStatus !== 'approved') return false;
+        return true;
+      });
+      if (filters) {
+        eligible = eligible.filter(u => {
+          if (filters.ageMin !== undefined && u.age < filters.ageMin) return false;
+          if (filters.ageMax !== undefined && u.age > filters.ageMax) return false;
+          if (filters.intention && filters.intention !== 'any' && u.intention !== filters.intention) return false;
+          if (filters.onlineOnly) {
+            const lastActive = u.lastActiveAt ? new Date(u.lastActiveAt.toString()).getTime() : 0;
+            const tenMinsAgo = Date.now() - 10 * 60 * 1000;
+            if (lastActive < tenMinsAgo) return false;
+          }
+          return true;
+        });
+      }
     }
 
     const BATCH_SIZE = 20;
@@ -269,8 +299,11 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
       const realCount = heartReactsMap.get(user.id) || 0;
       const fakeCount = ((user.id.charCodeAt(0) + user.id.charCodeAt(user.id.length - 1)) % 50) + 1;
 
+      // Exclude sensitive credentials and private push notification keys
+      const { password, pushSubscription, ...safeUser } = user;
+
       return {
-        ...user,
+        ...safeUser,
         lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
         createdAt: user.createdAt?.toString() || new Date().toISOString(),
         lastDailyBonusAt: user.lastDailyBonusAt?.toString() || null,
@@ -279,13 +312,13 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
         lifestyle: typeof user.lifestyle === 'string' ? JSON.parse(user.lifestyle) : (user.lifestyle || {}),
         boostedUntil: (() => {
           try {
-            const ls = typeof user.lifestyle === 'string' ? JSON.parse(user.lifestyle) : (user.lifestyle || {});
+            const ls = typeof user.lifestyle === 'string' ? JSON.parse(user.lifestyle || '{}') : (user.lifestyle || {});
             return ls?.boostedUntil || null;
           } catch { return null; }
         })(),
         isBoosted: (() => {
           try {
-            const ls = typeof user.lifestyle === 'string' ? JSON.parse(user.lifestyle) : (user.lifestyle || {});
+            const ls = typeof user.lifestyle === 'string' ? JSON.parse(user.lifestyle || '{}') : (user.lifestyle || {});
             return Boolean(ls?.boostedUntil && new Date(ls.boostedUntil).getTime() > Date.now());
           } catch { return false; }
         })(),
@@ -293,13 +326,17 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
           .filter(p => p.userId === user.id && p.moderation === 'approved')
           .sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0) || a.order - b.order)
           .map((p: any) => ({
-            ...p,
+            id: p.id,
+            userId: p.userId,
+            url: p.url,
+            order: p.order,
+            isPrimary: p.isPrimary,
+            moderation: p.moderation,
             uploadedAt: p.uploadedAt?.toString() || new Date().toISOString()
           })),
         prompts: [], // Loaded lazily on profile open
         heartReacts: realCount > 0 ? realCount : fakeCount
       };
-
     });
     console.log('getDiscoverUsers END, count:', mappedUsers.length);
     return { ok: true, data: mappedUsers };
