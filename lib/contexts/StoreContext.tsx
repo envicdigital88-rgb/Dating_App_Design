@@ -317,13 +317,20 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
           }
         });
 
-      // Fetch discover users in parallel in the background
-      const discoverPromise = import('@/app/actions/user')
-        .then(({ getDiscoverUsers }) => getDiscoverUsers())
-        .catch((e: any) => {
+      // Fetch discover users in parallel in the background via stable API endpoint
+      const discoverPromise = fetch('/api/discover', { cache: 'no-store', credentials: 'include' })
+        .then(async (res) => {
+          if (!res.ok) return { ok: false, error: 'failed', data: [] as User[] };
+          return await res.json();
+        })
+        .catch(async (e: any) => {
           checkStaleDeployment(e);
-          console.error('Discover users error during hydration:', e);
-          return { ok: false, error: 'failed', data: [] as User[] };
+          try {
+            const { getDiscoverUsers } = await import('@/app/actions/user');
+            return await getDiscoverUsers();
+          } catch (err: any) {
+            return { ok: false, error: 'failed', data: [] as User[] };
+          }
         });
 
       userPromise.then((user) => {
@@ -1313,8 +1320,26 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   const fetchDiscoverUsers = useCallback<StoreValue['fetchDiscoverUsers']>(async (filters, seenIds = []) => {
     setIsDiscoverFetching(true);
     try {
-      const { getDiscoverUsers } = await import('@/app/actions/user');
-      const res = await getDiscoverUsers(filters, seenIds);
+      let res: any = null;
+      try {
+        const apiRes = await fetch('/api/discover', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filters, seenIds }),
+          credentials: 'include'
+        });
+        if (apiRes.ok) {
+          res = await apiRes.json();
+        }
+      } catch (apiErr) {
+        console.warn('API /api/discover failed, trying fallback action:', apiErr);
+      }
+
+      if (!res || !res.ok) {
+        const { getDiscoverUsers } = await import('@/app/actions/user');
+        res = await getDiscoverUsers(filters, seenIds);
+      }
+
       if (res?.ok && Array.isArray(res.data)) {
         const newUsers = res.data as User[];
         const newPhotos = newUsers.flatMap((u: any) => u.photos || []);
@@ -1368,6 +1393,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         console.warn('Stale deployment detected, reloading page for latest build assets...');
         if (typeof window !== 'undefined') window.location.reload();
       }
+      return 0;
     } finally {
       setIsDiscoverFetching(false);
     }
@@ -1417,7 +1443,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       !passed.has(u.id) &&
       !hearted.has(u.id) &&
       !liked.has(u.id) &&
-      (u.isUnlimited || (Boolean(u.verificationSelfie) && u.selfieStatus === 'approved'));
+      (u.isUnlimited || u.selfieStatus === 'approved');
 
     const userMap = new Map(db.users.map((u) => [u.id, u]));
     const feed: User[] = [];
@@ -1466,7 +1492,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         !blocked.has(u.id) &&
         !hearted.has(u.id) &&
         !liked.has(u.id) &&
-        (u.isUnlimited || (Boolean(u.verificationSelfie) && u.selfieStatus === 'approved'));
+        (u.isUnlimited || u.selfieStatus === 'approved');
 
       const recycledCandidates = db.users.filter((u) => isEligibleRecycled(u) && !included.has(u.id));
       for (const u of recycledCandidates) {

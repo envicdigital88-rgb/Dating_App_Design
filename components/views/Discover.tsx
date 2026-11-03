@@ -180,9 +180,9 @@ export function Discover() {
     });
   }, [tab, filters, fetchDiscoverUsers]);
 
-  // Paginate when running low on profiles (fewer than 3 left, or empty)
+  // Paginate only when running low on profiles (between 1 and 3 left) - NEVER when 0 to prevent infinite loop
   useEffect(() => {
-    if (tab === 'nearby' && hasMore && !isDiscoverFetching && rawFeedLength < 3) {
+    if (tab === 'nearby' && hasMore && !isDiscoverFetching && rawFeedLength > 0 && rawFeedLength < 3) {
       const seenIds = rawFeed.map(u => u.id);
       fetchDiscoverUsers(filters, seenIds).then((count) => {
         if (typeof count === 'number' && count < 20) setHasMore(false);

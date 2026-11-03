@@ -180,8 +180,8 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
       if (u.discoverable === false) return false;
       // Unlimited accounts are always public and photo verified
       if (u.isUnlimited) return true;
-      // Must have completed and been approved for selfie verification to appear on Discover
-      if (!u.verificationSelfie || u.selfieStatus !== 'approved') return false;
+      // Must have been approved for selfie verification to appear on Discover
+      if (u.selfieStatus !== 'approved') return false;
       return true;
     });
 
@@ -211,7 +211,7 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
         if (hardExcludedIds.has(u.id)) return false;
         if (u.discoverable === false) return false;
         if (u.isUnlimited) return true;
-        if (!u.verificationSelfie || u.selfieStatus !== 'approved') return false;
+        if (u.selfieStatus !== 'approved') return false;
         return true;
       });
       if (filters) {
