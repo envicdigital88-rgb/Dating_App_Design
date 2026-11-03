@@ -113,6 +113,9 @@ export function AdminUsers() {
           });
 
         setRealUsers(merged);
+      } else if (!res.ok && mounted) {
+        setRealUsers([]);
+        toast.error(res.error || 'Failed to load members');
       }
     };
     fetchUsers();

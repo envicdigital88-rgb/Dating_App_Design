@@ -452,13 +452,23 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                   if (stateRes.data.relatedUsers) {
                     const relatedUsers = stateRes.data.relatedUsers as any[];
                     relatedUsers.forEach(ru => {
-                      if (!allUsers.find(u => u.id === ru.id)) {
-                        if (ru.heartReacts === undefined) {
-                          ru.heartReacts = ((ru.id.charCodeAt(0) + ru.id.charCodeAt(ru.id.length - 1)) % 50) + 1;
-                        }
-                        allUsers.push(ru);
-                        allPhotos.push(...(ru.photos || []));
+                      if (ru.heartReacts === undefined) {
+                        ru.heartReacts = ((ru.id.charCodeAt(0) + ru.id.charCodeAt(ru.id.length - 1)) % 50) + 1;
                       }
+                      const existingIndex = allUsers.findIndex(u => u.id === ru.id);
+                      if (existingIndex >= 0) {
+                        allUsers[existingIndex] = { ...allUsers[existingIndex], ...ru };
+                      } else {
+                        allUsers.push(ru);
+                      }
+                      (ru.photos || []).forEach((rp: any) => {
+                        const existingPIdx = allPhotos.findIndex(p => p.id === rp.id);
+                        if (existingPIdx >= 0) {
+                          allPhotos[existingPIdx] = { ...allPhotos[existingPIdx], ...rp };
+                        } else {
+                          allPhotos.push(rp);
+                        }
+                      });
                     });
                   }
                 }
@@ -1652,7 +1662,26 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     const heartTargetIds = new Set(
       db.heartBucket.filter((h) => h.userId === sessionId).map((h) => h.targetUserId)
     );
-    return db.users.filter((u) => heartTargetIds.has(u.id)).map((u) => maskUser(u, sessionId));
+    const usersInBucket = db.users.filter((u) => heartTargetIds.has(u.id)).map((u) => maskUser(u, sessionId));
+    for (const targetId of heartTargetIds) {
+      if (!usersInBucket.some(u => u.id === targetId)) {
+        usersInBucket.push({
+          id: targetId,
+          name: 'Saved Member',
+          age: 25,
+          location: 'Sri Lanka',
+          bio: '',
+          gender: 'woman',
+          verified: false,
+          isAnonymous: false,
+          photos: [],
+          interests: [],
+          traits: [],
+          lifestyle: {}
+        } as any);
+      }
+    }
+    return usersInBucket;
   }, [db.heartBucket, db.users, sessionId]);
 
   const addToHeartBucket = useCallback<StoreValue['addToHeartBucket']>((userId) => {

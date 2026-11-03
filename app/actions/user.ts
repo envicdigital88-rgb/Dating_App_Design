@@ -592,7 +592,7 @@ export async function getUserStateAction() {
       const rPhotos = await db.orm.public.Photo.where((p) => p.userId.in(uIds)).all();
       relatedUsers = rUsers.map((u: any) => ({
         ...u,
-        photos: rPhotos.filter((p: any) => p.userId === u.id && p.moderation === 'approved')
+        photos: rPhotos.filter((p: any) => p.userId === u.id && p.moderation !== 'rejected')
       }));
     }
 
@@ -604,35 +604,91 @@ export async function getUserStateAction() {
         parsedLifestyle?.boostedUntil && new Date(parsedLifestyle.boostedUntil).getTime() > Date.now()
       );
       return {
-        ...user,
-        lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
-        createdAt: user.createdAt?.toString() || new Date().toISOString(),
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone || '',
+        age: user.age,
+        gender: user.gender,
+        location: user.location,
+        bio: user.bio || '',
+        verified: Boolean(user.verified),
+        isUnlimited: Boolean(user.isUnlimited),
+        selfieStatus: user.selfieStatus || null,
+        lastActiveAt: user.lastActiveAt ? user.lastActiveAt.toString() : new Date().toISOString(),
+        createdAt: user.createdAt ? user.createdAt.toString() : new Date().toISOString(),
         lastDailyBonusAt: user.lastDailyBonusAt?.toString() || null,
-        interests: typeof user.interests === 'string' ? JSON.parse(user.interests) : user.interests,
-        traits: typeof user.traits === 'string' ? JSON.parse(user.traits) : user.traits,
+        interests: typeof user.interests === 'string' ? (() => { try { return JSON.parse(user.interests); } catch { return []; } })() : (user.interests || []),
+        traits: typeof user.traits === 'string' ? (() => { try { return JSON.parse(user.traits); } catch { return []; } })() : (user.traits || []),
         lifestyle: parsedLifestyle,
         boostedUntil: parsedLifestyle?.boostedUntil || null,
         isBoosted,
-        photos: user.photos?.map((p: any) => ({
-          ...p,
-          uploadedAt: p.uploadedAt?.toString() || new Date().toISOString()
-        })) || []
+        photos: (user.photos || []).map((p: any) => ({
+          id: p.id,
+          userId: p.userId,
+          url: p.url,
+          order: p.order,
+          isPrimary: Boolean(p.isPrimary),
+          moderation: p.moderation,
+          uploadedAt: p.uploadedAt ? p.uploadedAt.toString() : new Date().toISOString()
+        }))
       };
     });
 
     const payload = {
-      likes: likes.map(l => ({ ...l, createdAt: l.createdAt.toString() })),
-      passes,
-      heartBucket,
-      wingles: wingles.map(w => ({ ...w, createdAt: w.createdAt.toString(), respondedAt: w.respondedAt?.toString() })),
+      likes: likes.map(l => ({
+        id: l.id,
+        fromUserId: l.fromUserId,
+        toUserId: l.toUserId,
+        viewed: Boolean(l.viewed),
+        createdAt: l.createdAt ? l.createdAt.toString() : new Date().toISOString()
+      })),
+      passes: passes.map(p => ({
+        id: p.id,
+        userId: p.userId,
+        targetUserId: p.targetUserId,
+        viewed: Boolean(p.viewed),
+        createdAt: (p as any).createdAt ? (p as any).createdAt.toString() : new Date().toISOString()
+      })),
+      heartBucket: heartBucket.map(h => ({
+        id: h.id,
+        userId: h.userId,
+        targetUserId: h.targetUserId,
+        viewed: Boolean(h.viewed),
+        createdAt: (h as any).createdAt ? (h as any).createdAt.toString() : new Date().toISOString()
+      })),
+      wingles: wingles.map(w => ({
+        id: w.id,
+        fromUserId: w.fromUserId,
+        toUserId: w.toUserId,
+        note: w.note || '',
+        status: w.status,
+        viewed: Boolean(w.viewed),
+        createdAt: w.createdAt ? w.createdAt.toString() : new Date().toISOString(),
+        respondedAt: w.respondedAt ? w.respondedAt.toString() : null
+      })),
       connections: connections.map(c => ({
         id: c.id,
         userIds: [c.userId1, c.userId2],
-        createdAt: c.createdAt.toString()
+        createdAt: c.createdAt ? c.createdAt.toString() : new Date().toISOString()
       })),
-      blocks: blocks.map(b => ({ ...b, createdAt: b.createdAt.toString() })),
+      blocks: blocks.map(b => ({
+        id: b.id,
+        blockerId: b.blockerId,
+        blockedUserId: b.blockedUserId,
+        createdAt: b.createdAt ? b.createdAt.toString() : new Date().toISOString()
+      })),
       relatedUsers: mappedRelatedUsers,
-      notifications: notifications.map(n => ({ ...n, createdAt: n.createdAt.toString() }))
+      notifications: notifications.map(n => ({
+        id: n.id,
+        userId: n.userId,
+        type: n.type,
+        title: n.title,
+        body: n.body,
+        read: Boolean(n.read),
+        href: n.href || null,
+        createdAt: n.createdAt ? n.createdAt.toString() : new Date().toISOString()
+      }))
     };
 
     console.log(`[getUserStateAction] Returning state for ${userId}: ${wingles.length} wingles, ${connections.length} connections, ${relatedUsers.length} related users`);

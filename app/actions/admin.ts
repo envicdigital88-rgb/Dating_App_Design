@@ -387,8 +387,8 @@ export async function getAdminUsersAction() {
       data: sortedUsers.map(u => ({
         ...u,
         verificationSelfie: '',
-        createdAt: u.createdAt.toString(),
-        lastActiveAt: u.lastActiveAt?.toString() || u.createdAt.toString(),
+        createdAt: u.createdAt ? u.createdAt.toString() : new Date().toISOString(),
+        lastActiveAt: u.lastActiveAt ? u.lastActiveAt.toString() : (u.createdAt ? u.createdAt.toString() : new Date().toISOString()),
         lastDailyBonusAt: u.lastDailyBonusAt?.toString() || null,
         photos: photos.filter(p => p.userId === u.id).sort((a, b) => a.order - b.order).map(p => ({
           ...p,
@@ -511,16 +511,30 @@ export async function getAdminModerationDataAction() {
 
     const users = await db.orm.public.User.where((u) => u.id.in(Array.from(userIds))).all();
     
-    // Fetch only pending members with live selfies
-    const rawSelfieUsers = await db.orm.public.User.where({ role: 'member', selfieStatus: 'pending', isUnlimited: false }).all();
-    const selfieUsers = rawSelfieUsers.filter(u => u.verificationSelfie && u.verificationSelfie.trim().length > 0).slice(0, 100);
-    const selfieUserIds = selfieUsers.map(u => u.id);
+    // Fetch members with live selfies or non-null selfieStatus
+    const rawSelfieUsers = await db.orm.public.User.where({ role: 'member' }).all();
+    const selfieUsers = rawSelfieUsers.filter(u => 
+      (u.verificationSelfie && u.verificationSelfie.trim().length > 0) ||
+      u.selfieStatus === 'pending' ||
+      u.selfieStatus === 'approved' ||
+      u.selfieStatus === 'rejected'
+    );
+
+    // Sort: pending first, then by createdAt desc
+    const sortedSelfieUsers = [...selfieUsers].sort((a, b) => {
+      if (a.selfieStatus === 'pending' && b.selfieStatus !== 'pending') return -1;
+      if (b.selfieStatus === 'pending' && a.selfieStatus !== 'pending') return 1;
+      const timeA = a.createdAt ? new Date(a.createdAt.toString()).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt.toString()).getTime() : 0;
+      return timeB - timeA;
+    }).slice(0, 300);
+
+    const selfieUserIds = sortedSelfieUsers.map(u => u.id);
     const allPhotos = selfieUserIds.length > 0
       ? await db.orm.public.Photo.where(p => p.userId.in(selfieUserIds)).select('id', 'userId', 'url', 'order', 'isPrimary').all()
       : [];
 
-    const selfies = selfieUsers.map(u => {
-      const isReviewed = u.selfieStatus === 'approved' || u.selfieStatus === 'rejected';
+    const selfies = sortedSelfieUsers.map(u => {
       return {
         userId: u.id,
         name: u.name,
@@ -528,20 +542,18 @@ export async function getAdminModerationDataAction() {
         age: u.age,
         gender: u.gender,
         location: u.location,
-        verificationSelfie: isReviewed ? '' : (u.verificationSelfie as string),
+        verificationSelfie: (u.verificationSelfie as string) || '',
         selfieStatus: (u.selfieStatus as 'pending' | 'approved' | 'rejected') || 'pending',
-        createdAt: u.createdAt.toString(),
-        photos: isReviewed
-          ? []
-          : allPhotos
-              .filter(p => p.userId === u.id)
-              .sort((a, b) => a.order - b.order)
-              .map(p => ({
-                id: p.id,
-                url: p.url,
-                order: p.order,
-                isPrimary: p.isPrimary
-              }))
+        createdAt: u.createdAt ? u.createdAt.toString() : new Date().toISOString(),
+        photos: allPhotos
+          .filter(p => p.userId === u.id)
+          .sort((a, b) => a.order - b.order)
+          .map(p => ({
+            id: p.id,
+            url: p.url,
+            order: p.order,
+            isPrimary: p.isPrimary
+          }))
       };
     });
 
@@ -549,12 +561,12 @@ export async function getAdminModerationDataAction() {
       ok: true, 
       reports: reports.map(r => ({
         ...r,
-        createdAt: r.createdAt.toString(),
+        createdAt: r.createdAt ? r.createdAt.toString() : new Date().toISOString(),
         targetName: users.find(u => u.id === r.targetUserId)?.name || 'Member'
       })),
       photos: photos.map(p => ({
         ...p,
-        uploadedAt: p.uploadedAt.toString(),
+        uploadedAt: p.uploadedAt ? p.uploadedAt.toString() : new Date().toISOString(),
         ownerName: users.find(u => u.id === p.userId)?.name || 'Member'
       })),
       selfies

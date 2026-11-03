@@ -77,7 +77,7 @@ export function AdminModeration() {
     try {
       const res = await moderateSelfieAction(userId, status);
       if (res.ok) {
-        setRealSelfies(prev => prev.map(s => s.userId === userId ? { ...s, selfieStatus: status, verificationSelfie: '', photos: [] } : s));
+        setRealSelfies(prev => prev.map(s => s.userId === userId ? { ...s, selfieStatus: status } : s));
         toast.success(status === 'approved' ? 'Selfie approved & verified!' : 'Selfie rejected');
         window.dispatchEvent(new CustomEvent('admin-moderation-updated'));
       } else {
@@ -269,7 +269,7 @@ export function AdminModeration() {
                     </div>
 
                     {/* Comparison Body vs Reviewed Privacy Summary */}
-                    {item.selfieStatus === 'pending' && item.verificationSelfie ? (
+                    {item.verificationSelfie ? (
                       <div className="mt-5 grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
                         
                         {/* Left: Private Live Selfie */}
@@ -285,7 +285,7 @@ export function AdminModeration() {
                               className="h-full w-full object-cover"
                             />
                             <span className="absolute bottom-2 left-2 rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-medium text-white backdrop-blur-sm border border-white/20">
-                              Private · Admin view only
+                              {item.selfieStatus === 'approved' ? 'Approved Selfie' : item.selfieStatus === 'rejected' ? 'Rejected Selfie' : 'Private · Admin view only'}
                             </span>
                           </div>
                         </div>
@@ -326,40 +326,33 @@ export function AdminModeration() {
                           )}
                         </div>
                       </div>
-                    ) : item.selfieStatus === 'pending' && !item.verificationSelfie ? (
-                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sand bg-cream/40 px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center gap-2 text-[13px] font-medium text-amber-700">
-                            <ClockIcon className="h-4 w-4 text-amber-600 shrink-0" />
-                            <span>
-                              No live selfie uploaded yet for <strong className="font-semibold text-ink">{item.name}</strong>. (Member registered before live verification was enabled).
-                            </span>
-                          </span>
-                        </div>
-                      </div>
                     ) : (
-                      /* Approved or Rejected - Photo is hidden, only user's name & status shown */
+                      /* No verification selfie uploaded */
                       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sand bg-cream/40 px-4 py-3">
                         <div className="flex items-center gap-2">
                           {item.selfieStatus === 'approved' ? (
                             <span className="inline-flex items-center gap-2 text-[13px] font-medium text-emerald-700">
                               <CheckCircle2Icon className="h-4 w-4 text-emerald-600 shrink-0" />
                               <span>
-                                Verification approved for <strong className="font-semibold text-ink">{item.name}</strong>. Selfie photo is hidden from admin display.
+                                Verification approved for <strong className="font-semibold text-ink">{item.name}</strong>.
                               </span>
                             </span>
                           ) : item.selfieStatus === 'rejected' ? (
                             <span className="inline-flex items-center gap-2 text-[13px] font-medium text-rose-700">
                               <XCircleIcon className="h-4 w-4 text-rose-600 shrink-0" />
                               <span>
-                                Verification rejected for <strong className="font-semibold text-ink">{item.name}</strong>. Selfie photo is hidden from admin display.
+                                Verification rejected for <strong className="font-semibold text-ink">{item.name}</strong>.
                               </span>
                             </span>
-                          ) : null}
+                          ) : (
+                            <span className="inline-flex items-center gap-2 text-[13px] font-medium text-amber-700">
+                              <ClockIcon className="h-4 w-4 text-amber-600 shrink-0" />
+                              <span>
+                                No live selfie uploaded yet for <strong className="font-semibold text-ink">{item.name}</strong>.
+                              </span>
+                            </span>
+                          )}
                         </div>
-                        <span className="text-[11px] font-medium text-ink-muted">
-                          Photo privacy protected
-                        </span>
                       </div>
                     )}
                   </li>

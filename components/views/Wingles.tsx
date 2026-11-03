@@ -97,9 +97,16 @@ export function Wingles() {
 
         <ul className="space-y-3">
               {incoming.map((wingle) => {
-            const sender = userById(wingle.fromUserId);
-            const photo = sender ? photosOf(sender.id)[0] : undefined;
-            if (!sender) return null;
+            const sender = userById(wingle.fromUserId) || ({
+              id: wingle.fromUserId,
+              name: 'Member',
+              age: 25,
+              location: 'Sri Lanka',
+              bio: '',
+              isAnonymous: false,
+              photos: []
+            } as any);
+            const photo = photosOf(sender.id)[0];
 
             const isPending = wingle.status === 'pending';
             const { gift, text } = parseWingleNote(wingle.note);
@@ -245,9 +252,16 @@ export function Wingles() {
 
         <ul className="space-y-3">
               {sent.map((wingle) => {
-            const target = userById(wingle.toUserId);
-            const photo = target ? photosOf(target.id)[0] : undefined;
-            if (!target) return null;
+            const target = userById(wingle.toUserId) || ({
+              id: wingle.toUserId,
+              name: 'Member',
+              age: 25,
+              location: 'Sri Lanka',
+              bio: '',
+              isAnonymous: false,
+              photos: []
+            } as any);
+            const photo = photosOf(target.id)[0];
             return (
               <li
                 key={wingle.id}
