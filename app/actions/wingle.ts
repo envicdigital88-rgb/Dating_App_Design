@@ -5,7 +5,7 @@ import { getSession } from '@/lib/session'
 import { Temporal } from 'temporal-polyfill'
 import { formatNotifyPhoneNumber, getPhoneVariants, sendNotifySms } from '@/lib/notify'
 
-export const GIFT_META: Record<string, { cost: number; label: string; icon: string }> = {
+const GIFT_META: Record<string, { cost: number; label: string; icon: string }> = {
   rose: { cost: 5, label: 'Red Rose', icon: '🌹' },
   chocolates: { cost: 8, label: 'Chocolates', icon: '🍫' },
   coffee: { cost: 10, label: 'Coffee', icon: '☕' },
