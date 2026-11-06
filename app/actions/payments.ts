@@ -24,6 +24,8 @@ export type PaymentInitResult =
   | { ok: true; redirectUrl: string; ledgerId: string }
   | { ok: false; error: string };
 
+const PAYMENT_INIT_ERROR = 'Could not initialize the payment. Please try again shortly.';
+
 async function initializePayment(input: {
   userId: string;
   amountLKR: number;
@@ -67,10 +69,10 @@ async function initializePayment(input: {
       await db.orm.public.TransactionLedger.where({ id: ledger.id }).update({ transactionReference });
     }
     return { ok: true, redirectUrl, ledgerId: ledger.id };
-  } catch (error: any) {
-    if (error instanceof GenieError || error?.name === 'GenieError') return { ok: false, error: error.message };
-    console.error('Payment initialization could not complete:', error);
-    return { ok: false, error: error?.message || 'Could not initialize the payment. Please try again shortly.' };
+  } catch (error) {
+    if (error instanceof GenieError) return { ok: false, error: error.message };
+    console.error('Payment initialization could not complete.');
+    return { ok: false, error: PAYMENT_INIT_ERROR };
   }
 }
 
@@ -96,9 +98,9 @@ export async function buyWingitsAction(packageAmountLKR: number, wingitsAmount: 
       amountLKR: expectedAmountLKR,
       wingitsCredited: wingitsAmount,
     });
-  } catch (err: any) {
-    console.error('buyWingitsAction error:', err);
-    return { ok: false, error: err?.message || 'Could not initialize payment' };
+  } catch {
+    console.error('Wingits purchase could not start.');
+    return { ok: false, error: PAYMENT_INIT_ERROR };
   }
 }
 
@@ -154,9 +156,9 @@ export async function initiateSecretWinglePaymentAction(
       transactionReference: metadata,
       secretWingle: true,
     });
-  } catch (err: any) {
-    console.error('initiateSecretWinglePaymentAction error:', err);
-    return { ok: false, error: err?.message || 'Failed to initiate secret wingle payment' };
+  } catch {
+    console.error('Secret Wingle purchase could not start.');
+    return { ok: false, error: PAYMENT_INIT_ERROR };
   }
 }
 

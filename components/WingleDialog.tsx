@@ -24,7 +24,7 @@ export function WingleDialog({
 }: {
   open: boolean;
   onClose: () => void;
-  target: User | null;
+  target: Pick<User, 'id' | 'name'> | null;
 }) {
   const { sendWingle, currentUser } = useStore();
   const [note, setNote] = useState('');

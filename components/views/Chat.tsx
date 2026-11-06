@@ -43,7 +43,6 @@ export function Chat() {
   const router = useRouter();
   const navigate = router.push;
   const {
-    db,
     currentUser,
     entitlements,
     minglesOf,
@@ -61,7 +60,9 @@ export function Chat() {
     typingIn,
     conversationsOf,
     viewImage,
-    isHydrated
+    isHydrated,
+    conversationsLoadState,
+    refreshAccountState,
   } = useStore();
 
   const [draft, setDraft] = useState('');
@@ -89,25 +90,32 @@ export function Chat() {
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
-  const conversation = db.conversations.find((c) => c.id === conversationId);
+  const conversation = conversationsOf().find(c => c.id === conversationId);
+  const loadedConversationId = conversation?.id;
   const mingles = useMemo(
     () => conversation ? minglesOf(conversation.id) : [],
-    [conversation, minglesOf, db.mingles]
+    [conversation, minglesOf]
   );
 
   useEffect(() => {
-    if (conversation) markConversationRead(conversation.id);
-  }, [conversation, mingles.length, markConversationRead]);
+    if (loadedConversationId) markConversationRead(loadedConversationId);
+  }, [loadedConversationId, mingles.length, markConversationRead]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [mingles.length, typingIn]);
 
-  useEffect(() => {
-    if (isHydrated && !conversation) {
-      router.replace('/mingles');
-    }
-  }, [isHydrated, conversation, router]);
+  if (isHydrated && currentUser && !conversation && conversationsLoadState !== 'loading') {
+    const failed = conversationsLoadState === 'error';
+    return (
+      <div className="flex flex-col items-center gap-4 p-8">
+        <p role="status" className="text-ink">{failed ? 'Could not load this chat.' : 'This chat is unavailable.'}</p>
+        <Button variant="outline" onClick={failed ? refreshAccountState : () => navigate('/mingles')}>
+          {failed ? 'Try again' : 'Back to Mingles'}
+        </Button>
+      </div>
+    );
+  }
 
   if (!isHydrated || !currentUser || !entitlements || !conversation) {
     return (

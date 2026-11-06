@@ -30,6 +30,10 @@ import {
   DEMO_USER_ID
 } from '@/lib/data/seed';
 import { id as makeId } from '@/lib/utils/format';
+import type { getConversationsAction } from '@/app/actions/chat';
+import type { getUserStateAction } from '@/app/actions/user';
+
+type LoadState = 'loading' | 'ready' | 'error';
 
 /**
  * Simulated server. Every limit, package rule and payment verification is
@@ -147,10 +151,14 @@ interface StoreValue {
   wingleStatusWith: (userId: string) => WinglingWingle | undefined;
   // secret wingles
   secretWinglesReceived: () => SecretWingle[];
+  secretWinglesLoadState: LoadState;
+  refreshSecretWingles: () => void;
   sendSecretWingle: (targetPhone: string, message: string) => Promise<ServerResult<SecretWingle>>;
   // chat
   conversationsOf: () => Conversation[];
   conversationWith: (userId: string) => Conversation | undefined;
+  conversationsLoadState: LoadState;
+  refreshAccountState: () => void;
   minglesOf: (conversationId: string) => Mingle[];
   sendMingle: (conversationId: string, body: string, imageUrl?: string, replyToId?: string | null, forwarded?: boolean, viewOnce?: boolean) => ServerResult<Mingle>;
   markConversationRead: (conversationId: string) => void;
@@ -225,6 +233,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   const [db, setDb] = useState<Db>(initialDb);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [conversationsLoad, setConversationsLoad] = useState<{ userId: string; state: LoadState }>();
+  const [secretWinglesLoad, setSecretWinglesLoad] = useState<{ userId: string; state: LoadState }>();
   const [typingIn] = useState<string | null>(null);
   const [activePopupChatId, setActivePopupChatId] = useState<string | null>(null);
   const [discoverIds, setDiscoverIds] = useState<string[]>([]);
@@ -232,6 +242,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   const sessionIdRef = useRef<string | null>(null);
   sessionIdRef.current = sessionId;
   const refreshChatStateRef = useRef<(() => void) | null>(null);
+  const secretWinglesRequest = useRef<string | null>(null);
   const peerRef = useRef<any>(null);
   const connsRef = useRef<{ [userId: string]: any }>({});
 
@@ -239,6 +250,30 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     // We will no longer request permission immediately on mount.
     // Instead, we will show a UI prompt when needed.
   }, []);
+
+  const refreshSecretWingles = useCallback(() => {
+    const userId = sessionIdRef.current;
+    if (!userId || secretWinglesRequest.current === userId) return;
+    secretWinglesRequest.current = userId;
+    setSecretWinglesLoad(prev => prev?.userId === userId && prev.state === 'ready' ? prev : { userId, state: 'loading' });
+    import('@/app/actions/wingle').then(({ getReceivedSecretWinglesAction }) => getReceivedSecretWinglesAction())
+      .then(result => {
+        if (sessionIdRef.current !== userId) return;
+        if (!result.ok || result.userId !== userId || !result.data) {
+          setSecretWinglesLoad({ userId, state: 'error' });
+          return;
+        }
+        const secretWingles = result.data;
+        setDb(d => ({ ...d, secretWingles }));
+        setSecretWinglesLoad({ userId, state: 'ready' });
+      }).catch(() => {
+        if (sessionIdRef.current === userId) setSecretWinglesLoad({ userId, state: 'error' });
+      }).finally(() => {
+        if (secretWinglesRequest.current === userId) secretWinglesRequest.current = null;
+      });
+  }, []);
+
+  const refreshAccountState = useCallback(() => refreshChatStateRef.current?.(), []);
 
   const showNotification = useCallback((title: string, body: string, icon?: string) => {
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted' && document.hidden) {
@@ -403,119 +438,6 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
           }
         });
 
-        // If logged in, fetch secondary data in parallel in the background
-        if (user) {
-          Promise.all([
-            import('@/app/actions/chat'),
-            import('@/app/actions/wingle'),
-            import('@/app/actions/user')
-          ]).then(([{ getConversationsAction }, { getReceivedSecretWinglesAction }, { getUserStateAction }]) => {
-            Promise.allSettled([
-              getConversationsAction(),
-              getUserStateAction(),
-              getReceivedSecretWinglesAction()
-            ]).then(([chatResult, stateResult, secretWinglesResult]) => {
-              const chatRes = chatResult.status === 'fulfilled' ? chatResult.value : null;
-              const stateRes = stateResult.status === 'fulfilled' ? stateResult.value : null;
-              const secretWinglesRes = secretWinglesResult.status === 'fulfilled' ? secretWinglesResult.value : null;
-
-              setDb(d => {
-                let updatedConvs = d.conversations;
-                let updatedMingles = d.mingles;
-                if (chatRes?.ok && chatRes.data) {
-                  updatedConvs = chatRes.data.conversations as unknown as Conversation[];
-                  updatedMingles = chatRes.data.mingles as unknown as Mingle[];
-                }
-
-                let newLikes = d.likes;
-                let newPasses = d.passes;
-                let newHeartBucket = d.heartBucket;
-                let newWingles = d.wingles;
-                let newConnections = d.connections;
-                let newBlocks = d.blocks;
-                let newSecretWingles = d.secretWingles;
-                const allUsers = [...d.users];
-                const allPhotos = [...d.photos];
-
-                if (stateRes?.ok && stateRes.data) {
-                  newLikes = stateRes.data.likes as any[];
-                  newPasses = stateRes.data.passes as any[];
-                  newHeartBucket = stateRes.data.heartBucket as any[];
-                  newWingles = stateRes.data.wingles as any[];
-                  newConnections = stateRes.data.connections as any[];
-                  newBlocks = (stateRes.data as any).blocks as any[] || d.blocks;
-                  
-                  if (stateRes.data.relatedUsers) {
-                    const relatedUsers = stateRes.data.relatedUsers as any[];
-                    relatedUsers.forEach(ru => {
-                      if (ru.heartReacts === undefined) {
-                        ru.heartReacts = ((ru.id.charCodeAt(0) + ru.id.charCodeAt(ru.id.length - 1)) % 50) + 1;
-                      }
-                      const existingIndex = allUsers.findIndex(u => u.id === ru.id);
-                      if (existingIndex >= 0) {
-                        allUsers[existingIndex] = { ...allUsers[existingIndex], ...ru };
-                      } else {
-                        allUsers.push(ru);
-                      }
-                      (ru.photos || []).forEach((rp: any) => {
-                        const existingPIdx = allPhotos.findIndex(p => p.id === rp.id);
-                        if (existingPIdx >= 0) {
-                          allPhotos[existingPIdx] = { ...allPhotos[existingPIdx], ...rp };
-                        } else {
-                          allPhotos.push(rp);
-                        }
-                      });
-                    });
-                  }
-                }
-
-                if (secretWinglesRes?.ok && secretWinglesRes.data) {
-                  newSecretWingles = secretWinglesRes.data as SecretWingle[];
-                  newSecretWingles.forEach(sw => {
-                    if (sw.sender && !allUsers.find(u => u.id === sw.senderId)) {
-                      const s = sw.sender as any;
-                      if (s.heartReacts === undefined) {
-                        s.heartReacts = ((s.id.charCodeAt(0) + s.id.charCodeAt(s.id.length - 1)) % 50) + 1;
-                      }
-                      allUsers.push(s);
-                      allPhotos.push(...(s.photos || []));
-                    }
-                  });
-                }
-
-                let newNotifications = d.notifications;
-                if (stateRes?.data && stateRes.data.notifications) {
-                  const remoteNotifs = stateRes.data.notifications as any[];
-                  if (JSON.stringify(d.notifications) !== JSON.stringify(remoteNotifs)) {
-                    newNotifications = remoteNotifs;
-                  }
-                }
-
-                return { 
-                  ...d, 
-                  users: allUsers, 
-                  photos: allPhotos,
-                  conversations: updatedConvs,
-                  mingles: updatedMingles,
-                  likes: newLikes,
-                  passes: newPasses,
-                  heartBucket: newHeartBucket,
-                  wingles: newWingles,
-                  connections: newConnections,
-                  blocks: newBlocks,
-                  secretWingles: newSecretWingles,
-                  notifications: newNotifications
-                };
-              });
-            }).catch((e) => {
-              checkStaleDeployment(e);
-              console.error('Secondary hydration settled error:', e);
-            });
-          }).catch((e) => {
-            checkStaleDeployment(e);
-            console.error('Dynamic imports error:', e);
-          });
-        }
       }).catch((e: any) => {
         checkStaleDeployment(e);
         console.error('userPromise error:', e);
@@ -562,136 +484,153 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         return;
       }
       fetching = true;
-      import('@/app/actions/chat').then(({ getConversationsAction }) => {
-        import('@/app/actions/user').then(({ getUserStateAction }) => {
-          Promise.all([getConversationsAction(), getUserStateAction()]).then(([chatRes, stateRes]) => {
-            if (!active || sessionIdRef.current !== sessionId) return;
-            setDb(d => {
-              let nextDb = { ...d };
-              let changed = false;
+      setConversationsLoad(prev => prev?.userId === sessionId && prev.state === 'ready' ? prev : { userId: sessionId, state: 'loading' });
+      fetch('/api/account-state', { cache: 'no-store' }).then(async response => {
+        if (!response.ok) throw new Error('Account state request failed.');
+        const { userId, chatRes, stateRes }: {
+          userId: string;
+          chatRes: Awaited<ReturnType<typeof getConversationsAction>>;
+          stateRes: Awaited<ReturnType<typeof getUserStateAction>>;
+        } = await response.json();
+        if (!active || sessionIdRef.current !== sessionId) return;
+        if (userId !== sessionId) throw new Error('The signed-in account changed.');
+        setConversationsLoad({ userId: sessionId, state: chatRes.ok ? 'ready' : 'error' });
+        setDb(d => {
+          let nextDb = { ...d };
+          let changed = false;
 
-              if (chatRes?.ok && chatRes.data) {
-                const updatedConvs = chatRes.data.conversations as unknown as Conversation[];
-                const updatedMingles = chatRes.data.mingles as unknown as Mingle[];
-                
-                const allowedConversationIds = new Set(updatedConvs.map(c => c.id));
-                const now = new Date().getTime();
-                const localMingles = d.mingles.filter(m => 
-                  allowedConversationIds.has(m.conversationId) && !updatedMingles.some(um => um.id === m.id) &&
-                  (now - new Date(m.createdAt).getTime() < 60000)
-                );
-                
-                const mergedMingles = [...updatedMingles, ...localMingles].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-                
-                const isDifferent = 
-                  d.mingles.length !== mergedMingles.length ||
-                  JSON.stringify(d.conversations) !== JSON.stringify(updatedConvs) ||
-                  JSON.stringify(d.mingles) !== JSON.stringify(mergedMingles);
+          if (chatRes?.ok && chatRes.data) {
+            const updatedConvs = chatRes.data.conversations as unknown as Conversation[];
+            const updatedMingles = chatRes.data.mingles as unknown as Mingle[];
 
-                if (isDifferent) {
-                  const newMingles = updatedMingles.filter(m => m.senderId !== sessionIdRef.current && !d.mingles.find(dm => dm.id === m.id));
-                  if (newMingles.length > 0 && typeof document !== 'undefined' && document.hidden) {
-                    const latest = newMingles[newMingles.length - 1];
-                    const sender = d.users?.find((u: any) => u.id === latest.senderId);
-                    const senderPhoto = d.photos?.find(p => p.userId === latest.senderId && p.isPrimary)?.url || d.photos?.find(p => p.userId === latest.senderId)?.url;
-                    showNotification(`New message from ${sender?.name || 'someone'}`, latest.body || '📷 Photo', senderPhoto);
-                  }
-                  nextDb.conversations = updatedConvs;
-                  nextDb.mingles = mergedMingles;
-                  changed = true;
-                }
+            const allowedConversationIds = new Set(updatedConvs.map(c => c.id));
+            const now = new Date().getTime();
+            const localMingles = d.mingles.filter(m =>
+              allowedConversationIds.has(m.conversationId) && !updatedMingles.some(um => um.id === m.id) &&
+              (now - new Date(m.createdAt).getTime() < 60000)
+            );
+
+            const mergedMingles = [...updatedMingles, ...localMingles].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+            const isDifferent =
+              d.mingles.length !== mergedMingles.length ||
+              JSON.stringify(d.conversations) !== JSON.stringify(updatedConvs) ||
+              JSON.stringify(d.mingles) !== JSON.stringify(mergedMingles);
+
+            if (isDifferent) {
+              const newMingles = updatedMingles.filter(m => m.senderId !== sessionIdRef.current && !d.mingles.find(dm => dm.id === m.id));
+              if (newMingles.length > 0 && typeof document !== 'undefined' && document.hidden) {
+                const latest = newMingles[newMingles.length - 1];
+                const sender = d.users?.find((u: any) => u.id === latest.senderId);
+                const senderPhoto = d.photos?.find(p => p.userId === latest.senderId && p.isPrimary)?.url || d.photos?.find(p => p.userId === latest.senderId)?.url;
+                showNotification(`New message from ${sender?.name || 'someone'}`, latest.body || '📷 Photo', senderPhoto);
               }
+              nextDb.conversations = updatedConvs;
+              nextDb.mingles = mergedMingles;
+              changed = true;
+            }
+          }
 
-              if (stateRes?.ok && stateRes.data) {
-                const balance = stateRes.data.wingitsBalance;
-                if (balance !== undefined && d.users.some(u => u.id === sessionId && u.wingitsBalance !== balance)) {
-                  nextDb.users = d.users.map(u => u.id === sessionId ? { ...u, wingitsBalance: balance } : u);
-                  changed = true;
-                }
-                const now = new Date().getTime();
-                const isSameItem = (a: any, b: any) => {
-                  if (a.id && b.id) return a.id === b.id;
-                  if (a.userId && a.targetUserId) return a.userId === b.userId && a.targetUserId === b.targetUserId;
-                  return false;
-                };
-                const mergeItems = (local: any[], remote: any[]) => {
-                  const recentLocal = local.filter(m => {
-                    if (remote.some(um => isSameItem(um, m))) return false;
-                    const age = m.createdAt ? now - new Date(m.createdAt).getTime() : 0;
-                    return age < 60000;
-                  });
-                  return [...remote, ...recentLocal];
-                };
+          if (stateRes?.ok && stateRes.data) {
+            const balance = stateRes.data.wingitsBalance;
+            if (balance !== undefined && d.users.some(u => u.id === sessionId && u.wingitsBalance !== balance)) {
+              nextDb.users = d.users.map(u => u.id === sessionId ? { ...u, wingitsBalance: balance } : u);
+              changed = true;
+            }
+            const now = new Date().getTime();
+            const isSameItem = (a: any, b: any) => {
+              if (a.id && b.id) return a.id === b.id;
+              if (a.userId && a.targetUserId) return a.userId === b.userId && a.targetUserId === b.targetUserId;
+              return false;
+            };
+            const mergeItems = (local: any[], remote: any[]) => {
+              const recentLocal = local.filter(m => {
+                if (remote.some(um => isSameItem(um, m))) return false;
+                const age = m.createdAt ? now - new Date(m.createdAt).getTime() : 0;
+                return age < 60000;
+              });
+              return [...remote, ...recentLocal];
+            };
 
-                const newWingles = mergeItems(d.wingles, stateRes.data.wingles as any[]);
-                if (d.wingles.length !== newWingles.length || JSON.stringify(d.wingles) !== JSON.stringify(newWingles)) {
-                  nextDb.wingles = newWingles;
-                  changed = true;
-                }
-                const newConnections = stateRes.data.connections as Connection[];
-                if (d.connections.length !== newConnections.length || JSON.stringify(d.connections) !== JSON.stringify(newConnections)) {
-                  nextDb.connections = newConnections;
-                  changed = true;
-                }
-                const newLikes = mergeItems(d.likes, stateRes.data.likes as any[]);
-                if (d.likes.length !== newLikes.length || JSON.stringify(d.likes) !== JSON.stringify(newLikes)) {
-                  nextDb.likes = newLikes;
-                  changed = true;
-                }
-                const newPasses = mergeItems(d.passes, stateRes.data.passes as any[]);
-                if (d.passes.length !== newPasses.length || JSON.stringify(d.passes) !== JSON.stringify(newPasses)) {
-                  nextDb.passes = newPasses;
-                  changed = true;
-                }
-                const newHeartBucket = mergeItems(d.heartBucket, stateRes.data.heartBucket as any[]);
-                if (d.heartBucket.length !== newHeartBucket.length || JSON.stringify(d.heartBucket) !== JSON.stringify(newHeartBucket)) {
-                  nextDb.heartBucket = newHeartBucket;
-                  changed = true;
-                }
-                
-                const remoteBlocks = (stateRes.data as any).blocks as any[] || [];
-                if (JSON.stringify(d.blocks) !== JSON.stringify(remoteBlocks)) {
-                  nextDb.blocks = remoteBlocks;
-                  changed = true;
-                }
-                
-                if (stateRes.data.relatedUsers) {
-                  const rUsers = stateRes.data.relatedUsers as any[];
-                  const allUsers = [...(nextDb.users || d.users)];
-                  const allPhotos = [...(nextDb.photos || d.photos)];
-                  let usersChanged = false;
-                  
-                  rUsers.forEach(ru => {
-                    if (!allUsers.find(u => u.id === ru.id)) {
-                      if (ru.heartReacts === undefined) {
-                        ru.heartReacts = ((ru.id.charCodeAt(0) + ru.id.charCodeAt(ru.id.length - 1)) % 50) + 1;
-                      }
-                      allUsers.push(ru);
-                      allPhotos.push(...(ru.photos || []));
-                      usersChanged = true;
-                    }
-                  });
-                  
-                  if (usersChanged) {
-                    nextDb.users = allUsers;
-                    nextDb.photos = allPhotos;
-                    changed = true;
+            const newWingles = mergeItems(d.wingles, stateRes.data.wingles as any[]);
+            if (d.wingles.length !== newWingles.length || JSON.stringify(d.wingles) !== JSON.stringify(newWingles)) {
+              nextDb.wingles = newWingles;
+              changed = true;
+            }
+            const newConnections = stateRes.data.connections as Connection[];
+            if (d.connections.length !== newConnections.length || JSON.stringify(d.connections) !== JSON.stringify(newConnections)) {
+              nextDb.connections = newConnections;
+              changed = true;
+            }
+            const newLikes = mergeItems(d.likes, stateRes.data.likes as any[]);
+            if (d.likes.length !== newLikes.length || JSON.stringify(d.likes) !== JSON.stringify(newLikes)) {
+              nextDb.likes = newLikes;
+              changed = true;
+            }
+            const newPasses = mergeItems(d.passes, stateRes.data.passes as any[]);
+            if (d.passes.length !== newPasses.length || JSON.stringify(d.passes) !== JSON.stringify(newPasses)) {
+              nextDb.passes = newPasses;
+              changed = true;
+            }
+            const newHeartBucket = mergeItems(d.heartBucket, stateRes.data.heartBucket as any[]);
+            if (d.heartBucket.length !== newHeartBucket.length || JSON.stringify(d.heartBucket) !== JSON.stringify(newHeartBucket)) {
+              nextDb.heartBucket = newHeartBucket;
+              changed = true;
+            }
+
+            const notifications = mergeItems(d.notifications.filter(n => n.userId === sessionId), stateRes.data.notifications);
+            if (JSON.stringify(d.notifications) !== JSON.stringify(notifications)) {
+              nextDb.notifications = notifications;
+              changed = true;
+            }
+
+            const remoteBlocks = (stateRes.data as any).blocks as any[] || [];
+            if (JSON.stringify(d.blocks) !== JSON.stringify(remoteBlocks)) {
+              nextDb.blocks = remoteBlocks;
+              changed = true;
+            }
+
+            if (stateRes.data.relatedUsers) {
+              const rUsers = stateRes.data.relatedUsers as any[];
+              const allUsers = [...(nextDb.users || d.users)];
+              const allPhotos = [...(nextDb.photos || d.photos)];
+              let usersChanged = false;
+
+              rUsers.forEach(ru => {
+                if (!allUsers.find(u => u.id === ru.id)) {
+                  if (ru.heartReacts === undefined) {
+                    ru.heartReacts = ((ru.id.charCodeAt(0) + ru.id.charCodeAt(ru.id.length - 1)) % 50) + 1;
                   }
+                  allUsers.push(ru);
+                  allPhotos.push(...(ru.photos || []));
+                  usersChanged = true;
                 }
-              }
+              });
 
-              return changed ? nextDb : d;
-            });
-          }).catch(console.error).finally(finishFetch);
-        }).catch(finishFetch);
-      }).catch(finishFetch);
+              if (usersChanged) {
+                nextDb.users = allUsers;
+                nextDb.photos = allPhotos;
+                changed = true;
+              }
+            }
+          }
+
+          return changed ? nextDb : d;
+        });
+      }).catch(error => {
+        if (!active || sessionIdRef.current !== sessionId) return;
+        setConversationsLoad({ userId: sessionId, state: 'error' });
+        console.error('Could not load account data:', error);
+      }).finally(finishFetch);
     };
 
     refreshChatStateRef.current = fetchState;
     fetchState();
+    refreshSecretWingles();
 
     // Subscribe to Pusher channel for real-time events
     import('@/lib/pusher-client').then(({ pusherClient }) => {
+      if (!active) return;
       const channel = pusherClient.subscribe(`private-user-${sessionId}`);
       
       channel.bind('new-mingle', () => {
@@ -699,6 +638,10 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       });
 
       channel.bind('state-changed', () => {
+        fetchState();
+      });
+      channel.bind('secret-wingle-received', () => {
+        refreshSecretWingles();
         fetchState();
       });
     });
@@ -751,11 +694,15 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         pusherClient.unsubscribe(`private-user-${sessionId}`);
       });
     };
-  }, [sessionId, isHydrated]);
+  }, [sessionId, isHydrated, refreshSecretWingles, showNotification]);
 
   useEffect(() => {
     if (db.mingles !== initialDb.mingles && typeof window !== 'undefined') {
-      localStorage.setItem('winglemingle_mingles', JSON.stringify(db.mingles));
+      try {
+        localStorage.setItem('winglemingle_mingles', JSON.stringify(db.mingles));
+      } catch {
+        // The live chat still works if the browser cannot cache its history.
+      }
     }
   }, [db.mingles]);
 
@@ -967,7 +914,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
 
   const login = useCallback<StoreValue['login']>(
     (email, password) => {
-      const user = db.users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
+      const user = db.users.find((u) => u.email?.toLowerCase() === email.trim().toLowerCase());
       if (!user || user.password !== password)
       return { ok: false, error: 'That email and password combination does not match an account.' };
       if (user.suspended) return { ok: false, error: 'This account is suspended. Contact support.' };
@@ -982,7 +929,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       if (!name.trim() || !email.trim() || !password) return { ok: false, error: 'Fill every field to continue.' };
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: false, error: 'Enter a valid email address.' };
       if (password.length < 8) return { ok: false, error: 'Passwords need at least 8 characters.' };
-      if (db.users.some((u) => u.email.toLowerCase() === email.trim().toLowerCase()))
+      if (db.users.some((u) => u.email?.toLowerCase() === email.trim().toLowerCase()))
       return { ok: false, error: 'An account already exists with that email.' };
       const user: User = {
         id: makeId('u'),
@@ -1897,8 +1844,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   /* ---------------------------------------------------------------- secret wingles */
   
   const secretWinglesReceived = useCallback<StoreValue['secretWinglesReceived']>(
-    () => db.secretWingles.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-    [db.secretWingles]
+    () => secretWinglesLoad?.userId === sessionId ? db.secretWingles : [],
+    [db.secretWingles, secretWinglesLoad?.userId, sessionId]
   );
 
   const sendSecretWingle = useCallback<StoreValue['sendSecretWingle']>(
@@ -1937,9 +1884,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   );
 
   const conversationWith = useCallback<StoreValue['conversationWith']>(
-    (userId) =>
-    db.conversations.find((c) => c.userIds.includes(sessionId ?? '') && c.userIds.includes(userId)),
-    [db.conversations, sessionId]
+    (userId) => conversationsOf().find(c => c.userIds.includes(userId)),
+    [conversationsOf]
   );
 
   const minglesOf = useCallback<StoreValue['minglesOf']>(
@@ -2564,9 +2510,13 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     markWinglesViewed,
     wingleStatusWith,
     secretWinglesReceived,
+    secretWinglesLoadState: secretWinglesLoad?.userId === sessionId ? secretWinglesLoad.state : 'loading',
+    refreshSecretWingles,
     sendSecretWingle,
     conversationsOf,
     conversationWith,
+    conversationsLoadState: conversationsLoad?.userId === sessionId ? conversationsLoad.state : 'loading',
+    refreshAccountState,
     minglesOf,
     sendMingle,
     markConversationRead,

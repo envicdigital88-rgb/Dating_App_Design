@@ -238,7 +238,7 @@ async function settlePayment(ledgerId: string, transactionId: string, transactio
             url: '/secret-wingles',
           });
           const { pusherServer } = await import('@/lib/pusher');
-          await pusherServer.trigger(`private-user-${outcome.existingRecipientId}`, 'state-changed', {});
+          await pusherServer.trigger(`private-user-${outcome.existingRecipientId}`, 'secret-wingle-received', {});
         } catch {
           console.error('Secret Wingle recipient notification could not be delivered.');
         }

@@ -3,12 +3,13 @@
 import crypto from 'node:crypto'
 import { db } from '@/lib/db'
 import { getSession, deleteSession } from '@/lib/session'
-import { not, or } from '@prisma/orm-postgres/orm-client'
+import { and, or } from '@prisma/orm-postgres/orm-client'
+import { getPhoneVariants } from '@/lib/notify'
+import type { Photo, User } from '@/lib/types'
 
 export async function getCurrentUser() {
   try {
     const session = await getSession()
-    console.log('getCurrentUser session:', session)
     if (!session?.userId) return null
 
     let user = await db.orm.public.User.where({ id: session.userId as string })
@@ -49,8 +50,9 @@ export async function getCurrentUser() {
       ? (user.verificationSelfie.startsWith('data:') ? `/api/selfie/${user.id}` : user.verificationSelfie)
       : null;
 
+    const { password, pushSubscription, ...safeUser } = user;
     return {
-      ...user,
+      ...safeUser,
       verificationSelfie: selfieUrl,
       lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
       createdAt: user.createdAt?.toString() || new Date().toISOString(),
@@ -73,43 +75,105 @@ export async function getCurrentUser() {
 }
 
 export async function getUserProfile(userId: string) {
-  const user = await db.orm.public.User.where({ id: userId }).first()
-  if (!user) return null;
-  const parsedLifestyle = typeof user.lifestyle === 'string' ? (() => {
-    try { return JSON.parse(user.lifestyle); } catch { return {}; }
-  })() : (user.lifestyle || {});
-  const isBoosted = Boolean(
-    parsedLifestyle?.boostedUntil && new Date(parsedLifestyle.boostedUntil).getTime() > Date.now()
-  );
-  return {
-    ...user,
-    verificationSelfie: user.verificationSelfie
-      ? (user.verificationSelfie.startsWith('data:') ? `/api/selfie/${user.id}` : user.verificationSelfie)
-      : null,
-    lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
-    createdAt: user.createdAt?.toString() || new Date().toISOString(),
-    lastDailyBonusAt: user.lastDailyBonusAt?.toString() || null,
-    lifestyle: parsedLifestyle,
-    boostedUntil: parsedLifestyle?.boostedUntil || null,
-    isBoosted,
-  };
-}
-
-export async function updateUserProfile(data: any) {
   try {
-    const session = await getSession()
-    if (!session?.userId) return { ok: false, error: 'Unauthorized' }
+    const session = await getSession();
+    if (typeof session?.userId !== 'string') return { status: 'unavailable' as const };
+    const viewerId = session.userId;
+    if (viewerId === userId) return { status: 'self' as const };
 
-    const updatePayload = { ...data }
-    if (updatePayload.lifestyle) updatePayload.lifestyle = JSON.stringify(updatePayload.lifestyle)
-    if (updatePayload.interests) updatePayload.interests = JSON.stringify(updatePayload.interests)
-    if (updatePayload.traits) updatePayload.traits = JSON.stringify(updatePayload.traits)
+    const [viewer, user, blocked] = await Promise.all([
+      db.orm.public.User.select('phone', 'suspended').first({ id: viewerId }),
+      db.orm.public.User.select(
+        'id', 'name', 'age', 'location', 'bio', 'intention', 'interests', 'traits', 'lifestyle',
+        'verified', 'isUnlimited', 'selfieStatus', 'isAnonymous', 'anonymousName',
+        'online', 'lastActiveAt', 'showOnline', 'discoverable', 'onboarded', 'suspended', 'role'
+      ).first({ id: userId }),
+      db.orm.public.Block.where(b => or(
+        and(b.blockerId.eq(viewerId), b.blockedUserId.eq(userId)),
+        and(b.blockerId.eq(userId), b.blockedUserId.eq(viewerId))
+      )).first(),
+    ]);
+    if (!viewer || viewer.suspended || !user || user.suspended || blocked || user.role !== 'member') {
+      return { status: 'unavailable' as const };
+    }
 
-    await db.orm.public.User.where({ id: session.userId as string }).update(updatePayload)
-    return { ok: true }
+    const onDiscover = user.onboarded && user.discoverable && (user.isUnlimited || user.selfieStatus === 'approved');
+    if (!onDiscover) {
+      const phones = getPhoneVariants(viewer.phone);
+      const relationships = await Promise.all([
+        db.orm.public.Wingle.where(w => or(
+          and(w.fromUserId.eq(viewerId), w.toUserId.eq(userId)),
+          and(w.fromUserId.eq(userId), w.toUserId.eq(viewerId))
+        )).first(),
+        db.orm.public.Like.where(l => or(
+          and(l.fromUserId.eq(viewerId), l.toUserId.eq(userId)),
+          and(l.fromUserId.eq(userId), l.toUserId.eq(viewerId))
+        )).first(),
+        db.orm.public.HeartBucket.where(h => or(
+          and(h.userId.eq(viewerId), h.targetUserId.eq(userId)),
+          and(h.userId.eq(userId), h.targetUserId.eq(viewerId))
+        )).first(),
+        db.orm.public.Pass.where({ userId: viewerId, targetUserId: userId }).first(),
+        phones.length > 0 ? db.orm.public.SecretWingle.where({ senderId: userId })
+          .where(w => w.targetPhone.in(phones)).first() : null,
+      ]);
+      if (!relationships.some(Boolean)) return { status: 'unavailable' as const };
+    }
+
+    const [photos, prompts, hearts] = await Promise.all([
+      user.isAnonymous ? [] : db.orm.public.Photo.where({ userId, moderation: 'approved' }).all(),
+      user.isAnonymous ? [] : db.orm.public.Prompt.select('id', 'question', 'answer').where({ userId }).all(),
+      db.orm.public.HeartBucket.where({ targetUserId: userId }).aggregate(a => ({ count: a.count() })).then(result => result.count),
+    ]);
+    const parseList = (raw: string): string[] => {
+      try {
+        const list: unknown = JSON.parse(raw);
+        return Array.isArray(list) ? list.filter(item => typeof item === 'string') : [];
+      } catch { return []; }
+    };
+    const lifestyle: User['lifestyle'] = { drinking: '', smoking: '', exercise: '', pets: '', children: '', education: '', work: '' };
+    if (!user.isAnonymous) {
+      try {
+        const saved = JSON.parse(user.lifestyle);
+        for (const key of Object.keys(lifestyle) as (keyof typeof lifestyle)[]) {
+          if (typeof saved?.[key] === 'string') lifestyle[key] = saved[key];
+        }
+      } catch {}
+    }
+    return {
+      status: 'ready' as const,
+      user: {
+        id: user.id,
+        name: user.isAnonymous ? user.anonymousName || 'Anonymous' : user.name,
+        age: user.isAnonymous ? 0 : user.age,
+        location: user.isAnonymous ? 'Hidden' : user.location,
+        bio: user.isAnonymous ? '' : user.bio,
+        interests: user.isAnonymous ? [] : parseList(user.interests),
+        traits: user.isAnonymous ? [] : parseList(user.traits),
+        lifestyle,
+        intention: user.intention as User['intention'],
+        verified: user.verified,
+        isUnlimited: user.isUnlimited,
+        selfieStatus: user.selfieStatus,
+        isAnonymous: user.isAnonymous,
+        online: user.showOnline && user.online,
+        lastActiveAt: user.showOnline ? user.lastActiveAt.toString() : '',
+        heartReacts: hearts,
+        prompts,
+      },
+      photos: photos.sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary) || a.order - b.order).map((photo): Photo => ({
+        id: photo.id,
+        userId: photo.userId,
+        url: photo.url.startsWith('data:') ? `/api/photo/${photo.id}` : photo.url,
+        order: photo.order,
+        isPrimary: photo.isPrimary,
+        moderation: 'approved',
+        uploadedAt: photo.uploadedAt.toString(),
+      })),
+    };
   } catch (err) {
-    console.error('Update profile error:', err)
-    return { ok: false, error: 'Failed to update profile' }
+    console.error('Could not load member profile:', err);
+    return { status: 'error' as const };
   }
 }
 
@@ -330,7 +394,7 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
       const fakeCount = ((user.id.charCodeAt(0) + user.id.charCodeAt(user.id.length - 1)) % 50) + 1;
 
       // Exclude sensitive credentials and private push notification keys
-      const { password, pushSubscription, verificationSelfie, ...safeUser } = user;
+      const { password, pushSubscription, verificationSelfie, email, phone, ...safeUser } = user;
 
       return {
         ...safeUser,
@@ -466,23 +530,30 @@ export async function updateUserProfileAction(data: {
   }
 }
 
-export async function completeUserOnboarding(data: any) {
+export async function completeUserOnboarding(data: Pick<User, 'age' | 'gender' | 'location' | 'bio' | 'intention' | 'lifestyle' | 'interests' | 'traits' | 'verificationSelfie'> & {
+  photoUrls: string[];
+  prompts: { question: string; answer: string }[];
+}) {
   try {
     const session = await getSession()
     if (!session?.userId) return { ok: false, error: 'Unauthorized' }
 
-    const { photoUrls, prompts, verificationSelfie, ...userData } = data;
+    const { photoUrls, prompts, verificationSelfie, age, gender, location, bio, intention, lifestyle, interests, traits } = data;
     const userId = session.userId as string;
 
     // Stringify JSON fields because they are stored as text in DB
     const updatePayload = {
-      ...userData,
+      age,
+      gender,
+      location,
+      bio,
+      intention,
       verificationSelfie: verificationSelfie || null,
       selfieStatus: verificationSelfie ? 'pending' : null,
       onboarded: true,
-      lifestyle: JSON.stringify(userData.lifestyle || {}),
-      interests: JSON.stringify(userData.interests || []),
-      traits: JSON.stringify(userData.traits || [])
+      lifestyle: JSON.stringify(lifestyle || {}),
+      interests: JSON.stringify(interests || []),
+      traits: JSON.stringify(traits || [])
     };
 
     // Update user profile and set onboarded = true
@@ -491,7 +562,7 @@ export async function completeUserOnboarding(data: any) {
     // Handle prompts
     if (prompts && prompts.length > 0) {
       await db.orm.public.Prompt.where({ userId }).delete();
-      const promptsToInsert = prompts.map((p: any) => ({
+      const promptsToInsert = prompts.map(p => ({
         userId,
         question: p.question,
         answer: p.answer
@@ -527,40 +598,6 @@ export async function completeUserOnboarding(data: any) {
   }
 }
 
-export async function getDiscoverProfiles() {
-  try {
-    const session = await getSession()
-    if (!session?.userId) return { ok: false, error: 'Unauthorized' }
-    const userId = session.userId as string
-
-    const likes = await db.orm.public.Like.where({ fromUserId: userId }).all()
-    const passes = await db.orm.public.Pass.where({ userId }).all()
-    const heartBucket = await db.orm.public.HeartBucket.where({ userId }).all()
-    
-    const tenDaysAgo = new Date();
-    tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
-    
-    const recentPasses = passes.filter((p: any) => new Date(p.createdAt) >= tenDaysAgo);
-
-    const excludedIds = [
-      userId,
-      ...likes.map((l: any) => l.toUserId),
-      ...recentPasses.map((p: any) => p.targetUserId),
-      ...heartBucket.map((h: any) => h.targetUserId)
-    ]
-
-    const users = await db.orm.public.User.where(
-      (u) => not(u.id.in(excludedIds))
-    ).limit(300).all()
-    
-    // In a real app we'd map this, fetch photos, and calculate vibe match score here.
-    return { ok: true, data: users }
-  } catch (err) {
-    console.error('Discover profiles error:', err)
-    return { ok: false, error: 'Failed to fetch profiles' }
-  }
-}
-
 export async function getUserStateAction() {
   console.log('getUserStateAction START');
   try {
@@ -568,19 +605,22 @@ export async function getUserStateAction() {
     if (!session?.userId) return { ok: false, error: 'Unauthorized' }
     const userId = session.userId as string
     
-    const likes = await db.orm.public.Like.where(l => or(l.fromUserId.eq(userId), l.toUserId.eq(userId))).all();
-    const passes = await db.orm.public.Pass.where(p => or(p.userId.eq(userId), p.targetUserId.eq(userId))).all();
-    const heartBucket = await db.orm.public.HeartBucket.where(h => or(h.userId.eq(userId), h.targetUserId.eq(userId))).all();
-
-    const wingles = await db.orm.public.Wingle.where(w => or(w.fromUserId.eq(userId), w.toUserId.eq(userId))).all();
+    const [likes, passes, heartBucket, wingles, rawConnections, blocks, userNotifications, currentUserRecord] = await Promise.all([
+      db.orm.public.Like.where(l => or(l.fromUserId.eq(userId), l.toUserId.eq(userId))).all(),
+      db.orm.public.Pass.where(p => or(p.userId.eq(userId), p.targetUserId.eq(userId))).all(),
+      db.orm.public.HeartBucket.where(h => or(h.userId.eq(userId), h.targetUserId.eq(userId))).all(),
+      db.orm.public.Wingle.where(w => or(w.fromUserId.eq(userId), w.toUserId.eq(userId))).all(),
+      db.orm.public.Connection.where(c => or(c.userId1.eq(userId), c.userId2.eq(userId))).all(),
+      db.orm.public.Block.where(b => or(b.blockerId.eq(userId), b.blockedUserId.eq(userId))).all(),
+      db.orm.public.Notification.where({ userId }).all(),
+      db.orm.public.User.select('wingitsBalance', 'isUnlimited', 'verificationSelfie', 'selfieStatus').first({ id: userId }),
+    ]);
     const acceptedPeerIds = new Set(wingles.filter(w => w.status === 'accepted')
       .map(w => w.fromUserId === userId ? w.toUserId : w.fromUserId));
-    const connections = (await db.orm.public.Connection.where(c => or(c.userId1.eq(userId), c.userId2.eq(userId))).all())
+    const connections = rawConnections
       .filter(c => acceptedPeerIds.has(c.userId1 === userId ? c.userId2 : c.userId1));
-    const blocks = await db.orm.public.Block.where(b => or(b.blockerId.eq(userId), b.blockedUserId.eq(userId))).all();
-    let notifications = await db.orm.public.Notification.where({ userId }).all();
+    let notifications = userNotifications;
 
-    const currentUserRecord = await db.orm.public.User.where({ id: userId }).first();
     if (currentUserRecord && !currentUserRecord.isUnlimited && (!currentUserRecord.verificationSelfie || currentUserRecord.selfieStatus !== 'approved')) {
       const hasSelfieNotif = notifications.some((n: any) => n.type === 'selfie_verification' || n.href === '/verify-selfie');
       if (!hasSelfieNotif) {
@@ -610,11 +650,13 @@ export async function getUserStateAction() {
     let relatedUsers: any[] = [];
     if (relatedUserIds.size > 0) {
       const uIds = Array.from(relatedUserIds);
-      const rUsers = await db.orm.public.User.where((u) => u.id.in(uIds)).all();
-      const rPhotos = await db.orm.public.Photo.where((p) => p.userId.in(uIds)).all();
+      const [rUsers, rPhotos] = await Promise.all([
+        db.orm.public.User.where(u => u.id.in(uIds)).all(),
+        db.orm.public.Photo.where({ moderation: 'approved' }).where(p => p.userId.in(uIds)).all(),
+      ]);
       relatedUsers = rUsers.map((u: any) => ({
         ...u,
-        photos: rPhotos.filter((p: any) => p.userId === u.id && p.moderation !== 'rejected')
+        photos: rPhotos.filter(p => p.userId === u.id)
       }));
     }
 
@@ -628,8 +670,6 @@ export async function getUserStateAction() {
       return {
         id: user.id,
         name: user.name,
-        email: user.email,
-        phone: user.phone || '',
         age: user.age,
         gender: user.gender,
         location: user.location,

@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/Button';
 import { toast } from 'sonner';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { getSentSecretWinglesAction } from '@/app/actions/wingle';
 import { initiateSecretWinglePaymentAction, checkAndVerifyPendingPaymentAction } from '@/app/actions/payments';
 import { buildSecretWingleSms } from '@/lib/notify';
@@ -33,7 +34,10 @@ interface SentSecretWingle {
 }
 
 export function SecretWingleTab() {
-  const { secretWinglesReceived, currentUser, conversationWith } = useStore();
+  const {
+    secretWinglesReceived, secretWinglesLoadState, refreshSecretWingles, currentUser,
+    conversationWith, conversationsLoadState, refreshAccountState, wingleStatusWith, isBlocked,
+  } = useStore();
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<'compose' | 'received' | 'sent'>('compose');
@@ -59,7 +63,7 @@ export function SecretWingleTab() {
 
   const SECRET_WINGLE_PRICE_LKR = 50;
 
-  const receivedWingles = secretWinglesReceived();
+  const receivedWingles = secretWinglesReceived().filter(sw => !isBlocked(sw.senderId));
 
   const paymentPopupRef = useRef<Window | null>(null);
 
@@ -580,7 +584,14 @@ export function SecretWingleTab() {
                 </div>
               )}
 
-              {receivedWingles.length === 0 ? (
+              {secretWinglesLoadState === 'loading' && receivedWingles.length === 0 ? (
+                <p role="status" className="py-12 text-center text-sm text-ink-muted">Loading received Secret Wingles…</p>
+              ) : secretWinglesLoadState === 'error' && receivedWingles.length === 0 ? (
+                <div className="py-12 text-center space-y-3">
+                  <p role="status" className="text-sm text-ink">Could not load received Secret Wingles.</p>
+                  <Button size="sm" variant="outline" onClick={refreshSecretWingles}>Try again</Button>
+                </div>
+              ) : receivedWingles.length === 0 ? (
                 <div className="bg-white dark:bg-[#0e0c22] border border-gray-200/80 dark:border-white/10 rounded-3xl p-10 text-center space-y-3">
                   <div className="h-16 w-16 mx-auto rounded-full bg-[#ec4899]/10 text-[#ec4899] flex items-center justify-center">
                     <Lock className="w-8 h-8" />
@@ -604,7 +615,12 @@ export function SecretWingleTab() {
                   </div>
 
                   <div className="space-y-3">
-                    {receivedWingles.map((sw) => (
+                    {receivedWingles.map(sw => {
+                      const sender = sw.sender;
+                      const conversation = sender ? conversationWith(sender.id) : undefined;
+                      const wingle = sender ? wingleStatusWith(sender.id) : undefined;
+                      const incoming = wingle?.status === 'pending' && wingle.toUserId === currentUser?.id;
+                      return (
                       <div
                         key={sw.id}
                         className="bg-white dark:bg-[#0e0c22] border border-[#ec4899]/30 rounded-3xl p-5 shadow-sm relative overflow-hidden space-y-4"
@@ -637,34 +653,32 @@ export function SecretWingleTab() {
                                 {sw.sender?.name || 'A secret admirer'}
                               </p>
                               <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                                {sw.sender ? `${sw.sender.age} yrs • ${sw.sender.location}` : 'Identity revealed upon sign in'}
+                                {sender?.age ? `${sender.age} yrs • ${sender.location}` : sender?.location}
                               </p>
                             </div>
                           </div>
 
                           {/* Action Buttons for Recipient */}
-                          <div className="flex items-center gap-2">
-                            {sw.sender?.id && (
+                          <div className="flex flex-wrap items-center gap-2">
+                            {sender && (
                               <>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => router.push(`/profile/${sw.sender!.id}`)}
-                                  className="text-xs py-1.5 px-3 rounded-xl border-gray-200 dark:border-white/10"
+                                <Link
+                                  href={`/profile/${sender.id}`}
+                                  className="inline-flex h-9 items-center rounded-xl border border-sand bg-cream-deep px-3 text-xs font-medium text-ink hover:border-berry-300"
                                 >
                                   View Profile
-                                </Button>
-                                {conversationWith(sw.sender.id) && <Button
-                                  size="sm"
-                                  onClick={() => {
-                                    const conversation = conversationWith(sw.sender!.id);
-                                    if (conversation) router.push(`/mingles/${conversation.id}`);
-                                  }}
-                                  className="text-xs py-1.5 px-3 rounded-xl bg-gradient-to-r from-[#ec4899] to-[#8b2fc9] text-white flex items-center gap-1.5 shadow-sm shadow-[#ec4899]/20"
-                                >
-                                  <MessageSquare className="w-3.5 h-3.5" />
-                                  <span>Chat with Admirer</span>
-                                </Button>}
+                                </Link>
+                                {conversation ? (
+                                  <Link
+                                    href={`/mingles/${conversation.id}`}
+                                    className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#ec4899] to-[#8b2fc9] px-3 text-xs font-semibold text-white hover:opacity-90"
+                                  >
+                                    <MessageSquare className="w-3.5 h-3.5" aria-hidden />
+                                    Chat with Admirer
+                                  </Link>
+                                ) : incoming ? (
+                                  <Link href="/wingles" className="text-xs font-semibold text-berry-500 underline">Review Wingle</Link>
+                                ) : null}
                               </>
                             )}
 
@@ -673,8 +687,18 @@ export function SecretWingleTab() {
                             </span>
                           </div>
                         </div>
+                        {sender && !conversation && (
+                          <div className="text-xs text-ink-muted">
+                            {conversationsLoadState === 'loading' ? 'Checking chat availability…' :
+                              conversationsLoadState === 'error' ? (
+                                <>Could not check chat availability. <button type="button" onClick={refreshAccountState} className="underline">Try again</button></>
+                              ) : wingle?.status === 'pending' ? 'Chat opens when the recipient accepts the Wingle.' :
+                                'A Secret Wingle reveals the admirer. To chat, a regular Wingle needs to be accepted.'}
+                          </div>
+                        )}
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}

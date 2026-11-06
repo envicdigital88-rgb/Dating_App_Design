@@ -3,6 +3,7 @@
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { Temporal } from 'temporal-polyfill'
+import { or } from '@prisma/orm-postgres/orm-client'
 import { formatNotifyPhoneNumber, getPhoneVariants, sendNotifySms } from '@/lib/notify'
 
 import { getWingleGift, WINGLE_ACCEPT_COST, WINGLE_SEND_COST } from '@/lib/wingle-pricing'
@@ -306,7 +307,7 @@ export async function sendSecretWingleAction(
         });
 
         const { pusherServer } = await import('@/lib/pusher');
-        await pusherServer.trigger(`private-user-${existingUser.id}`, 'state-changed', {});
+        await pusherServer.trigger(`private-user-${existingUser.id}`, 'secret-wingle-received', {});
       }
     } catch (pushErr) {
       console.error('Error notifying existing recipient:', pushErr);
@@ -329,59 +330,60 @@ export async function sendSecretWingleAction(
 export async function getReceivedSecretWinglesAction() {
   try {
     const session = await getSession();
-    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
+    if (typeof session?.userId !== 'string') return { ok: false as const, error: 'Unauthorized' };
+    const userId = session.userId;
+    const currentUser = await db.orm.public.User.select('phone', 'suspended').first({ id: userId });
+    if (!currentUser || currentUser.suspended) return { ok: false as const, error: 'Unauthorized' };
+    const phones = getPhoneVariants(currentUser.phone);
+    if (!phones.length) return { ok: true as const, userId, data: [] };
 
-    const currentUser = await db.orm.public.User.where({ id: session.userId as string }).first();
-    if (!currentUser || !currentUser.phone) {
-      return { ok: true, data: [] };
-    }
+    const [secretWingles, blocks] = await Promise.all([
+      db.orm.public.SecretWingle.where(sw => sw.targetPhone.in(phones)).all(),
+      db.orm.public.Block.where(b => or(b.blockerId.eq(userId), b.blockedUserId.eq(userId)))
+        .select('blockerId', 'blockedUserId').all(),
+    ]);
+    const blocked = new Set(blocks.map(b => b.blockerId === userId ? b.blockedUserId : b.blockerId));
+    const senderIds = [...new Set(secretWingles.map(sw => sw.senderId))].filter(id => !blocked.has(id));
+    if (!senderIds.length) return { ok: true as const, userId, data: [] };
 
-    const phoneVariants = getPhoneVariants(currentUser.phone);
-    const secretWingles = await db.orm.public.SecretWingle.where(sw =>
-      sw.targetPhone.in(phoneVariants)
-    ).all();
+    const senders = await db.orm.public.User
+      .select('id', 'name', 'age', 'gender', 'location', 'isAnonymous', 'anonymousName')
+      .where({ suspended: false, role: 'member' }).where(u => u.id.in(senderIds)).all();
+    const senderById = new Map(senders.map(sender => [sender.id, sender]));
+    const visible = secretWingles.filter(sw => senderById.has(sw.senderId));
+    const photoIds = senders.filter(sender => !sender.isAnonymous).map(sender => sender.id);
+    const unlockIds = visible.filter(sw => !sw.unlocked).map(sw => sw.id);
+    const [photos] = await Promise.all([
+      photoIds.length ? db.orm.public.Photo.select('id', 'userId', 'url')
+        .where({ isPrimary: true, moderation: 'approved' }).where(p => p.userId.in(photoIds)).all() : [],
+      unlockIds.length ? db.runtime().execute(db.sql.public.secretWingle.update({ unlocked: true })
+        .where((fields, fns) => fns.in(fields.id, unlockIds)).build()) : null,
+    ]);
+    const photoBySender = new Map(photos.map(photo => [photo.userId, photo]));
 
-    // Mark as unlocked
-    for (const sw of secretWingles) {
-      if (!sw.unlocked) {
-        await db.orm.public.SecretWingle.where({ id: sw.id }).update({ unlocked: true });
-      }
-    }
-
-    const sendersIds = Array.from(new Set(secretWingles.map(sw => sw.senderId)));
-    const senders = sendersIds.length > 0
-      ? await db.orm.public.User.where(u => u.id.in(sendersIds)).all()
-      : [];
-    const validSenders = senders.filter(Boolean);
-
-    // Fetch primary photos of senders
-    const senderPhotos = sendersIds.length > 0
-      ? await db.orm.public.Photo.where(p => p.userId.in(sendersIds)).all()
-      : [];
-
-    const populatedSecretWingles = secretWingles.map(sw => {
-      const sender = validSenders.find(s => s && s.id === sw.senderId);
-      const primaryPhoto = senderPhotos.find(p => p.userId === sw.senderId && p.isPrimary);
-
+    const data = visible.sort((a, b) => Temporal.Instant.compare(b.createdAt, a.createdAt)).map(sw => {
+      const sender = senderById.get(sw.senderId)!;
+      const photo = photoBySender.get(sw.senderId);
       return {
-        ...sw,
+        id: sw.id,
+        senderId: sw.senderId,
+        message: sw.message,
         createdAt: sw.createdAt.toString(),
         unlocked: true,
-        sender: sender ? {
+        sender: {
           id: sender.id,
-          name: sender.name,
-          age: sender.age,
-          gender: sender.gender,
-          location: sender.location,
-          photo: primaryPhoto?.url || null
-        } : null
+          name: sender.isAnonymous ? sender.anonymousName || 'Anonymous' : sender.name,
+          age: sender.isAnonymous ? 0 : sender.age,
+          gender: sender.isAnonymous ? '' : sender.gender,
+          location: sender.isAnonymous ? 'Hidden' : sender.location,
+          photo: photo ? (photo.url.startsWith('data:') ? `/api/photo/${photo.id}` : photo.url) : null,
+        },
       };
     });
-
-    return { ok: true, data: populatedSecretWingles };
+    return { ok: true as const, userId, data };
   } catch (err) {
     console.error('Get Secret Wingles error:', err);
-    return { ok: false, error: 'Failed to fetch Secret Wingles' };
+    return { ok: false as const, error: 'Failed to fetch Secret Wingles' };
   }
 }
 

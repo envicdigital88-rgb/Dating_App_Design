@@ -191,7 +191,7 @@ export interface Mingle {
 export interface SecretWingle {
   id: string;
   senderId: string;
-  targetPhone: string;
+  targetPhone?: string;
   message: string;
   createdAt: string;
   unlocked: boolean;

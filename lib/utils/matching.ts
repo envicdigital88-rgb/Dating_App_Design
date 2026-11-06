@@ -5,7 +5,9 @@ export interface VibeMatchResult {
   reasons: string[];
 }
 
-export function calculateVibeMatch(userA: User, userB: User): VibeMatchResult {
+type MatchProfile = Pick<User, 'intention' | 'interests' | 'traits' | 'lifestyle' | 'location' | 'prompts'>;
+
+export function calculateVibeMatch(userA: MatchProfile, userB: MatchProfile): VibeMatchResult {
   if (!userA || !userB) return { score: 0, reasons: [] };
 
   let score = 0;
@@ -29,7 +31,7 @@ export function calculateVibeMatch(userA: User, userB: User): VibeMatchResult {
   }
 
   // 2. Interests (20%)
-  const sharedInterests = userA.interests.filter(i => userB.interests.includes(i));
+  const sharedInterests = (userA.interests || []).filter(i => userB.interests?.includes(i));
   if (sharedInterests.length > 0) {
     const interestScore = Math.min(20, sharedInterests.length * 5); // 5 points per shared interest, max 20
     score += interestScore;
@@ -67,26 +69,26 @@ export function calculateVibeMatch(userA: User, userB: User): VibeMatchResult {
 
   // 4. Lifestyle (20%)
   let lifestyleMatches = 0;
-  if (userA.lifestyle.drinking === userB.lifestyle.drinking && userA.lifestyle.drinking !== 'Never') {
+  if (userA.lifestyle?.drinking && userA.lifestyle.drinking === userB.lifestyle?.drinking && userA.lifestyle.drinking !== 'Never') {
     lifestyleMatches++;
     reasons.push(userA.lifestyle.drinking === 'Socially' ? 'Both drink socially' : 'Both drink regularly');
-  } else if (userA.lifestyle.drinking === 'Never' && userB.lifestyle.drinking === 'Never') {
+  } else if (userA.lifestyle?.drinking === 'Never' && userB.lifestyle?.drinking === 'Never') {
     lifestyleMatches++;
     reasons.push('Neither drink');
   }
 
-  if (userA.lifestyle.smoking === userB.lifestyle.smoking && userA.lifestyle.smoking !== 'Never') {
+  if (userA.lifestyle?.smoking && userA.lifestyle.smoking === userB.lifestyle?.smoking && userA.lifestyle.smoking !== 'Never') {
     lifestyleMatches++;
-  } else if (userA.lifestyle.smoking === 'Never' && userB.lifestyle.smoking === 'Never') {
+  } else if (userA.lifestyle?.smoking === 'Never' && userB.lifestyle?.smoking === 'Never') {
     lifestyleMatches++;
     reasons.push('Neither smoke');
   }
 
-  if (userA.lifestyle.exercise === userB.lifestyle.exercise) {
+  if (userA.lifestyle?.exercise && userA.lifestyle.exercise === userB.lifestyle?.exercise) {
     lifestyleMatches++;
   }
   
-  if (userA.lifestyle.pets !== 'None' && userB.lifestyle.pets !== 'None') {
+  if (userA.lifestyle?.pets && userB.lifestyle?.pets && userA.lifestyle.pets !== 'None' && userB.lifestyle.pets !== 'None') {
     lifestyleMatches++;
     if (userA.lifestyle.pets === userB.lifestyle.pets) {
       reasons.push(`Both have a ${userA.lifestyle.pets.toLowerCase()}`);

@@ -13,7 +13,8 @@ import { StatusViewer } from '@/components/ui/StatusViewer';
 
 export function Mingles() {
   const router = useRouter();
-  const { conversationsOf, minglesOf, currentUser, userById, photosOf, entitlements, openChatPopup, statusesOf, myStatuses } = useStore();
+  const { conversationsOf, minglesOf, currentUser, userById, photosOf, entitlements, openChatPopup, statusesOf, myStatuses,
+    conversationsLoadState, refreshAccountState } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   
   const [showAddStatus, setShowAddStatus] = useState(false);
@@ -49,7 +50,16 @@ export function Mingles() {
 
       <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="min-w-0 w-full overflow-hidden lg:max-w-2xl">
-          {conversations.length === 0 ? (
+          {conversations.length === 0 && conversationsLoadState === 'loading' ? (
+            <p role="status" className="p-6 text-ink-muted">Loading conversations…</p>
+          ) : conversations.length === 0 && conversationsLoadState === 'error' ? (
+            <EmptyState
+              icon={<MessageCircleIcon className="h-5 w-5" />}
+              title="Could not load conversations"
+              body="Please try again."
+              action={<Button onClick={refreshAccountState}>Try again</Button>}
+            />
+          ) : conversations.length === 0 ? (
             <EmptyState
               icon={<MessageCircleIcon className="h-5 w-5" />}
               title="No conversations yet"

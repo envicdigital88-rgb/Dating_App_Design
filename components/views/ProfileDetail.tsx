@@ -1,6 +1,7 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import type { getUserProfile } from '@/app/actions/user';
 import { toast } from 'sonner';
 import {
   ArrowLeftIcon,
@@ -28,14 +29,12 @@ import { calculateVibeMatch } from '@/lib/utils/matching';
 import { lifestyleFields } from '@/lib/data/interests';
 import { type Lifestyle, isSelfieVerified } from '@/lib/types';
 
-export function ProfileDetail() {
-  const params = useParams();
-  const userId = Array.isArray(params.userId) ? params.userId[0] : params.userId;
+type ProfileResult = Exclude<Awaited<ReturnType<typeof getUserProfile>>, { status: 'self' }>;
+
+export function ProfileDetail({ profile }: { profile: ProfileResult }) {
   const router = useRouter();
   const navigate = router.push;
   const {
-    userById,
-    photosOf,
     hasLiked,
     likeUser,
     unlikeUser,
@@ -44,9 +43,7 @@ export function ProfileDetail() {
     blockUser,
     hasReported,
     openChatPopup,
-    entitlements,
     currentUser,
-    isHydrated
   } = useStore();
 
   const [reporting, setReporting] = useState(false);
@@ -54,34 +51,21 @@ export function ProfileDetail() {
   const [wingleing, setWingleing] = useState(false);
   const [showSelfieModal, setShowSelfieModal] = useState(false);
 
-  const user = userId ? userById(userId) : undefined;
-
-  useEffect(() => {
-    if (isHydrated && currentUser) {
-      if (user && user.id === currentUser.id) {
-        router.replace('/profile');
-      } else if (!user) {
-        router.replace('/discover');
-      }
-    }
-  }, [isHydrated, user, currentUser, router]);
-
-  if (!isHydrated || !currentUser || !entitlements || !user) {
+  if (!currentUser) return null;
+  if (profile.status !== 'ready') {
     return (
       <Page>
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:gap-12 animate-pulse">
-          <div className="h-96 w-full rounded-3xl bg-sand/60" />
-          <div className="space-y-4">
-            <div className="h-8 w-48 rounded-full bg-sand" />
-            <div className="h-4 w-64 rounded-full bg-sand/60" />
-            <div className="h-24 w-full rounded-2xl bg-sand/40" />
-          </div>
-        </div>
+        <p role="status" className="mb-4 text-ink">
+          {profile.status === 'error' ? 'Could not load this profile. Please try again.' : 'This profile is unavailable.'}
+        </p>
+        <Button variant="outline" onClick={() => profile.status === 'error' ? router.refresh() : router.back()}>
+          {profile.status === 'error' ? 'Try again' : 'Back'}
+        </Button>
       </Page>
     );
   }
 
-  const photos = photosOf(user.id);
+  const { user, photos } = profile;
   const wingle = wingleStatusWith(user.id);
   const conversation = conversationWith(user.id);
 
@@ -138,7 +122,7 @@ export function ProfileDetail() {
               {!user.isAnonymous ? (
                 <p className="mt-2 flex items-center justify-center sm:justify-start gap-1.5 text-[14px] text-ink-soft">
                   <MapPinIcon className="h-4 w-4" />
-                  {user.location} · {presence(user.online, user.lastActiveAt)}
+                  {user.location}{user.lastActiveAt && ` · ${presence(user.online, user.lastActiveAt)}`}
                 </p>
               ) : (
                 <p className="mt-2 flex items-center justify-center sm:justify-start gap-1.5 text-[14px] text-ink-soft">

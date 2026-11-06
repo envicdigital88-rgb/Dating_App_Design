@@ -234,10 +234,16 @@ export async function getConversationsAction() {
     if (!session?.userId) return { ok: false, error: 'Unauthorized' }
     const userId = session.userId as string
 
-    const accepted = await db.orm.public.Wingle.where({ status: 'accepted' })
-      .where(w => or(w.fromUserId.eq(userId), w.toUserId.eq(userId)))
-      .select('fromUserId', 'toUserId').all();
-    const peerIds = [...new Set(accepted.map(w => w.fromUserId === userId ? w.toUserId : w.fromUserId))];
+    const [accepted, blocks] = await Promise.all([
+      db.orm.public.Wingle.where({ status: 'accepted' })
+        .where(w => or(w.fromUserId.eq(userId), w.toUserId.eq(userId)))
+        .select('fromUserId', 'toUserId').all(),
+      db.orm.public.Block.where(b => or(b.blockerId.eq(userId), b.blockedUserId.eq(userId)))
+        .select('blockerId', 'blockedUserId').all(),
+    ]);
+    const blockedPeers = new Set(blocks.map(b => b.blockerId === userId ? b.blockedUserId : b.blockerId));
+    const peerIds = [...new Set(accepted.map(w => w.fromUserId === userId ? w.toUserId : w.fromUserId))]
+      .filter(peerId => !blockedPeers.has(peerId));
     if (peerIds.length === 0) return { ok: true, data: { conversations: [], mingles: [] } };
     const convs = await db.orm.public.Conversation.where(c => or(
       and(c.userId1.eq(userId), c.userId2.in(peerIds)),

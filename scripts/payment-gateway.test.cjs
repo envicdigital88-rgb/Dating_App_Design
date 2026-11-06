@@ -307,7 +307,7 @@ test('standard Wingits and Secret Wingle share the same UAT gateway transport', 
   assert.equal(body.redirectUrl, 'https://winglemingle.com/payment-success?ledgerId=ledger-2&type=secret_wingle');
   assert.equal(body.webhook, 'https://winglemingle.com/api/webhooks/dialog');
   assert.equal(h.ledgers[1].amountLKR, 50);
-  assert.equal(h.ledgers[1].wingitsCredited, 20);
+  assert.equal(h.ledgers[1].wingitsCredited, 0);
   const metadata = JSON.parse(h.ledgers[1].transactionReference);
   assert.equal(metadata.type, 'secret_wingle');
   assert.equal(metadata.message, 'Hello');
