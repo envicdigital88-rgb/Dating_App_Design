@@ -6,13 +6,13 @@ import {
   RefreshCwIcon, 
   SearchIcon, 
   ChevronLeftIcon, 
-  ChevronRightIcon, 
-  RotateCcwIcon 
+  ChevronRightIcon
 } from 'lucide-react';
 import { AdminHeader, StatTile } from './AdminShell';
 import { Badge } from '@/components/ui/Bits';
 import { relativeTime } from '@/lib/utils/format';
-import { getAdminActivityDataAction, resetMemberUsageAction } from '@/app/actions/admin';
+import { getAdminActivityDataAction } from '@/app/actions/admin';
+import { WINGLE_SEND_COST, WINGLE_ACCEPT_COST } from '@/lib/wingle-pricing';
 
 interface ActivityData {
   totalWingles: number;
@@ -41,11 +41,12 @@ interface ActivityData {
     pkg: {
       id: string;
       name: string;
-      chatLimit: number | null;
-      wingleLimit: number | null;
     };
     chatUsed: number;
     winglesUsed: number;
+    winglesAccepted: number;
+    wingitsBalance: number;
+    isUnlimited: boolean;
   }>;
 }
 
@@ -54,10 +55,9 @@ export function AdminActivity() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [usageFilter, setUsageFilter] = useState<'all' | 'active' | 'exhausted' | 'within'>('all');
+  const [usageFilter, setUsageFilter] = useState<'all' | 'active' | 'low_balance'>('all');
   const [wingleFilter, setWingleFilter] = useState<'all' | 'accepted' | 'pending' | 'declined'>('all');
   const [page, setPage] = useState(1);
-  const [resettingId, setResettingId] = useState<string | null>(null);
   const itemsPerPage = 20;
 
   const fetchData = async (isManual = false) => {
@@ -109,32 +109,6 @@ export function AdminActivity() {
     setPage(1);
   }, [searchQuery, usageFilter]);
 
-  const handleResetUsage = async (userId: string, userName: string) => {
-    setResettingId(userId);
-    try {
-      const res = await resetMemberUsageAction(userId);
-      if (res.ok) {
-        toast.success(`Reset usage for ${userName}`);
-        // Instantly update local state
-        setData(prev => {
-          if (!prev) return null;
-          return {
-            ...prev,
-            usageRows: prev.usageRows.map(row => 
-              row.id === userId ? { ...row, chatUsed: 0, winglesUsed: 0 } : row
-            )
-          };
-        });
-      } else {
-        toast.error(res.error || 'Failed to reset usage');
-      }
-    } catch (err) {
-      toast.error('An error occurred while resetting usage');
-    } finally {
-      setResettingId(null);
-    }
-  };
-
   const filteredUsageRows = useMemo(() => {
     if (!data) return [];
     return data.usageRows.filter(row => {
@@ -145,10 +119,8 @@ export function AdminActivity() {
       if (!matchesSearch) return false;
 
       // Status filter
-      const isExhausted = row.pkg.chatLimit !== null && row.chatUsed >= row.pkg.chatLimit;
-      if (usageFilter === 'exhausted') return isExhausted;
-      if (usageFilter === 'within') return !isExhausted;
-      if (usageFilter === 'active') return row.chatUsed > 0 || row.winglesUsed > 0;
+      if (usageFilter === 'low_balance') return !row.isUnlimited && row.wingitsBalance < WINGLE_SEND_COST;
+      if (usageFilter === 'active') return row.chatUsed > 0 || row.winglesUsed > 0 || row.winglesAccepted > 0;
       return true;
     });
   }, [data, searchQuery, usageFilter]);
@@ -167,12 +139,12 @@ export function AdminActivity() {
 
   const activeMembersCount = useMemo(() => {
     if (!data) return 0;
-    return data.usageRows.filter(r => r.chatUsed > 0 || r.winglesUsed > 0).length;
+    return data.usageRows.filter(r => r.chatUsed > 0 || r.winglesUsed > 0 || r.winglesAccepted > 0).length;
   }, [data]);
 
-  const exhaustedMembersCount = useMemo(() => {
+  const lowBalanceMembersCount = useMemo(() => {
     if (!data) return 0;
-    return data.usageRows.filter(r => r.pkg.chatLimit !== null && r.chatUsed >= r.pkg.chatLimit).length;
+    return data.usageRows.filter(r => !r.isUnlimited && r.wingitsBalance < WINGLE_SEND_COST).length;
   }, [data]);
 
   if (loading && !data) {
@@ -180,7 +152,7 @@ export function AdminActivity() {
       <div>
         <AdminHeader
           title="Wingles & chat"
-          body="Wingle throughput, chat consumption per member, and abuse signals. Usage is metered server-side against each member's package." />
+          body={`Sending costs ${WINGLE_SEND_COST} Wingits and accepting costs ${WINGLE_ACCEPT_COST} Wingits. Text chat is free once a Wingle is accepted.`} />
         <div className="flex h-64 flex-col items-center justify-center gap-3 text-ink-muted">
           <RefreshCwIcon className="h-6 w-6 animate-spin text-berry-500" />
           <p className="text-sm">Loading activity data...</p>
@@ -200,7 +172,7 @@ export function AdminActivity() {
     <div>
       <AdminHeader
         title="Wingles & chat"
-        body="Wingle throughput, chat consumption per member, and abuse signals. Usage is metered server-side against each member's package."
+        body={`Sending costs ${WINGLE_SEND_COST} Wingits and accepting costs ${WINGLE_ACCEPT_COST} Wingits. Text chat is free once a Wingle is accepted.`}
         action={
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 rounded-full bg-cream-deep px-3 py-1.5 text-xs text-ink-muted">
@@ -243,12 +215,12 @@ export function AdminActivity() {
         />
       </div>
 
-      {/* Chat usage by member Section */}
+      {/* Member activity and Wingits Section */}
       <section className="mt-8 overflow-hidden rounded-4xl bg-cream-deep shadow-card border border-sand/40">
         <div className="border-b border-sand p-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="font-display text-xl text-ink">
-              Chat usage by member
+              Member activity and Wingits
             </h2>
             <p className="text-xs text-ink-muted mt-0.5">
               Showing {filteredUsageRows.length} member{filteredUsageRows.length === 1 ? '' : 's'} · {activeMembersCount} active users
@@ -287,12 +259,12 @@ export function AdminActivity() {
                 Active ({activeMembersCount})
               </button>
               <button
-                onClick={() => setUsageFilter('exhausted')}
+                onClick={() => setUsageFilter('low_balance')}
                 className={`px-3 py-1 rounded-full transition-colors ${
-                  usageFilter === 'exhausted' ? 'bg-cream-deep text-ink shadow-sm font-medium' : 'text-ink-muted hover:text-ink'
+                  usageFilter === 'low_balance' ? 'bg-cream-deep text-ink shadow-sm font-medium' : 'text-ink-muted hover:text-ink'
                 }`}
               >
-                Exhausted ({exhaustedMembersCount})
+                Low balance ({lowBalanceMembersCount})
               </button>
             </div>
           </div>
@@ -304,10 +276,10 @@ export function AdminActivity() {
               <tr>
                 <th scope="col" className="px-5 py-3 font-semibold">Member</th>
                 <th scope="col" className="px-5 py-3 font-semibold">Package</th>
-                <th scope="col" className="px-5 py-3 font-semibold">Mingles used</th>
-                <th scope="col" className="hidden px-5 py-3 font-semibold md:table-cell">Wingles used</th>
-                <th scope="col" className="px-5 py-3 font-semibold">Status</th>
-                <th scope="col" className="px-5 py-3 font-semibold text-right">Actions</th>
+                <th scope="col" className="px-5 py-3 font-semibold">Messages sent</th>
+                <th scope="col" className="hidden px-5 py-3 font-semibold md:table-cell">Wingles sent</th>
+                <th scope="col" className="px-5 py-3 font-semibold">Wingles accepted</th>
+                <th scope="col" className="px-5 py-3 font-semibold text-right">Wingits</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-sand">
@@ -318,13 +290,7 @@ export function AdminActivity() {
                   </td>
                 </tr>
               ) : (
-                paginatedUsageRows.map((row) => {
-                  const chatLimit = row.pkg.chatLimit;
-                  const exhausted = chatLimit !== null && row.chatUsed >= chatLimit;
-                  const chatPercent = chatLimit ? Math.min(100, Math.round((row.chatUsed / chatLimit) * 100)) : 0;
-                  const isResetting = resettingId === row.id;
-
-                  return (
+                paginatedUsageRows.map(row => (
                     <tr key={row.id} className="hover:bg-cream/20 transition-colors">
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
@@ -344,50 +310,15 @@ export function AdminActivity() {
                           {row.pkg.name}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5">
-                        <div className="space-y-1">
-                          <span className="text-ink-soft text-sm font-medium">
-                            {row.chatUsed} / {chatLimit === null ? '∞' : chatLimit}
-                          </span>
-                          {chatLimit !== null && (
-                            <div className="w-24 h-1.5 rounded-full bg-sand overflow-hidden">
-                              <div 
-                                className={`h-full rounded-full transition-all duration-300 ${
-                                  exhausted ? 'bg-red-500' : 'bg-berry-500'
-                                }`}
-                                style={{ width: `${chatPercent}%` }}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="hidden px-5 py-3.5 text-ink-soft md:table-cell">
-                        <span className="font-medium">
-                          {row.winglesUsed}
-                        </span>
-                        <span className="text-ink-muted text-xs">
-                          {' '}/ {row.pkg.wingleLimit === null ? '∞' : row.pkg.wingleLimit}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <Badge tone={exhausted ? 'red' : 'moss'}>
-                          {exhausted ? 'Limit reached' : 'Within limit'}
-                        </Badge>
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        <button
-                          onClick={() => handleResetUsage(row.id, row.name)}
-                          disabled={isResetting || (row.chatUsed === 0 && row.winglesUsed === 0)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg text-ink-muted hover:text-ink hover:bg-sand/60 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                          title="Reset usage counter"
-                        >
-                          <RotateCcwIcon className={`h-3 w-3 ${isResetting ? 'animate-spin' : ''}`} />
-                          Reset
-                        </button>
+                      <td className="px-5 py-3.5 text-ink-soft">{row.chatUsed}</td>
+                      <td className="hidden px-5 py-3.5 text-ink-soft md:table-cell">{row.winglesUsed}</td>
+                      <td className="px-5 py-3.5 text-ink-soft">{row.winglesAccepted}</td>
+                      <td className="px-5 py-3.5 text-right text-ink-soft">
+                        {row.wingitsBalance}
+                        {row.isUnlimited && <span className="ml-2 text-xs text-ink-muted">Unlimited access</span>}
                       </td>
                     </tr>
-                  );
-                })
+                ))
               )}
             </tbody>
           </table>

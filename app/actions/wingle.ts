@@ -5,113 +5,113 @@ import { getSession } from '@/lib/session'
 import { Temporal } from 'temporal-polyfill'
 import { formatNotifyPhoneNumber, getPhoneVariants, sendNotifySms } from '@/lib/notify'
 
-const GIFT_META: Record<string, { cost: number; label: string; icon: string }> = {
-  rose: { cost: 5, label: 'Red Rose', icon: '🌹' },
-  chocolates: { cost: 8, label: 'Chocolates', icon: '🍫' },
-  coffee: { cost: 10, label: 'Coffee', icon: '☕' },
-  teddy: { cost: 15, label: 'Cute Teddy', icon: '🧸' }
-};
+import { getWingleGift, WINGLE_ACCEPT_COST, WINGLE_SEND_COST } from '@/lib/wingle-pricing'
+
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+class WingleError extends Error {
+  constructor(message: string, readonly reason?: 'verification_required' | 'insufficient_wingits') {
+    super(message);
+  }
+}
+
+async function adjustWingleBalance(tx: Transaction, userId: string, amount: number, isUnlimited?: boolean) {
+  const update = tx.sql.public.user
+    .update((fields, fns) => ({
+      wingitsBalance: fns.raw`${fields.wingitsBalance} + ${amount}`.returns('pg/int4@1'),
+    }))
+    .where((fields, fns) => fns.eq(fields.id, userId))
+    .where((fields, fns) => fns.gte(fields.wingitsBalance, Math.max(0, -amount)));
+  const plan = isUnlimited === undefined
+    ? update.build()
+    : update.where((fields, fns) => fns.eq(fields.isUnlimited, isUnlimited)).build();
+  const { affectedRows } = await tx.execute(plan);
+  if (affectedRows !== 1) {
+    throw new WingleError('Unable to charge Wingits. Check your balance and try again.', 'insufficient_wingits');
+  }
+  const user = await tx.orm.public.User.select('wingitsBalance').first({ id: userId });
+  if (!user) throw new WingleError('Account not found.');
+  return user.wingitsBalance;
+}
 
 export async function sendWingle(toUserId: string, note: string, gift?: string) {
   try {
-    const session = await getSession()
-    if (!session?.userId) return { ok: false, error: 'Unauthorized' }
-
-    // Check if Wingle already exists
-    const existing = await db.orm.public.Wingle.where({
-      fromUserId: session.userId as string,
-      toUserId: toUserId
-    }).first()
-    
-    if (existing) {
-      return { ok: false, error: 'Wingle already sent' }
+    const session = await getSession();
+    if (!session?.userId) throw new WingleError('Unauthorized');
+    const userId = session.userId as string;
+    if (!toUserId || toUserId === userId || typeof note !== 'string' || note.length > 280) {
+      throw new WingleError('Invalid Wingle.');
     }
+    const giftMeta = getWingleGift(gift);
+    if (gift && !giftMeta) throw new WingleError('Invalid gift.');
+    const giftCost = giftMeta?.cost ?? 0;
+    const title = giftMeta ? `New Wingle with ${giftMeta.icon} ${giftMeta.label}!` : 'New Wingle!';
+    const body = giftMeta ? `Someone sent you a ${giftMeta.label} with their Wingle!` : 'Someone sent you a Wingle. Check it out!';
+    const href = '/wingles';
 
-    const selectedGift = gift && GIFT_META[gift] ? gift : null;
-    const giftCost = selectedGift ? GIFT_META[selectedGift].cost : 0;
-
-    const newWingle = await db.transaction(async (tx) => {
-      const user = await tx.orm.public.User.where({ id: session.userId as string }).first();
-      if (!user) throw new Error('User not found');
-      
+    const { wingleId, createdAt, remainingBalance } = await db.transaction(async (tx) => {
+      const user = await tx.orm.public.User.where({ id: userId }).first();
+      if (!user) throw new WingleError('Account not found.');
       if (!user.isUnlimited && (!user.verificationSelfie || user.selfieStatus !== 'approved')) {
-        throw new Error('Selfie verification required. Please complete selfie verification to activate your account before sending Wingles.');
-      }
-      
-      let baseWingleCost = 8;
-      if (user.isUnlimited) {
-        baseWingleCost = 0;
-      } else if (user.freeWinglesSent < 5) {
-        baseWingleCost = 0;
+        throw new WingleError('Complete selfie verification to send Wingles.', 'verification_required');
       }
 
-      const totalCost = baseWingleCost + giftCost;
+      const sendCost = user.isUnlimited ? 0 : WINGLE_SEND_COST;
+      // Updating the sender first serializes concurrent sends. A duplicate rolls back the debit.
+      const remainingBalance = await adjustWingleBalance(tx, userId, -(sendCost + giftCost), user.isUnlimited);
+      const existing = await tx.orm.public.Wingle.where({ fromUserId: userId, toUserId }).first();
+      if (existing) throw new WingleError('You have already sent this person a Wingle.');
 
-      if (user.wingitsBalance < totalCost) {
-        throw new Error(`Not enough Wingits to send Wingle ${selectedGift ? `with ${GIFT_META[selectedGift].label}` : ''}. Required: ${totalCost} Wingits.`);
-      }
-
-      const updates: any = {};
-      if (totalCost > 0) updates.wingitsBalance = Math.max(0, user.wingitsBalance - totalCost);
-      if (baseWingleCost === 0) updates.freeWinglesSent = user.freeWinglesSent + 1;
-      
-      await tx.orm.public.User.where({ id: user.id }).update(updates);
-      
-      if (totalCost > 0) {
+      const wingle = await tx.orm.public.Wingle.create({
+        fromUserId: userId,
+        toUserId,
+        note: giftMeta ? `[GIFT:${gift}] ${note.trim()}` : note.trim(),
+      });
+      // Record the base charge separately so a decline can refund the actual Wingle charge.
+      await tx.orm.public.WingitsTransaction.create({
+        id: `wingle-send:${wingle.id}`,
+        userId,
+        amount: -sendCost,
+        type: 'spend',
+        description: sendCost ? 'Sent a Wingle' : 'Sent a Wingle (Unlimited access)',
+      });
+      if (giftCost) {
         await tx.orm.public.WingitsTransaction.create({
-          userId: user.id,
-          amount: -totalCost,
+          id: crypto.randomUUID(),
+          userId,
+          amount: -giftCost,
           type: 'spend',
-          description: selectedGift ? `Sent Wingle with ${GIFT_META[selectedGift].label} Gift` : 'Sent a Wingle'
+          description: `Sent ${giftMeta?.label} with a Wingle`,
         });
       }
-
-      const storedNote = selectedGift ? `[GIFT:${selectedGift}] ${note.trim()}` : note.trim();
-
-      return await tx.orm.public.Wingle.create({
-        fromUserId: user.id,
-        toUserId: toUserId,
-        note: storedNote
+      await tx.orm.public.Notification.create({
+        userId: toUserId, type: 'wingle_received', title, body, href,
       });
+      return { wingleId: wingle.id, createdAt: wingle.createdAt.toString(), remainingBalance };
     });
 
-    const giftLabel = selectedGift ? GIFT_META[selectedGift].label : null;
-    const notifTitle = giftLabel ? `New Wingle with ${GIFT_META[selectedGift!].icon} ${giftLabel}!` : 'New Wingle!';
-    const notifBody = giftLabel 
-      ? `Someone sent you a special ${giftLabel} gift with their Wingle!` 
-      : 'Someone sent you a Wingle. Check it out!';
-
-    await db.orm.public.Notification.create({
-      userId: toUserId,
-      type: 'wingle_received',
-      title: notifTitle,
-      body: notifBody,
-      href: '/wingles'
-    })
-
-    try {
-      const { sendPushNotificationAction } = await import('@/app/actions/push');
-      await sendPushNotificationAction(toUserId, {
-        title: notifTitle,
-        body: notifBody,
-        url: '/wingles'
-      });
-      const { pusherServer } = await import('@/lib/pusher');
-      await pusherServer.trigger(`private-user-${toUserId}`, 'state-changed', {});
-    } catch (e) {
-      console.error('Push error:', e);
+    await publishWingleUpdate(toUserId, { title, body, url: href });
+    return { ok: true as const, wingleId, createdAt, remainingBalance };
+  } catch (err) {
+    if (err instanceof WingleError) {
+      return { ok: false as const, error: err.message, reason: err.reason };
     }
+    console.error('Send Wingle error:', err);
+    return { ok: false as const, error: 'Failed to send Wingle.' };
+  }
+}
 
-    return { ok: true, wingleId: newWingle.id }
-  } catch (err: any) {
-    console.error('Send Wingle error:', err)
-    const msg = err?.message || 'Failed to send Wingle';
-    const isVerification = msg.toLowerCase().includes('verification');
-    return { 
-      ok: false, 
-      error: msg,
-      reason: isVerification ? 'verification_required' : undefined
-    }
+async function publishWingleUpdate(userId: string, notification?: { title: string; body: string; url: string }) {
+  const tasks: Promise<unknown>[] = [
+    import('@/lib/pusher').then(({ pusherServer }) => pusherServer.trigger(`private-user-${userId}`, 'state-changed', {})),
+  ];
+  if (notification) {
+    tasks.push(import('@/app/actions/push').then(({ sendPushNotificationAction }) =>
+      sendPushNotificationAction(userId, notification)));
+  }
+  const results = await Promise.allSettled(tasks);
+  for (const result of results) {
+    if (result.status === 'rejected') console.error('Wingle notification error:', result.reason);
   }
 }
 
@@ -134,128 +134,84 @@ export async function getReceivedWingles() {
 
 export async function respondToWingle(wingleId: string, accept: boolean) {
   try {
-    const session = await getSession()
-    if (!session?.userId) return { ok: false, error: 'Unauthorized' }
+    const session = await getSession();
+    if (!session?.userId) throw new WingleError('Unauthorized');
+    const userId = session.userId as string;
+    const status = accept ? 'accepted' : 'declined';
+    const result = await db.transaction(async (tx) => {
+      const respondedAt = Temporal.Now.instant();
+      const wingle = await tx.orm.public.Wingle.where({ id: wingleId, toUserId: userId, status: 'pending' })
+        .update({ status, respondedAt });
+      if (!wingle) throw new WingleError('This Wingle has already been answered or is unavailable.');
 
-    const wingle = await db.orm.public.Wingle.where({ id: wingleId }).first()
-    if (!wingle || wingle.toUserId !== session.userId) {
-      return { ok: false, error: 'Invalid Wingle' }
-    }
-
-    const newStatus = accept ? 'accepted' : 'declined'
-
-    const logMsg = `[respondToWingle] wingleId: ${wingleId}, accept: ${accept}, session: ${session.userId}, toUserId: ${wingle.toUserId}\n`;
-    console.log(logMsg);
-
-    const { connection, conversation } = await db.transaction(async (tx) => {
-      let acceptCost = 4;
-      if (accept) {
-        const receiver = await tx.orm.public.User.where({ id: session.userId as string }).first();
-        if (!receiver) throw new Error('Receiver not found');
-        if (receiver.isUnlimited) {
-          acceptCost = 0;
-        } else if (receiver.freeWinglesAccepted < 2) {
-          acceptCost = 0;
-        }
-
-        if (receiver.wingitsBalance < acceptCost) {
-          throw new Error('Not enough Wingits to accept.');
-        }
-
-        const updates: any = {};
-        if (acceptCost > 0) updates.wingitsBalance = receiver.wingitsBalance - acceptCost;
-        if (acceptCost === 0) updates.freeWinglesAccepted = receiver.freeWinglesAccepted + 1;
-        
-        await tx.orm.public.User.where({ id: receiver.id }).update(updates);
-        if (acceptCost > 0) {
+      if (!accept) {
+        const sendCharge = await tx.orm.public.WingitsTransaction
+          .where({ id: `wingle-send:${wingle.id}`, userId: wingle.fromUserId }).first();
+        // Older Wingles predate per-Wingle ledger entries and retain their original refund.
+        const refund = sendCharge ? Math.min(3, -sendCharge.amount) : 3;
+        if (refund > 0) {
+          await adjustWingleBalance(tx, wingle.fromUserId, refund);
           await tx.orm.public.WingitsTransaction.create({
-            userId: receiver.id,
-            amount: -acceptCost,
-            type: 'spend',
-            description: 'Accepted a Wingle'
-          });
-        }
-      } else {
-        // Refund 3 Wingits to the sender
-        const sender = await tx.orm.public.User.where({ id: wingle.fromUserId }).first();
-        if (sender) {
-          await tx.orm.public.User.where({ id: sender.id }).update({
-            wingitsBalance: sender.wingitsBalance + 3
-          });
-          await tx.orm.public.WingitsTransaction.create({
-            userId: sender.id,
-            amount: 3,
+            id: crypto.randomUUID(),
+            userId: wingle.fromUserId,
+            amount: refund,
             type: 'refund',
-            description: 'Wingle was declined'
+            description: 'Wingle was declined',
           });
         }
+        return { senderId: wingle.fromUserId, respondedAt: respondedAt.toString() };
       }
 
-      // Update Wingle
-      await tx.orm.public.Wingle.where({ id: wingleId }).update({
-        status: newStatus,
-        respondedAt: Temporal.Now.instant()
-      });
-
-      let conn = null;
-      let conv = null;
-
-      // If accepted, create a Connection and Conversation
-      if (accept) {
-        const u1 = wingle.fromUserId < wingle.toUserId ? wingle.fromUserId : wingle.toUserId
-        const u2 = wingle.fromUserId < wingle.toUserId ? wingle.toUserId : wingle.fromUserId
-
-        conn = await tx.orm.public.Connection.where({ userId1: u1, userId2: u2 }).first()
-        if (!conn) {
-          conn = await tx.orm.public.Connection.create({
-            userId1: u1,
-            userId2: u2
-          })
-        }
-
-        conv = await tx.orm.public.Conversation.where({ userId1: u1, userId2: u2 }).first()
-        if (!conv) {
-          conv = await tx.orm.public.Conversation.create({
-            userId1: u1,
-            userId2: u2
-          })
-        }
+      const receiver = await tx.orm.public.User.where({ id: userId }).first();
+      if (!receiver) throw new WingleError('Account not found.');
+      const acceptCost = receiver.isUnlimited ? 0 : WINGLE_ACCEPT_COST;
+      const remainingBalance = await adjustWingleBalance(tx, userId, -acceptCost, receiver.isUnlimited);
+      if (acceptCost) {
+        await tx.orm.public.WingitsTransaction.create({
+          id: crypto.randomUUID(), userId, amount: -acceptCost, type: 'spend', description: 'Accepted a Wingle',
+        });
       }
-      return { connection: conn, conversation: conv };
-    });
 
-    console.log(`[respondToWingle] Wingle status updated to ${newStatus}`);
-    if (accept && connection && conversation) {
-      console.log(`[respondToWingle] Created Connection ${connection.id} and Conversation ${conversation.id}`);
-
-      await db.orm.public.Notification.create({
-        userId: wingle.fromUserId,
-        type: 'wingle_accepted',
+      const [userId1, userId2] = [wingle.fromUserId, wingle.toUserId].sort();
+      const pair = { userId1, userId2 };
+      const connection = await tx.orm.public.Connection.where(pair).first()
+        ?? await tx.orm.public.Connection.create(pair);
+      const conversation = await tx.orm.public.Conversation.where(pair).first()
+        ?? await tx.orm.public.Conversation.create(pair);
+      const notification = {
         title: 'Wingle Accepted!',
         body: 'Your Wingle was accepted. You can now chat!',
-        href: `/mingles/${conversation.id}`
+        url: `/mingles/${conversation.id}`,
+      };
+      await tx.orm.public.Notification.create({
+        userId: wingle.fromUserId,
+        type: 'wingle_accepted',
+        title: notification.title,
+        body: notification.body,
+        href: notification.url,
       });
+      return {
+        senderId: wingle.fromUserId,
+        respondedAt: respondedAt.toString(),
+        remainingBalance,
+        connectionId: connection.id,
+        conversationId: conversation.id,
+        notification,
+      };
+    });
 
-      try {
-        const { sendPushNotificationAction } = await import('@/app/actions/push');
-        await sendPushNotificationAction(wingle.fromUserId, {
-          title: 'Wingle Accepted!',
-          body: 'Your Wingle was accepted. You can now chat!',
-          url: `/mingles/${conversation.id}`
-        });
-      } catch (e) {
-        console.error('Push error:', e);
-      }
-
-      return { ok: true, connectionId: connection.id, conversationId: conversation.id }
-    }
-
-    return { ok: true }
+    await publishWingleUpdate(result.senderId, result.notification);
+    return {
+      ok: true as const,
+      respondedAt: result.respondedAt,
+      remainingBalance: result.remainingBalance,
+      connectionId: result.connectionId,
+      conversationId: result.conversationId,
+    };
   } catch (err) {
-    const errMsg = `Respond Wingle error: ${err}\n`;
-    console.error(errMsg)
-    try { require('fs').appendFileSync('d:/Dating_App_Design/logs.txt', errMsg); } catch(e) {}
-    return { ok: false, error: 'Failed to respond to Wingle' }
+    if (err instanceof WingleError) return { ok: false as const, error: err.message, reason: err.reason };
+    console.error('Respond Wingle error:', err);
+    return { ok: false as const, error: 'Failed to respond to Wingle.' };
   }
 }
 

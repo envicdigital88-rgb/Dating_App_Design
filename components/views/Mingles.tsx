@@ -2,11 +2,10 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MessageCircleIcon, SparklesIcon, SearchIcon, MicIcon } from 'lucide-react';
+import { MessageCircleIcon, SearchIcon, MicIcon } from 'lucide-react';
 import { Page, PageHeader } from '@/components/AppShell';
 import { Button } from '@/components/ui/Button';
 import { Avatar, EmptyState } from '@/components/ui/Bits';
-import { UsageMeter } from '@/components/UsageMeter';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { listTime } from '@/lib/utils/format';
 import { AddStatusModal } from '@/components/ui/AddStatusModal';
@@ -46,14 +45,6 @@ export function Mingles() {
       <PageHeader
         title="Mingles"
         body="Conversations open as soon as a wingling wingle is accepted."
-        action={
-          entitlements.chatRemaining !== null && entitlements.chatRemaining <= 5 ? (
-            <Button onClick={() => router.push('/packages')}>
-              <SparklesIcon className="h-4 w-4" />
-              Top up mingles
-            </Button>
-          ) : undefined
-        }
       />
 
       <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
@@ -205,28 +196,10 @@ export function Mingles() {
 
         <aside className="hidden space-y-5 lg:block">
           <div className="rounded-4xl bg-cream-deep p-5 shadow-card">
-            <h2 className="mb-4 font-display text-lg text-ink">Chat allowance</h2>
-            <UsageMeter
-              label="Mingles remaining"
-              used={entitlements.chatUsed}
-              limit={entitlements.chatLimit}
-            />
-            <p className="mt-4 text-[13px] leading-relaxed text-ink-soft">
-              {entitlements.chatLimit === null
-                ? 'Your package includes unlimited mingles.'
-                : `You have used ${entitlements.chatUsed} of ${entitlements.chatLimit} mingles on the ${entitlements.packageName} package.`}
+            <h2 className="mb-2 font-display text-lg text-ink">Free text chat</h2>
+            <p className="text-[13px] leading-relaxed text-ink-soft">
+              Once a Wingle is accepted, both people can send unlimited free text messages. Photo messages use Wingits.
             </p>
-            {entitlements.chatRemaining !== null && (
-              <Button
-                size="sm"
-                block
-                className="mt-4"
-                variant={entitlements.chatRemaining === 0 ? 'primary' : 'outline'}
-                onClick={() => router.push('/packages')}
-              >
-                {entitlements.chatRemaining === 0 ? 'Upgrade to keep chatting' : 'See packages'}
-              </Button>
-            )}
           </div>
         </aside>
       </div>

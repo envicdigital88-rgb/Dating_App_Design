@@ -17,8 +17,19 @@ export async function sendMingleAction(conversationId: string, body: string, ima
       console.warn(`Conversation ${conversationId} not found in DB. Skip sending mingle to DB.`)
       return { ok: false, error: 'Conversation not found' }
     }
+    if (conv.userId1 !== senderId && conv.userId2 !== senderId) {
+      return { ok: false, error: 'Conversation not found' }
+    }
 
     const otherId = conv.userId1 === senderId ? conv.userId2 : conv.userId1
+    const acceptedWingle = await db.orm.public.Wingle.where({ status: 'accepted' })
+      .where(w => or(
+        and(w.fromUserId.eq(senderId), w.toUserId.eq(otherId)),
+        and(w.fromUserId.eq(otherId), w.toUserId.eq(senderId))
+      )).first();
+    if (!acceptedWingle) {
+      return { ok: false, error: 'Accept a Wingle to start chatting.' }
+    }
     if (otherId) {
       const blocked = await db.orm.public.Block.where((b) => 
         or(
@@ -223,8 +234,15 @@ export async function getConversationsAction() {
     if (!session?.userId) return { ok: false, error: 'Unauthorized' }
     const userId = session.userId as string
 
-    // Get all conversations where userId1 or userId2 is the current user
-    const convs = await db.orm.public.Conversation.where(c => or(c.userId1.eq(userId), c.userId2.eq(userId))).all();
+    const accepted = await db.orm.public.Wingle.where({ status: 'accepted' })
+      .where(w => or(w.fromUserId.eq(userId), w.toUserId.eq(userId)))
+      .select('fromUserId', 'toUserId').all();
+    const peerIds = [...new Set(accepted.map(w => w.fromUserId === userId ? w.toUserId : w.fromUserId))];
+    if (peerIds.length === 0) return { ok: true, data: { conversations: [], mingles: [] } };
+    const convs = await db.orm.public.Conversation.where(c => or(
+      and(c.userId1.eq(userId), c.userId2.in(peerIds)),
+      and(c.userId2.eq(userId), c.userId1.in(peerIds))
+    )).all();
     const convIds = convs.map(c => c.id);
     
     let allMingles: any[] = [];

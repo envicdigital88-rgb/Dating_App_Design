@@ -1,8 +1,7 @@
 import type { Package } from '@/lib/types';
 
 /**
- * Seed values only — packages live in the store and are editable from the
- * admin dashboard. Nothing in the product reads limits from anywhere else.
+ * Legacy package details. Wingle prices come from the shared Wingits rules.
  */
 export const seedPackages: Package[] = [
 {
@@ -10,18 +9,16 @@ export const seedPackages: Package[] = [
   name: 'Free',
   price: 0,
   durationDays: 0,
-  chatLimit: 5,
-  wingleLimit: 3,
+  chatLimit: null,
+  wingleLimit: null,
   incomingWinglesUnlocked: false,
   priorityVisibility: false,
-  tagline: 'See who is out there and start a few conversations.',
+  tagline: 'Discover people and connect with Wingits.',
   features: [
   'Create your profile',
   'Upload up to 6 photos',
   'Browse every member',
-  'Unlimited likes',
-  '3 wingling wingles',
-  '5 chat mingles'],
+  'Unlimited likes'],
 
   active: true
 },
@@ -30,15 +27,13 @@ export const seedPackages: Package[] = [
   name: 'Basic',
   price: 14.99,
   durationDays: 30,
-  chatLimit: 120,
-  wingleLimit: 25,
+  chatLimit: null,
+  wingleLimit: null,
   incomingWinglesUnlocked: true,
   priorityVisibility: false,
   tagline: 'Unlock who already wants to meet you.',
   features: [
   'See who sent you wingles',
-  '25 wingling wingles a month',
-  '120 chat mingles',
   'Photo sharing in chat',
   'Read receipts'],
 
@@ -50,13 +45,11 @@ export const seedPackages: Package[] = [
   price: 29.99,
   durationDays: 30,
   chatLimit: null,
-  wingleLimit: 100,
+  wingleLimit: null,
   incomingWinglesUnlocked: true,
   priorityVisibility: true,
-  tagline: 'Talk freely and be seen first.',
+  tagline: 'Get priority profile visibility.',
   features: [
-  'Unlimited chat mingles',
-  '100 wingling wingles a month',
   'See who sent you wingles',
   'Priority profile visibility',
   'Verified badge review',

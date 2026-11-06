@@ -9,7 +9,6 @@ import { Page, PageHeader } from '@/components/AppShell';
 import { ProfileCard } from '@/components/ProfileCard';
 import { WingleDialog } from '@/components/WingleDialog';
 import { SpotlightBoostModal } from '@/components/SpotlightBoostModal';
-import { UpgradeDialog, type UpgradeReason } from '@/components/UpgradeDialog';
 import { SelfieVerificationModal } from '@/components/SelfieVerificationModal';
 import { Button } from '@/components/ui/Button';
 import { EmptyState, Skeleton } from '@/components/ui/Bits';
@@ -141,7 +140,6 @@ export function Discover() {
 
   const [tab, setTab] = useState<'nearby' | 'daily5'>('nearby');
   const [wingleTarget, setWingleTarget] = useState<User | null>(null);
-  const [upgrade, setUpgrade] = useState<UpgradeReason | null>(null);
   const [boostModalOpen, setBoostModalOpen] = useState(false);
   const [showSelfieModal, setShowSelfieModal] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -428,7 +426,7 @@ export function Discover() {
                       setShowSelfieModal(true);
                       return;
                     }
-                    if (entitlements.winglesRemaining !== null && entitlements.winglesRemaining <= 0) { setUpgrade('wingle_limit'); return; }
+
                     setWingleTarget(current);
                   }}
                   heartZoneRef={heartZoneRef} recycleZoneRef={recycleZoneRef} activeZone={activeZone}
@@ -523,8 +521,7 @@ export function Discover() {
         </aside>
       </div>
 
-      <WingleDialog open={!!wingleTarget} target={wingleTarget} onClose={() => setWingleTarget(null)} onLimitReached={() => setUpgrade('wingle_limit')} />
-      <UpgradeDialog open={!!upgrade} reason={upgrade ?? 'wingle_limit'} onClose={() => setUpgrade(null)} />
+      <WingleDialog open={!!wingleTarget} target={wingleTarget} onClose={() => setWingleTarget(null)} />
       <SpotlightBoostModal
         open={boostModalOpen}
         onClose={() => setBoostModalOpen(false)}

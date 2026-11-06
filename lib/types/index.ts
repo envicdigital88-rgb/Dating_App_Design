@@ -63,8 +63,6 @@ export interface User {
   anonymousName?: string;
   heartReacts?: number;
   wingitsBalance: number;
-  freeWinglesSent: number;
-  freeWinglesAccepted: number;
   lastDailyBonusAt?: string;
   isUnlimited: boolean;
   discoverable: boolean;
@@ -260,12 +258,6 @@ export interface Block {
 export interface Entitlements {
   packageId: string;
   packageName: string;
-  chatLimit: number | null;
-  chatUsed: number;
-  chatRemaining: number | null;
-  wingleLimit: number | null;
-  winglesUsed: number;
-  winglesRemaining: number | null;
   incomingWinglesUnlocked: boolean;
   priorityVisibility: boolean;
   subscriptionStatus: 'free' | 'active' | 'expired';
@@ -274,7 +266,7 @@ export interface Entitlements {
 
 export type ServerResult<T = void> =
   | { ok: true; data: T; }
-  | { ok: false; error: string; reason?: 'chat_limit' | 'wingle_limit' | 'locked' | 'invalid' | 'verification_required'; };
+  | { ok: false; error: string; reason?: 'locked' | 'invalid' | 'verification_required' | 'insufficient_wingits'; };
 
 export function isSelfieVerified(user: User | null | undefined): boolean {
   if (!user) return false;

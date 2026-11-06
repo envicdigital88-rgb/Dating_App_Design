@@ -643,13 +643,18 @@ export async function getAdminActivityDataAction() {
       allMembers,
       allSubscriptions,
       allPackages,
-      allUsage
+      chatCounts,
+      sentCounts,
+      acceptedCounts
     ] = await Promise.all([
       db.orm.public.Wingle.orderBy(w => w.createdAt.desc()).limit(30).all(),
-      db.orm.public.User.where({ role: 'member' }).select('id', 'name', 'email', 'lastActiveAt', 'createdAt', 'freeWinglesSent').all(),
+      db.orm.public.User.where({ role: 'member' })
+        .select('id', 'name', 'email', 'lastActiveAt', 'createdAt', 'wingitsBalance', 'isUnlimited').all(),
       db.orm.public.Subscription.where({ status: 'active' }).all(),
-      db.orm.public.Package.all(),
-      db.orm.public.Usage.all()
+      db.orm.public.Package.select('id', 'name').all(),
+      db.orm.public.Mingle.groupBy('senderId').aggregate(a => ({ count: a.count() })),
+      db.orm.public.Wingle.groupBy('fromUserId').aggregate(a => ({ count: a.count() })),
+      db.orm.public.Wingle.where({ status: 'accepted' }).groupBy('toUserId').aggregate(a => ({ count: a.count() })),
     ]);
 
     const wingleUserIds = new Set<string>();
@@ -674,18 +679,10 @@ export async function getAdminActivityDataAction() {
       respondedAt: w.respondedAt ? w.respondedAt.toString() : null
     }));
 
-    const usageByUser: Record<string, { chatUsed: number; winglesUsed: number }> = {};
-    for (const u of allUsage) {
-      usageByUser[u.userId] = { chatUsed: u.chatUsed, winglesUsed: u.winglesUsed };
-    }
-
-    const freePackage = {
-      id: 'free',
-      name: 'Free',
-      chatLimit: 5,
-      wingleLimit: 3,
-      price: 0
-    };
+    const chatsByUser = new Map(chatCounts.map(row => [row.senderId, row.count]));
+    const sentByUser = new Map(sentCounts.map(row => [row.fromUserId, row.count]));
+    const acceptedByUser = new Map(acceptedCounts.map(row => [row.toUserId, row.count]));
+    const freePackage = { id: 'free', name: 'Free' };
 
     const nowMs = Date.now();
     const usageRows = allMembers.map(member => {
@@ -699,23 +696,17 @@ export async function getAdminActivityDataAction() {
         ? allPackages.find(p => p.id === userSub.packageId) || freePackage
         : freePackage;
 
-      const userUsage = usageByUser[member.id];
-      const chatUsed = userUsage !== undefined ? userUsage.chatUsed : 0;
-      const winglesUsed = userUsage !== undefined ? userUsage.winglesUsed : (member.freeWinglesSent || 0);
-
       return {
         id: member.id,
         name: member.name,
         email: member.email,
         lastActiveAt: member.lastActiveAt ? member.lastActiveAt.toString() : (member.createdAt ? member.createdAt.toString() : new Date().toISOString()),
-        pkg: {
-          id: pkg.id,
-          name: pkg.name,
-          chatLimit: pkg.chatLimit,
-          wingleLimit: pkg.wingleLimit,
-        },
-        chatUsed,
-        winglesUsed,
+        pkg,
+        chatUsed: chatsByUser.get(member.id) ?? 0,
+        winglesUsed: sentByUser.get(member.id) ?? 0,
+        winglesAccepted: acceptedByUser.get(member.id) ?? 0,
+        wingitsBalance: member.wingitsBalance,
+        isUnlimited: member.isUnlimited,
       };
     }).sort((a, b) => 
       (b.chatUsed + b.winglesUsed) - (a.chatUsed + a.winglesUsed) ||
@@ -745,41 +736,6 @@ export async function getAdminActivityDataAction() {
   } catch (err) {
     console.error('getAdminActivityDataAction error:', err);
     return { ok: false, error: 'Failed to fetch admin activity data' };
-  }
-}
-
-export async function resetMemberUsageAction(targetUserId: string) {
-  try {
-    const session = await getSession();
-    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
-    const admin = await db.orm.public.User.where({ id: session.userId as string }).first();
-    if (admin?.role !== 'admin') return { ok: false, error: 'Forbidden' };
-
-    // Reset user's free counters
-    await db.orm.public.User.where({ id: targetUserId }).update({
-      freeWinglesSent: 0,
-      freeWinglesAccepted: 0
-    });
-
-    // Reset or initialize usage table
-    const existingUsage = await db.orm.public.Usage.where({ userId: targetUserId }).first();
-    if (existingUsage) {
-      await db.orm.public.Usage.where({ userId: targetUserId }).update({
-        chatUsed: 0,
-        winglesUsed: 0
-      });
-    } else {
-      await db.orm.public.Usage.create({
-        userId: targetUserId,
-        chatUsed: 0,
-        winglesUsed: 0
-      });
-    }
-
-    return { ok: true };
-  } catch (err) {
-    console.error('resetMemberUsageAction error:', err);
-    return { ok: false, error: 'Failed to reset member usage' };
   }
 }
 

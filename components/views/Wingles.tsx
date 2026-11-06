@@ -7,7 +7,7 @@ import { CheckIcon, LockIcon, SendIcon, XIcon } from 'lucide-react';
 import { Page, PageHeader } from '@/components/AppShell';
 import { Button } from '@/components/ui/Button';
 import { Badge, EmptyState } from '@/components/ui/Bits';
-import { UpgradeDialog } from '@/components/UpgradeDialog';
+import { WINGLE_ACCEPT_COST } from '@/lib/wingle-pricing';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { relativeTime, shortDate } from '@/lib/utils/format';
 import { type WinglingWingle, parseWingleNote } from '@/lib/types';
@@ -34,14 +34,35 @@ export function Wingles() {
     currentUser
   } = useStore();
   const [tab, setTab] = useState<'incoming' | 'sent'>('incoming');
-  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [responseInProgress, setResponseInProgress] = useState<{
+    id: string;
+    status: 'accepted' | 'declined';
+  } | null>(null);
   const [showTopup, setShowTopup] = useState(false);
 
   React.useEffect(() => {
     markWinglesViewed();
   }, [markWinglesViewed]);
 
-  if (!entitlements) return null;
+  if (!entitlements || !currentUser) return null;
+  const acceptCost = currentUser.isUnlimited ? 0 : WINGLE_ACCEPT_COST;
+
+  const handleResponse = async (id: string, status: 'accepted' | 'declined') => {
+    if (responseInProgress) return;
+    if (status === 'accepted' && currentUser.wingitsBalance < acceptCost) {
+      setShowTopup(true);
+      return;
+    }
+    setResponseInProgress({ id, status });
+    const result = await respondToWingle(id, status);
+    setResponseInProgress(null);
+    if (!result.ok) {
+      if (result.reason === 'insufficient_wingits') setShowTopup(true);
+      else toast.error(result.error);
+      return;
+    }
+    toast.success(status === 'accepted' ? 'You are connected with the sender!' : 'Wingle declined');
+  };
 
   const sent = sentWingles();
   const incoming = incomingWingles();
@@ -157,10 +178,11 @@ export function Wingles() {
                       size="sm"
                       variant="outline"
                       className="flex-1 sm:flex-none"
+                      loading={responseInProgress?.id === wingle.id && responseInProgress.status === 'declined'}
+                      disabled={!!responseInProgress}
                       onClick={(e) => {
                         e.stopPropagation();
-                        respondToWingle(wingle.id, 'declined');
-                        toast.success('Wingle declined');
+                        void handleResponse(wingle.id, 'declined');
                       }}>
                       <XIcon className="h-3.5 w-3.5" />
                       Decline
@@ -168,18 +190,14 @@ export function Wingles() {
                     <Button
                       size="sm"
                       className="flex-1 sm:flex-none"
-                      onClick={async (e) => {
+                      loading={responseInProgress?.id === wingle.id && responseInProgress.status === 'accepted'}
+                      disabled={!!responseInProgress}
+                      onClick={(e) => {
                         e.stopPropagation();
-                        const acceptCost = currentUser?.isUnlimited ? 0 : ((currentUser?.freeWinglesAccepted ?? 0) < 2 ? 0 : 4);
-                        if ((currentUser?.wingitsBalance ?? 0) < acceptCost) {
-                          setShowTopup(true);
-                          return;
-                        }
-                        await respondToWingle(wingle.id, 'accepted');
-                        toast.success(`You are connected with the sender!`);
+                        void handleResponse(wingle.id, 'accepted');
                       }}>
                       <CheckIcon className="h-3.5 w-3.5" />
-                      Accept {currentUser?.isUnlimited ? '' : (((currentUser?.freeWinglesAccepted ?? 0) < 2) ? '(Free)' : '(4 Wingits)')}
+                      Accept {acceptCost > 0 && `(${acceptCost} Wingits)`}
                     </Button>
                   </div>
                 </li>
@@ -314,14 +332,10 @@ export function Wingles() {
         </div>
       }
 
-      <UpgradeDialog
-        open={upgradeOpen}
-        reason="incoming_locked"
-        onClose={() => setUpgradeOpen(false)} />
       <InsufficientWingitsModal
         open={showTopup}
         onClose={() => setShowTopup(false)}
-        requiredAmount={4}
+        requiredAmount={acceptCost}
         currentBalance={currentUser?.wingitsBalance ?? 0}
         actionName="accept this Wingle"
       />

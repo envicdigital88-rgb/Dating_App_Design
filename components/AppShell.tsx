@@ -27,7 +27,6 @@ import {
   XIcon } from
 'lucide-react';
 import { BrandMark } from './BrandMark';
-/* import { UsageMeter } from './UsageMeter'; */
 import { Avatar, Badge, Skeleton } from './ui/Bits';
 import { ChatPopup } from './ui/ChatPopup';
 /* import { Button } from './ui/Button'; */
@@ -187,39 +186,6 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           </nav>
 
           <div className="mt-auto space-y-4">
-            {/* <div className="rounded-3xl bg-plum-500 p-4 text-cream">
-              <div className="mb-3 flex items-center justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-cream/70">
-                  {entitlements.packageName} package
-                </span>
-              </div>
-              <div className="space-y-3">
-                <UsageMeter
-                  label="Mingles left"
-                  used={entitlements.chatUsed}
-                  limit={entitlements.chatLimit}
-                  tone="plum" />
-                
-                <UsageMeter
-                  label="Wingles left"
-                  used={entitlements.winglesUsed}
-                  limit={entitlements.wingleLimit}
-                  tone="plum" />
-                
-              </div>
-              {entitlements.subscriptionStatus === 'free' &&
-              <Button
-                variant="inverse"
-                size="sm"
-                block
-                className="mt-4"
-                onClick={() => router.push('/packages')}>
-                
-                  Upgrade
-                </Button>
-              }
-            </div> */}
-
             <div className="flex items-center gap-3 px-1">
               <Avatar src={primaryPhoto?.url} name={currentUser.name} size={38} online />
               <div className="min-w-0 flex-1">
@@ -245,9 +211,9 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
           <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-sand/70 bg-cream/90 px-4 py-3 backdrop-blur lg:hidden">
               <BrandMark />
               <div className="flex items-center gap-1">
-                <span className="mr-1 rounded-full bg-cream-deep px-3 py-1.5 text-[12px] font-medium text-ink-soft shadow-sm">
-                  {entitlements.chatRemaining === null ? '∞' : entitlements.chatRemaining} msgs
-                </span>
+                <Link href="/store" className="mr-1 rounded-full bg-cream-deep px-3 py-1.5 text-[12px] font-medium text-ink-soft shadow-sm">
+                  {currentUser.wingitsBalance} Wingits
+                </Link>
                 <Link
                 href="/notifications"
                 aria-label="Notifications"

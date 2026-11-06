@@ -36,62 +36,11 @@ export async function likeUser(targetUserId: string) {
     // Check for mutual like (did the target user already like this user?)
     const mutualLike = await db.orm.public.Like.where({ fromUserId: targetUserId, toUserId: userId }).first()
 
-    if (mutualLike) {
-      // It's a match! Create Connection and Conversation
-      // Ensure userId1 < userId2 for consistency in Connections/Conversations
-      const [u1, u2] = userId < targetUserId ? [userId, targetUserId] : [targetUserId, userId]
-
-      // Check if connection already exists to prevent duplicates
-      let connection = await db.orm.public.Connection.where({ userId1: u1, userId2: u2 }).first()
-      if (!connection) {
-        connection = await db.orm.public.Connection.create({
-          userId1: u1,
-          userId2: u2,
-        })
-      }
-
-      let conversation = await db.orm.public.Conversation.where({ userId1: u1, userId2: u2 }).first()
-      if (!conversation) {
-        conversation = await db.orm.public.Conversation.create({
-          userId1: u1,
-          userId2: u2,
-        })
-      }
-
-      await db.orm.public.Notification.create({
-        userId: targetUserId,
-        type: 'connection',
-        title: 'New Match! 🔥',
-        body: 'Someone just liked you back. Start chatting now!',
-        href: `/mingles/${conversation.id}`
-      })
-
-      try {
-        const { sendPushNotificationAction } = await import('@/app/actions/push');
-        await sendPushNotificationAction(targetUserId, {
-          title: 'New Match! 🔥',
-          body: 'Someone just liked you back. Start chatting now!',
-          url: `/mingles/${conversation.id}`
-        });
-        const { pusherServer } = await import('@/lib/pusher');
-        await pusherServer.trigger(`private-user-${targetUserId}`, 'state-changed', {});
-      } catch (e) {
-        console.error('Push error:', e);
-      }
-
-      return { 
-        ok: true, 
-        matched: true, 
-        connectionId: connection.id, 
-        conversationId: conversation.id 
-      }
-    }
-
     await db.orm.public.Notification.create({
       userId: targetUserId,
       type: 'like',
-      title: 'Someone liked you!',
-      body: 'Someone just liked your profile. Check who it is!',
+      title: mutualLike ? 'You liked each other!' : 'Someone liked you!',
+      body: mutualLike ? 'Send a Wingle to start connecting.' : 'Someone just liked your profile. Check who it is!',
       href: '/likes'
     });
 
@@ -101,15 +50,15 @@ export async function likeUser(targetUserId: string) {
     try {
       const { sendPushNotificationAction } = await import('@/app/actions/push');
       await sendPushNotificationAction(targetUserId, {
-        title: 'Someone liked you!',
-        body: 'Someone just liked your profile. Check who it is!',
+        title: mutualLike ? 'You liked each other!' : 'Someone liked you!',
+        body: mutualLike ? 'Send a Wingle to start connecting.' : 'Someone just liked your profile. Check who it is!',
         url: '/likes'
       });
     } catch (e) {
       console.error('Push error for like:', e);
     }
 
-    return { ok: true, matched: false }
+    return { ok: true, matched: Boolean(mutualLike) }
   } catch (err) {
     console.error('likeUser error:', err)
     return { ok: false, error: 'Failed to process like' }
@@ -133,8 +82,6 @@ export async function unlikeUserAction(targetUserId: string) {
     const { pusherServer } = await import('@/lib/pusher');
     await pusherServer.trigger(`private-user-${targetUserId}`, 'state-changed', {}).catch(console.error);
 
-    // We keep the connections/conversations intact in case they had a match, but we could also delete them if we wanted to fully "unmatch"
-    // For now, unlike just removes the like record.
 
     return { ok: true }
   } catch (err) {

@@ -33,7 +33,7 @@ export function Landing() {
             <SectionHeading
               overline="Packages"
               title="Pay for conversations, not for hope"
-              body="Start free and see the whole community. Upgrade when you have someone you actually want to talk to — every package includes a mingle allowance held on your account." />
+              body="Join free with 20 welcome Wingits. Once a Wingle is accepted, both people get unlimited free text chat." />
             
             <div className="mt-12">
               <PackageGrid
@@ -43,7 +43,7 @@ export function Landing() {
               
             </div>
             <p className="mt-6 text-center text-[13px] text-ink-muted">
-              Allowances are set by our team and shown live in your dashboard. Cancel any time —
+              Your Wingits balance is shown in your profile. Cancel any time —
               packages do not auto-renew without your consent.
             </p>
           </div>

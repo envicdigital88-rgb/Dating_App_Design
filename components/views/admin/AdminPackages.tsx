@@ -11,14 +11,15 @@ import { Badge } from '@/components/ui/Bits';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { id as makeId, money } from '@/lib/utils/format';
 import type { Package } from '@/lib/types';
+import { WINGLE_SEND_COST, WINGLE_ACCEPT_COST } from '@/lib/wingle-pricing';
 
 const blank = (): Package => ({
   id: makeId('pkg'),
   name: '',
   price: 9.99,
   durationDays: 30,
-  chatLimit: 50,
-  wingleLimit: 10,
+  chatLimit: null,
+  wingleLimit: null,
   incomingWinglesUnlocked: true,
   priorityVisibility: false,
   tagline: '',
@@ -38,7 +39,7 @@ export function AdminPackages() {
     <div>
       <AdminHeader
         title="Package management"
-        body="Limits live here, not in the app. Changing a chat or wingle limit applies to every member on that package immediately."
+        body={`Manage package benefits. Wingle pricing is ${WINGLE_SEND_COST} Wingits to send and ${WINGLE_ACCEPT_COST} to accept. Text chat is free once a Wingle is accepted.`}
         action={
         <Button onClick={() => setEditing(blank())}>
             <PlusIcon className="h-4 w-4" />
@@ -54,8 +55,6 @@ export function AdminPackages() {
               <th scope="col" className="px-5 py-3 font-semibold">Package</th>
               <th scope="col" className="px-5 py-3 font-semibold">Price</th>
               <th scope="col" className="px-5 py-3 font-semibold">Duration</th>
-              <th scope="col" className="px-5 py-3 font-semibold">Chat limit</th>
-              <th scope="col" className="px-5 py-3 font-semibold">Wingle limit</th>
               <th scope="col" className="px-5 py-3 font-semibold">Incoming</th>
               <th scope="col" className="px-5 py-3 font-semibold">State</th>
               <th scope="col" className="px-5 py-3 text-right font-semibold">Actions</th>
@@ -75,12 +74,6 @@ export function AdminPackages() {
                   <td className="px-5 py-3.5 text-ink-soft">{money(pkg.price)}</td>
                   <td className="px-5 py-3.5 text-ink-soft">
                     {pkg.durationDays === 0 ? '—' : `${pkg.durationDays} days`}
-                  </td>
-                  <td className="px-5 py-3.5 text-ink-soft">
-                    {pkg.chatLimit === null ? 'Unlimited' : pkg.chatLimit}
-                  </td>
-                  <td className="px-5 py-3.5 text-ink-soft">
-                    {pkg.wingleLimit === null ? 'Unlimited' : pkg.wingleLimit}
                   </td>
                   <td className="px-5 py-3.5">
                     <Badge tone={pkg.incomingWinglesUnlocked ? 'moss' : 'neutral'}>
@@ -177,32 +170,6 @@ export function AdminPackages() {
               
               </div>
               <div>
-                <Label htmlFor="pkg-chat">Chat mingle limit</Label>
-                <Input
-                id="pkg-chat"
-                type="number"
-                min="0"
-                value={editing.chatLimit ?? ''}
-                placeholder="Leave empty for unlimited"
-                onChange={(e) =>
-                set('chatLimit', e.target.value === '' ? null : Number(e.target.value))
-                } />
-              
-              </div>
-              <div>
-                <Label htmlFor="pkg-wingles">Wingling wingle limit</Label>
-                <Input
-                id="pkg-wingles"
-                type="number"
-                min="0"
-                value={editing.wingleLimit ?? ''}
-                placeholder="Leave empty for unlimited"
-                onChange={(e) =>
-                set('wingleLimit', e.target.value === '' ? null : Number(e.target.value))
-                } />
-              
-              </div>
-              <div>
                 <Label htmlFor="pkg-tagline">Tagline</Label>
                 <Input
                 id="pkg-tagline"
@@ -258,7 +225,7 @@ export function AdminPackages() {
         open={!!pendingDelete}
         onClose={() => setPendingDelete(null)}
         title="Delete this package?"
-        description="Members currently on it keep their allowance until it expires, but nobody new can buy it."
+        description="Current members keep their package benefits until it expires."
         footer={
         <>
             <Button variant="ghost" onClick={() => setPendingDelete(null)}>

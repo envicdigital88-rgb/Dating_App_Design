@@ -11,7 +11,6 @@ import {
   CheckCheckIcon,
   FlagIcon,
   ImageIcon,
-  LockIcon,
   MoreVerticalIcon,
   SendIcon,
   SmileIcon,
@@ -32,7 +31,6 @@ import { Button } from '@/components/ui/Button';
 import { Avatar, Badge } from '@/components/ui/Bits';
 import { Modal } from '@/components/ui/Modal';
 import { ReportDialog } from '@/components/ReportDialog';
-import { UpgradeDialog } from '@/components/UpgradeDialog';
 import { InsufficientWingitsModal } from '@/components/InsufficientWingitsModal';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { dayLabel, mingleTime, presence } from '@/lib/utils/format';
@@ -71,7 +69,6 @@ export function Chat() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [blocking, setBlocking] = useState(false);
-  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [showTopup, setShowTopup] = useState(false);
   
   // New WhatsApp Features State
@@ -131,7 +128,6 @@ export function Chat() {
   const otherId = conversation.userIds.find((uid) => uid !== currentUser.id) as string;
   const other = userById(otherId);
   const photo = photosOf(otherId)[0];
-  const limitReached = entitlements.chatRemaining !== null && entitlements.chatRemaining <= 0;
 
   const submit = (imageUrl?: string) => {
     if (!imageUrl && !draft.trim()) return;
@@ -144,8 +140,7 @@ export function Chat() {
 
     const result = sendMingle(conversation.id, draft, imageUrl, replyToId, false);
     if (!result.ok) {
-      if (result.reason === 'chat_limit') setUpgradeOpen(true);
-      else toast.error(result.error);
+      toast.error(result.error);
       return;
     }
     setDraft('');
@@ -287,8 +282,8 @@ export function Chat() {
             </span>
           </button>
           <span className="hidden sm:block">
-            <Badge tone={limitReached ? 'red' : 'neutral'}>
-              {entitlements.chatRemaining === null ? 'Unlimited' : `${entitlements.chatRemaining} left`}
+            <Badge tone="neutral">
+              Free text chat
             </Badge>
           </span>
           <button
@@ -514,23 +509,6 @@ export function Chat() {
             <p className="text-[14px]">You blocked this contact.</p>
             <Button variant="outline" size="sm" onClick={() => unblockUser(otherId)}>
               Unblock
-            </Button>
-          </div>
-        </div>
-      ) : limitReached ? (
-        <div className="border-t border-sand/70 bg-cream-deep px-4 py-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
-          <div className="mx-auto flex max-w-2xl flex-wrap items-center gap-4 rounded-4xl bg-plum-500 p-5 text-cream">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cream/15">
-              <LockIcon className="h-5 w-5" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="font-display text-lg leading-tight">Your chat limit has been reached</p>
-              <p className="mt-1 text-[13px] text-cream/75">
-                You have used all {entitlements.chatLimit} mingles on the {entitlements.packageName} package. Upgrade to keep this conversation going.
-              </p>
-            </div>
-            <Button variant="inverse" onClick={() => navigate('/packages')}>
-              Upgrade package
             </Button>
           </div>
         </div>
@@ -788,7 +766,6 @@ export function Chat() {
           </>
         } />
       <ReportDialog open={reporting} onClose={() => setReporting(false)} userId={otherId} userName={other?.name ?? 'this member'} context="chat" />
-      <UpgradeDialog open={upgradeOpen} reason="chat_limit" onClose={() => setUpgradeOpen(false)} />
       
       <Modal
         open={!!pendingDelete}

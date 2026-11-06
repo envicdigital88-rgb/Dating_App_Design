@@ -1,3 +1,4 @@
+import { WINGLE_SEND_COST, WINGLE_ACCEPT_COST } from '@/lib/wingle-pricing';
 import React from 'react';
 import { CheckIcon, SparklesIcon } from 'lucide-react';
 import { Button } from './ui/Button';
@@ -65,12 +66,12 @@ export function PackageGrid({
             <dl className={`mt-6 space-y-2 border-y py-5 text-[13px] ${featured ? 'border-ink/15' : 'border-sand'}`}>
               <div className="flex justify-between gap-3">
                 <dt className={featured ? 'text-ink/70' : 'text-ink-muted'}>Chat mingles</dt>
-                <dd className="font-medium">{pkg.chatLimit === null ? 'Unlimited' : pkg.chatLimit}</dd>
+                <dd className="font-medium">Free and unlimited once a Wingle is accepted</dd>
               </div>
               <div className="flex justify-between gap-3">
-                <dt className={featured ? 'text-ink/70' : 'text-ink-muted'}>Wingling wingles</dt>
+                <dt className={featured ? 'text-ink/70' : 'text-ink-muted'}>Wingits per Wingle</dt>
                 <dd className="font-medium">
-                  {pkg.wingleLimit === null ? 'Unlimited' : pkg.wingleLimit}
+                  {WINGLE_SEND_COST} to send · {WINGLE_ACCEPT_COST} to accept
                 </dd>
               </div>
               <div className="flex justify-between gap-3">

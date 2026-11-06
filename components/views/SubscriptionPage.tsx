@@ -6,7 +6,7 @@ import { CreditCardIcon, CoinsIcon } from 'lucide-react';
 import { Page, PageHeader } from '@/components/AppShell';
 import { Button } from '@/components/ui/Button';
 import { Badge, EmptyState } from '@/components/ui/Bits';
-import { UsageMeter } from '@/components/UsageMeter';
+import { WINGLE_SEND_COST, WINGLE_ACCEPT_COST } from '@/lib/wingle-pricing';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { money, shortDate } from '@/lib/utils/format';
 import { checkWelcomeBonusAction, claimWelcomeBonusAction, getWingitsTransactionsAction } from '@/app/actions/wingits';
@@ -49,7 +49,7 @@ export function SubscriptionPage() {
     <Page>
       <PageHeader
         title="Wingits"
-        body="Your package, your remaining allowance, and every payment on your account."
+        body="Your Wingits balance, Wingle prices, and payment history."
         action={
         <Button onClick={() => router.push('/store')}>
             Buy Wingits
@@ -89,16 +89,11 @@ export function SubscriptionPage() {
             </Badge>
           </div>
 
-          <div className="mt-6 space-y-4">
-            <UsageMeter
-              label="Free Wingles (Sent)"
-              used={currentUser.isUnlimited ? 0 : currentUser.freeWinglesSent}
-              limit={currentUser.isUnlimited ? null : 5} />
-            
-            <UsageMeter
-              label="Free Wingles (Accepted)"
-              used={currentUser.isUnlimited ? 0 : currentUser.freeWinglesAccepted}
-              limit={currentUser.isUnlimited ? null : 2} />
+          <div className="mt-6 space-y-2 text-sm text-ink-soft">
+            <p>Unlimited free text chat once a Wingle is accepted.</p>
+            <p>{currentUser.isUnlimited
+              ? 'Unlimited Wingle access'
+              : `Send a Wingle for ${WINGLE_SEND_COST} Wingits. Accept for ${WINGLE_ACCEPT_COST} Wingits.`}</p>
           </div>
 
           <dl className="mt-6 divide-y divide-sand border-t border-sand text-[14px]">

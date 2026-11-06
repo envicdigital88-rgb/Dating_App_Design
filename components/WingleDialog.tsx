@@ -10,24 +10,21 @@ import { type User, type WingleGift, isSelfieVerified } from '@/lib/types';
 import { InsufficientWingitsModal } from './InsufficientWingitsModal';
 import { SelfieVerificationModal } from './SelfieVerificationModal';
 
+import { WINGLE_GIFTS, WINGLE_SEND_COST, getWingleGift } from '@/lib/wingle-pricing';
+
 const AVAILABLE_GIFTS = [
   { id: 'none', label: 'No Gift', icon: '💌', cost: 0 },
-  { id: 'rose', label: 'Red Rose', icon: '🌹', cost: 5 },
-  { id: 'chocolates', label: 'Chocolates', icon: '🍫', cost: 8 },
-  { id: 'coffee', label: 'Coffee', icon: '☕', cost: 10 },
-  { id: 'teddy', label: 'Cute Teddy', icon: '🧸', cost: 15 },
+  ...Object.entries(WINGLE_GIFTS).map(([id, gift]) => ({ id: id as WingleGift, ...gift })),
 ] as const;
 
 export function WingleDialog({
   open,
   onClose,
-  target,
-  onLimitReached
+  target
 }: {
   open: boolean;
   onClose: () => void;
   target: User | null;
-  onLimitReached: () => void;
 }) {
   const { sendWingle, currentUser } = useStore();
   const [note, setNote] = useState('');
@@ -38,8 +35,8 @@ export function WingleDialog({
 
   if (!target || !currentUser) return null;
 
-  const baseCost = currentUser.isUnlimited ? 0 : (currentUser.freeWinglesSent < 5 ? 0 : 8);
-  const giftCost = selectedGift !== 'none' ? (AVAILABLE_GIFTS.find(g => g.id === selectedGift)?.cost ?? 0) : 0;
+  const baseCost = currentUser.isUnlimited ? 0 : WINGLE_SEND_COST;
+  const giftCost = getWingleGift(selectedGift)?.cost ?? 0;
   const totalCost = baseCost + giftCost;
 
   const submit = async () => {
@@ -63,11 +60,11 @@ export function WingleDialog({
     setSending(false);
 
     if (!result.ok) {
-      onClose();
       if (result.reason === 'verification_required') {
+        onClose();
         setShowSelfieModal(true);
-      } else if (result.reason === 'wingle_limit') {
-        onLimitReached();
+      } else if (result.reason === 'insufficient_wingits') {
+        setShowTopup(true);
       } else {
         toast.error(result.error);
       }
@@ -99,7 +96,7 @@ export function WingleDialog({
               Cancel
             </Button>
             <Button onClick={submit} loading={sending}>
-              Send wingle {totalCost > 0 ? `(${totalCost} Wingits)` : '(Free)'}
+              Send wingle {totalCost > 0 ? `(${totalCost} Wingits)` : ''}
             </Button>
           </>
         }
@@ -116,11 +113,8 @@ export function WingleDialog({
         <div className="mt-2 flex items-center justify-between text-[13px] text-ink-muted">
           <span>{note.length}/280</span>
           <span>
-            {currentUser?.isUnlimited
-              ? (giftCost > 0 ? `Gift: +${giftCost} Wingits` : 'Unlimited wingles')
-              : (baseCost === 0 
-                  ? `Free wingle (${5 - (currentUser?.freeWinglesSent ?? 0)} left)${giftCost > 0 ? ` + ${giftCost} gift` : ''}`
-                  : `Cost: 8${giftCost > 0 ? ` + ${giftCost} gift` : ''} Wingits`)}
+            {baseCost ? `Wingle: ${baseCost} Wingits` : 'Unlimited access'}
+            {giftCost > 0 && ` + ${giftCost} Wingits for gift`}
           </span>
         </div>
 
@@ -157,7 +151,7 @@ export function WingleDialog({
                     {g.label}
                   </span>
                   <span className={`text-[10px] font-semibold ${isSelected ? 'text-berry-600' : 'text-ink-muted'}`}>
-                    {g.cost === 0 ? 'Free' : `+${g.cost}`}
+                    {g.cost === 0 ? '+0' : `+${g.cost}`}
                   </span>
                 </button>
               );
@@ -171,7 +165,7 @@ export function WingleDialog({
         onClose={() => setShowTopup(false)} 
         requiredAmount={totalCost} 
         currentBalance={currentUser?.wingitsBalance ?? 0} 
-        actionName="send this Wingle & Gift"
+        actionName="send this Wingle"
       />
 
       <SelfieVerificationModal

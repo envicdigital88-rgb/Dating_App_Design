@@ -33,7 +33,7 @@ interface SentSecretWingle {
 }
 
 export function SecretWingleTab() {
-  const { secretWinglesReceived, currentUser, ensureConversation } = useStore();
+  const { secretWinglesReceived, currentUser, conversationWith } = useStore();
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<'compose' | 'received' | 'sent'>('compose');
@@ -654,17 +654,17 @@ export function SecretWingleTab() {
                                 >
                                   View Profile
                                 </Button>
-                                <Button
+                                {conversationWith(sw.sender.id) && <Button
                                   size="sm"
                                   onClick={() => {
-                                    const conv = ensureConversation(sw.sender!.id);
-                                    router.push(`/mingles/${conv.id}`);
+                                    const conversation = conversationWith(sw.sender!.id);
+                                    if (conversation) router.push(`/mingles/${conversation.id}`);
                                   }}
                                   className="text-xs py-1.5 px-3 rounded-xl bg-gradient-to-r from-[#ec4899] to-[#8b2fc9] text-white flex items-center gap-1.5 shadow-sm shadow-[#ec4899]/20"
                                 >
                                   <MessageSquare className="w-3.5 h-3.5" />
                                   <span>Chat with Admirer</span>
-                                </Button>
+                                </Button>}
                               </>
                             )}
 

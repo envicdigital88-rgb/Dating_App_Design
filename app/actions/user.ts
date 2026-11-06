@@ -573,7 +573,10 @@ export async function getUserStateAction() {
     const heartBucket = await db.orm.public.HeartBucket.where(h => or(h.userId.eq(userId), h.targetUserId.eq(userId))).all();
 
     const wingles = await db.orm.public.Wingle.where(w => or(w.fromUserId.eq(userId), w.toUserId.eq(userId))).all();
-    const connections = await db.orm.public.Connection.where(c => or(c.userId1.eq(userId), c.userId2.eq(userId))).all();
+    const acceptedPeerIds = new Set(wingles.filter(w => w.status === 'accepted')
+      .map(w => w.fromUserId === userId ? w.toUserId : w.fromUserId));
+    const connections = (await db.orm.public.Connection.where(c => or(c.userId1.eq(userId), c.userId2.eq(userId))).all())
+      .filter(c => acceptedPeerIds.has(c.userId1 === userId ? c.userId2 : c.userId1));
     const blocks = await db.orm.public.Block.where(b => or(b.blockerId.eq(userId), b.blockedUserId.eq(userId))).all();
     let notifications = await db.orm.public.Notification.where({ userId }).all();
 
@@ -655,6 +658,7 @@ export async function getUserStateAction() {
     });
 
     const payload = {
+      wingitsBalance: currentUserRecord?.wingitsBalance,
       likes: likes.map(l => ({
         id: l.id,
         fromUserId: l.fromUserId,

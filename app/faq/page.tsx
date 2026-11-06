@@ -1,5 +1,6 @@
 'use client';
 
+import { WINGLE_SEND_COST, WINGLE_ACCEPT_COST } from '@/lib/wingle-pricing';
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -55,7 +56,7 @@ const faqs = [
     question: "Do I have to pay to receive a Wingle?",
     answer: [
       "You can receive Wingles for free.",
-      "Certain actions, such as viewing or accepting a Wingle request, may require Wingits. This helps keep interactions meaningful while allowing everyone to join and start using WingleMingle for free."
+      `Sending a Wingle costs ${WINGLE_SEND_COST} Wingits. Accepting costs ${WINGLE_ACCEPT_COST} Wingits. Once a Wingle is accepted, both people get unlimited free text chat.`
     ]
   },
   {
@@ -64,16 +65,14 @@ const faqs = [
       "Secret Wingle is for the brave... and the curious.",
       "Have a crush on someone but don't want to reveal yourself straight away?",
       "Send them a Secret Wingle.",
-      "They'll know that someone has a crush on them, but they won't know who sent it. If they choose to respond, you can start an anonymous conversation, exchange hints and decide later whether you want to reveal yourselves.",
+      "A Secret Wingle lets the recipient know someone is interested in them. For text chat, a regular Wingle between you must be accepted.",
       "Sometimes a little mystery is where the story begins."
     ]
   },
   {
-    question: "Can I chat with someone anonymously?",
+    question: "When can I start a text chat?",
     answer: [
-      "Secret Wingle allows you to start an anonymous conversation with someone who has received your Secret Wingle.",
-      "You can choose to keep your identity hidden or reveal yourself when you're comfortable.",
-      "And if you decide it's not for you, you can simply end the interaction."
+      "Once the recipient accepts a regular Wingle, both people can chat for free with unlimited text messages."
     ]
   },
   {

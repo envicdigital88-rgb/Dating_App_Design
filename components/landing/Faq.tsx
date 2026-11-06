@@ -1,3 +1,4 @@
+import { WINGLE_SEND_COST, WINGLE_ACCEPT_COST } from '@/lib/wingle-pricing';
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { PlusIcon } from 'lucide-react';
@@ -19,11 +20,11 @@ const landingFaqs = [
   },
   {
     q: "What is a Wingle?",
-    a: "A Wingle is your way of showing someone that you'd like to connect. See someone interesting? Send them a Wingle and let them decide where it goes. A Wingle can be the beginning of a conversation, a friendship, a date  or something completely unexpected."
+    a: `A Wingle tells someone you’d like to connect. Sending costs ${WINGLE_SEND_COST} Wingits and accepting costs ${WINGLE_ACCEPT_COST} Wingits. Once a Wingle is accepted, both people get unlimited free text chat.`
   },
   {
     q: "What is a Secret Wingle?",
-    a: "Secret Wingle is for the brave... and the curious. Have a crush on someone but don't want to reveal yourself straight away? Send them a Secret Wingle. They'll know that someone has a crush on them, but they won't know who sent it. If they choose to respond, you can start an anonymous conversation, exchange hints and decide later whether you want to reveal yourselves. Sometimes a little mystery is where the story begins."
+    a: "Secret Wingle is for the brave... and the curious. Have a crush on someone but don't want to reveal yourself straight away? Send them a Secret Wingle. They'll know that someone has a crush on them, but they won't know who sent it. For text chat, a regular Wingle between you must be accepted."
   },
   {
     q: "Do I need a subscription?",

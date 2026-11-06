@@ -9,7 +9,7 @@ import { PhotoGallery } from '@/components/PhotoGallery';
 import { Button } from '@/components/ui/Button';
 import { Badge, VerifiedMark } from '@/components/ui/Bits';
 import { Input, Label, Select, Textarea } from '@/components/ui/Field';
-import { UsageMeter } from '@/components/UsageMeter';
+import { WINGLE_SEND_COST, WINGLE_ACCEPT_COST } from '@/lib/wingle-pricing';
 import { Modal } from '@/components/ui/Modal';
 import { LiveSelfieCapture } from '@/components/LiveSelfieCapture';
 import { SpotlightBoostModal } from '@/components/SpotlightBoostModal';
@@ -19,7 +19,7 @@ import type { WinglingIntention, Lifestyle } from '@/lib/types';
 
 export function MyProfile() {
   const router = useRouter();
-  const { db, currentUser, photosOf, updateProfile, entitlements, likesReceived, sentWingles, userById, unblockUser, submitVerificationSelfie } =
+  const { db, currentUser, photosOf, updateProfile, likesReceived, sentWingles, userById, unblockUser, submitVerificationSelfie } =
   useStore();
   const [activeTab, setActiveTab] = useState<'profile' | 'edit' | 'blocked'>('profile');
   const [boostModalOpen, setBoostModalOpen] = useState(false);
@@ -52,7 +52,7 @@ export function MyProfile() {
     }
   }, [currentUser]);
 
-  if (!currentUser || !entitlements) return null;
+  if (!currentUser) return null;
 
   const photos = photosOf(currentUser.id);
   const blocked = db.blocks.filter((b) => b.blockerId === currentUser.id);
@@ -226,31 +226,18 @@ export function MyProfile() {
           <PhotoGallery photos={photos} name={currentUser.name} />
           <div className="rounded-4xl bg-plum-500 p-5 text-cream">
             <div className="mb-4 flex items-center justify-between">
-              <p className="font-display text-lg">{entitlements.packageName} package</p>
+              <p className="font-display text-lg">Wingits wallet</p>
               <SparklesIcon className="h-4 w-4 text-cream/70" />
             </div>
-            <div className="space-y-4">
-              <UsageMeter
-                label="Chat mingles remaining"
-                used={entitlements.chatUsed}
-                limit={entitlements.chatLimit}
-                tone="plum" />
-              
-              <UsageMeter
-                label="Wingles remaining"
-                used={entitlements.winglesUsed}
-                limit={entitlements.wingleLimit}
-                tone="plum" />
-              
-            </div>
-            <Button
-              variant="inverse"
-              size="sm"
-              block
-              className="mt-5"
-              onClick={() => router.push('/packages')}>
-              
-              {entitlements.subscriptionStatus === 'free' ? 'Upgrade package' : 'Manage package'}
+            <p className="text-2xl font-semibold">{currentUser.wingitsBalance} Wingits</p>
+            <p className="mt-3 text-sm">
+              {currentUser.isUnlimited
+                ? 'Unlimited Wingle access'
+                : `Send a Wingle for ${WINGLE_SEND_COST} Wingits. Accept for ${WINGLE_ACCEPT_COST} Wingits.`}
+            </p>
+            <p className="mt-1 text-sm">Unlimited free text chat once a Wingle is accepted.</p>
+            <Button variant="inverse" size="sm" block className="mt-5" onClick={() => router.push('/store')}>
+              Buy Wingits
             </Button>
           </div>
 

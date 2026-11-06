@@ -1,5 +1,6 @@
 'use client';
 
+import { WINGLE_SEND_COST, WINGLE_ACCEPT_COST } from '@/lib/wingle-pricing';
 import React, { useState } from 'react';
 import { useParams, useRouter, redirect } from 'next/navigation';
 import { CheckCircle2Icon, LockKeyholeIcon, ShieldCheckIcon } from 'lucide-react';
@@ -100,16 +101,15 @@ export function Checkout() {
           </span>
           <h1 className="font-display text-3xl leading-tight text-ink">Payment confirmed</h1>
           <p className="mt-3 text-[15px] leading-relaxed text-ink-soft">
-            Your {pkg.name} package is active. Your allowances have been topped up and incoming
-            wingles are unlocked.
+            Your {pkg.name} package is active.
           </p>
 
           <dl className="mt-7 divide-y divide-sand border-y border-sand text-left text-[14px]">
             {[
             ['Package', pkg.name],
             ['Amount paid', money(pkg.price)],
-            ['Chat mingles', pkg.chatLimit === null ? 'Unlimited' : String(pkg.chatLimit)],
-            ['Wingling wingles', pkg.wingleLimit === null ? 'Unlimited' : String(pkg.wingleLimit)],
+            ['Text chat', 'Free and unlimited once a Wingle is accepted'],
+            ['Wingits per Wingle', `${WINGLE_SEND_COST} to send · ${WINGLE_ACCEPT_COST} to accept`],
             [
             'Renews / expires',
             shortDate(new Date(Date.now() + pkg.durationDays * 86_400_000).toISOString())],
@@ -179,12 +179,12 @@ export function Checkout() {
           <dl className="mt-6 space-y-2 border-t border-cream/15 pt-5 text-[14px]">
             <div className="flex justify-between gap-4">
               <dt className="text-cream/70">Chat mingles</dt>
-              <dd className="font-medium">{pkg.chatLimit === null ? 'Unlimited' : pkg.chatLimit}</dd>
+              <dd className="font-medium">Free and unlimited once a Wingle is accepted</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-cream/70">Wingling wingles</dt>
+              <dt className="text-cream/70">Wingits per Wingle</dt>
               <dd className="font-medium">
-                {pkg.wingleLimit === null ? 'Unlimited' : pkg.wingleLimit}
+                {WINGLE_SEND_COST} to send · {WINGLE_ACCEPT_COST} to accept
               </dd>
             </div>
             <div className="flex justify-between gap-4">

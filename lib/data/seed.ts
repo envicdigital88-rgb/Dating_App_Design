@@ -1,3 +1,4 @@
+import { WINGLE_SEND_COST, WINGLE_ACCEPT_COST } from '@/lib/wingle-pricing';
 import type {
   AppNotification,
   Connection,
@@ -42,7 +43,7 @@ const baseLifestyle = {
   work: 'Product designer'
 };
 
-type SeedMember = Omit<User, 'password' | 'role' | 'onboarded' | 'traits' | 'prompts' | 'freeWinglesAccepted' | 'freeWinglesSent' | 'lastDailyBonusAt' | 'isUnlimited' | 'discoverable' | 'showOnline' | 'showDistance' | 'readReceipts'> & {photos: string[];};
+type SeedMember = Omit<User, 'password' | 'role' | 'onboarded' | 'traits' | 'prompts' | 'lastDailyBonusAt' | 'isUnlimited' | 'discoverable' | 'showOnline' | 'showDistance' | 'readReceipts'> & {photos: string[];};
 
 const members: SeedMember[] = [
 {
@@ -234,8 +235,6 @@ export const seedUsers: User[] = [
   lastActiveAt: new Date().toISOString(),
   createdAt: daysAgo(12),
   wingitsBalance: 50,
-  freeWinglesSent: 0,
-  freeWinglesAccepted: 0,
   isUnlimited: true,
   discoverable: true,
   showOnline: true,
@@ -265,8 +264,6 @@ export const seedUsers: User[] = [
   lastActiveAt: new Date().toISOString(),
   createdAt: daysAgo(400),
   wingitsBalance: 10000,
-  freeWinglesSent: 0,
-  freeWinglesAccepted: 0,
   isUnlimited: true,
   discoverable: true,
   showOnline: true,
@@ -280,8 +277,6 @@ export const seedUsers: User[] = [
   traits: [],
   prompts: [],
   onboarded: true,
-  freeWinglesSent: 0,
-  freeWinglesAccepted: 0,
   isUnlimited: true,
   discoverable: true,
   showOnline: true,
@@ -627,16 +622,12 @@ export const testimonials = [
 
 export const faqs = [
 {
-  q: 'Why do I pay for mingles instead of a flat subscription?',
-  a: 'Every package includes a mingle allowance held on your account. It keeps conversations deliberate and stops the copy-paste openers most apps drown in. Your remaining balance is always visible in your dashboard.'
+  q: 'How much does a Wingle cost?',
+  a: `Sending a Wingle costs ${WINGLE_SEND_COST} Wingits. Accepting costs ${WINGLE_ACCEPT_COST} Wingits. Optional gifts cost extra.`
 },
 {
-  q: 'What happens when my chat allowance runs out?',
-  a: 'Sending pauses immediately and we show you your package options. Nothing is deleted, your conversations stay exactly where they are, and the moment a payment is verified your balance updates.'
-},
-{
-  q: 'Why can I not see who sent me a wingle?',
-  a: 'Incoming wingles are a paid feature. Free members see that a wingle exists and a blurred preview; Basic and Premium members see the person, their note and can reply.'
+  q: 'Does chatting cost Wingits?',
+  a: 'Text chat is free and unlimited once a Wingle is accepted. Sending photos in chat uses Wingits.'
 },
 {
   q: 'How is my identity protected?',

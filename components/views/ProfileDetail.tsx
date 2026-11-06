@@ -21,7 +21,6 @@ import { Badge, VerifiedMark } from '@/components/ui/Bits';
 import { Modal } from '@/components/ui/Modal';
 import { ReportDialog } from '@/components/ReportDialog';
 import { WingleDialog } from '@/components/WingleDialog';
-import { UpgradeDialog, type UpgradeReason } from '@/components/UpgradeDialog';
 import { SelfieVerificationModal } from '@/components/SelfieVerificationModal';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { presence } from '@/lib/utils/format';
@@ -42,7 +41,6 @@ export function ProfileDetail() {
     unlikeUser,
     wingleStatusWith,
     conversationWith,
-    ensureConversation,
     blockUser,
     hasReported,
     openChatPopup,
@@ -54,7 +52,6 @@ export function ProfileDetail() {
   const [reporting, setReporting] = useState(false);
   const [blocking, setBlocking] = useState(false);
   const [wingleing, setWingleing] = useState(false);
-  const [upgrade, setUpgrade] = useState<UpgradeReason | null>(null);
   const [showSelfieModal, setShowSelfieModal] = useState(false);
 
   const user = userId ? userById(userId) : undefined;
@@ -86,14 +83,13 @@ export function ProfileDetail() {
 
   const photos = photosOf(user.id);
   const wingle = wingleStatusWith(user.id);
-  const connected = !!conversationWith(user.id);
+  const conversation = conversationWith(user.id);
 
   const openChat = () => {
-    if (!connected) {
-      toast.error('You can chat once your wingle has been accepted.');
+    if (!conversation) {
+      toast.error('You can chat once a Wingle between you is accepted.');
       return;
     }
-    const conversation = ensureConversation(user.id);
     if (window.innerWidth >= 1024) {
       openChatPopup(conversation.id);
     } else {
@@ -184,10 +180,6 @@ export function ProfileDetail() {
                 }
                 if (!isSelfieVerified(currentUser)) {
                   setShowSelfieModal(true);
-                  return;
-                }
-                if (entitlements.winglesRemaining !== null && entitlements.winglesRemaining <= 0) {
-                  setUpgrade('wingle_limit');
                   return;
                 }
                 setWingleing(true);
@@ -350,14 +342,8 @@ export function ProfileDetail() {
         open={wingleing}
         target={user}
         onClose={() => setWingleing(false)}
-        onLimitReached={() => setUpgrade('wingle_limit')}
       />
       
-      <UpgradeDialog
-        open={!!upgrade}
-        reason={upgrade ?? 'wingle_limit'}
-        onClose={() => setUpgrade(null)}
-      />
 
       <SelfieVerificationModal
         open={showSelfieModal}
