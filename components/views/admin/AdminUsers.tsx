@@ -689,7 +689,7 @@ export function AdminUsers() {
                 ['Location', detailUser.location || '—'],
                 ['Intention', detailUser.intention || '—'],
                 ['Unlimited access', detailUser.isUnlimited ? 'Active (Unlimited)' : 'No (Standard)'],
-                ['Wingits balance', detailUser.wingitsBalance?.toString() || '0'],
+                ['Wingits balance', detailUser.wingitsBalance?.toString() ?? 'Unavailable'],
                 ['Email / Account', detailUser.verified ? 'Verified' : 'Unverified'],
                 ['Selfie Verification', (detailUser.isUnlimited || detailUser.selfieStatus === 'approved') ? 'Selfie Verified' : detailUser.selfieStatus === 'pending' ? 'Pending Review' : 'Unverified'],
                 ['Account state', detailUser.suspended ? 'Suspended' : 'Active'],

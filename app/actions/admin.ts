@@ -369,7 +369,7 @@ export async function getAdminUsersAction() {
     if (admin?.role !== 'admin') return { ok: false, error: 'Forbidden' };
 
     const users = await db.orm.public.User.where({ role: 'member' })
-      .select('id', 'name', 'email', 'phone', 'age', 'gender', 'location', 'role', 'verified', 'suspended', 'suspensionReason', 'isUnlimited', 'selfieStatus', 'createdAt', 'lastActiveAt', 'lastDailyBonusAt')
+      .select('id', 'name', 'email', 'phone', 'age', 'gender', 'location', 'role', 'verified', 'suspended', 'suspensionReason', 'isUnlimited', 'selfieStatus', 'wingitsBalance', 'createdAt', 'lastActiveAt', 'lastDailyBonusAt')
       .limit(1500)
       .all();
     const photos = await db.orm.public.Photo
