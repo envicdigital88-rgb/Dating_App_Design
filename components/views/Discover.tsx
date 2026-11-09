@@ -192,10 +192,7 @@ export function Discover() {
     if (u.age < filters.ageMin || u.age > filters.ageMax) return false;
     if (filters.gender !== 'any' && u.gender !== filters.gender) return false;
     if (filters.intention !== 'any' && u.intention !== filters.intention) return false;
-    if (filters.onlineOnly) {
-      const tenMinsAgo = Date.now() - 10 * 60 * 1000;
-      if (new Date(u.lastActiveAt).getTime() < tenMinsAgo) return false;
-    }
+    if (filters.onlineOnly && !u.online) return false;
     return true;
   }), [rawFeed, filters]);
 

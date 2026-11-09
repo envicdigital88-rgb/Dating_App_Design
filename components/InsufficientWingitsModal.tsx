@@ -11,6 +11,7 @@ interface InsufficientWingitsModalProps {
   requiredAmount: number;
   currentBalance: number;
   actionName?: string;
+  onRequestWingits?: () => void;
 }
 
 export function InsufficientWingitsModal({
@@ -18,7 +19,8 @@ export function InsufficientWingitsModal({
   onClose,
   requiredAmount,
   currentBalance,
-  actionName = 'complete this action'
+  actionName = 'complete this action',
+  onRequestWingits,
 }: InsufficientWingitsModalProps) {
   const router = useRouter();
 
@@ -54,6 +56,9 @@ export function InsufficientWingitsModal({
           >
             Get More Wingits
           </Button>
+          {onRequestWingits && <Button variant="outline" onClick={onRequestWingits} block>
+            Request Wingits from this friend
+          </Button>}
           <Button variant="ghost" onClick={onClose} className="w-full rounded-2xl py-6">
             Maybe Later
           </Button>

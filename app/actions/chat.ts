@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { Temporal } from 'temporal-polyfill'
 import { and, or } from '@prisma/orm-postgres/orm-client'
+import { lockWingitsWallet } from '@/lib/wingits-wallet'
 
 export async function sendMingleAction(conversationId: string, body: string, imageUrl?: string, replyToId?: string | null, forwarded?: boolean, viewOnce?: boolean, clientId?: string) {
   try {
@@ -55,6 +56,7 @@ export async function sendMingleAction(conversationId: string, body: string, ima
 
     const mingle = await db.transaction(async (tx) => {
       if (imageUrl) {
+        await lockWingitsWallet(tx, senderId);
         const sender = await tx.orm.public.User.where({ id: senderId }).first();
         if (sender && !sender.isUnlimited) {
           if (sender.wingitsBalance < 3) {
@@ -310,6 +312,7 @@ export async function viewImageAction(mingleId: string) {
 
       if (!isFirstView) {
         cost = 4;
+        await lockWingitsWallet(tx, userId);
         const user = await tx.orm.public.User.where({ id: userId }).first();
         if (user && !user.isUnlimited) {
           if (user.wingitsBalance < cost) {

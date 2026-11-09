@@ -7,6 +7,7 @@ import { or } from '@prisma/orm-postgres/orm-client'
 import { formatNotifyPhoneNumber, getPhoneVariants, sendNotifySms } from '@/lib/notify'
 
 import { getWingleGift, WINGLE_ACCEPT_COST, WINGLE_SEND_COST } from '@/lib/wingle-pricing'
+import { lockWingitsWallet } from '@/lib/wingits-wallet'
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -247,14 +248,15 @@ export async function sendSecretWingleAction(
     }
 
     const SECRET_WINGLE_COST = 20;
-    if (currentUser.wingitsBalance < SECRET_WINGLE_COST) {
-      return { ok: false, error: 'Insufficient Wingits balance (20 Wingits required)' };
-    }
-
     // Deduct Wingits and save SecretWingle atomically
     const newSecretWingle = await db.transaction(async (tx) => {
+      await lockWingitsWallet(tx, currentUser.id);
+      const wallet = await tx.orm.public.User.select('wingitsBalance').first({ id: currentUser.id });
+      if (!wallet || wallet.wingitsBalance < SECRET_WINGLE_COST) {
+        throw new WingleError('Insufficient Wingits balance (20 Wingits required)', 'insufficient_wingits');
+      }
       await tx.orm.public.User.where({ id: currentUser.id }).update({
-        wingitsBalance: currentUser.wingitsBalance - SECRET_WINGLE_COST
+        wingitsBalance: wallet.wingitsBalance - SECRET_WINGLE_COST
       });
 
       await tx.orm.public.WingitsTransaction.create({
@@ -322,6 +324,7 @@ export async function sendSecretWingleAction(
       smsStatus: smsRes.status || (smsRes.simulated ? 'simulated' : 'sent')
     };
   } catch (err: any) {
+    if (err instanceof WingleError) return { ok: false, error: err.message };
     console.error('Send Secret Wingle error:', err);
     return { ok: false, error: err?.message || 'Failed to send Secret Wingle' };
   }

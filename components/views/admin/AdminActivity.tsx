@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { 
   RefreshCwIcon, 
@@ -13,71 +13,43 @@ import { Badge } from '@/components/ui/Bits';
 import { relativeTime } from '@/lib/utils/format';
 import { getAdminActivityDataAction } from '@/app/actions/admin';
 import { WINGLE_SEND_COST, WINGLE_ACCEPT_COST } from '@/lib/wingle-pricing';
+import { isOnlineAt, presenceLabel } from '@/lib/presence';
 
-interface ActivityData {
-  totalWingles: number;
-  acceptedWingles: number;
-  declinedWingles: number;
-  acceptRate: number;
-  minglesSent: number;
-  blocksCount: number;
-  chatReportsCount: number;
-  recentWingles: Array<{
-    id: string;
-    fromUserId: string;
-    fromUserName: string;
-    toUserId: string;
-    toUserName: string;
-    note: string;
-    status: string;
-    createdAt: string;
-    respondedAt: string | null;
-  }>;
-  usageRows: Array<{
-    id: string;
-    name: string;
-    email: string;
-    lastActiveAt: string;
-    pkg: {
-      id: string;
-      name: string;
-    };
-    chatUsed: number;
-    winglesUsed: number;
-    winglesAccepted: number;
-    wingitsBalance: number;
-    isUnlimited: boolean;
-  }>;
-}
+type ActivityData = NonNullable<Awaited<ReturnType<typeof getAdminActivityDataAction>>['data']>;
+type MemberActivity = ActivityData['usageRows'][number];
+const hasActivity = (member: MemberActivity) => member.chatUsed + member.winglesUsed + member.winglesAccepted > 0;
+const hasLowBalance = (member: MemberActivity) => !member.isUnlimited && member.wingitsBalance < WINGLE_SEND_COST;
 
 export function AdminActivity() {
   const [data, setData] = useState<ActivityData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const inFlight = useRef(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [usageFilter, setUsageFilter] = useState<'all' | 'active' | 'low_balance'>('all');
+  const [usageFilter, setUsageFilter] = useState<'all' | 'online' | 'active' | 'low_balance'>('all');
   const [wingleFilter, setWingleFilter] = useState<'all' | 'accepted' | 'pending' | 'declined'>('all');
   const [page, setPage] = useState(1);
   const itemsPerPage = 20;
+  const now = Date.now();
 
-  const fetchData = async (isManual = false) => {
-    if (isManual) setRefreshing(true);
+  const fetchData = useCallback(async (isManual = false) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setRefreshing(true);
     try {
       const res = await getAdminActivityDataAction();
-      if (res.ok && res.data) {
-        setData(res.data as unknown as ActivityData);
-      } else if (res.error) {
-        console.error('Failed to load activity data:', res.error);
-        if (isManual) toast.error('Failed to refresh activity data');
-      }
+      if (!res.ok || !res.data) throw new Error(res.error || 'Activity data unavailable');
+      setData(res.data);
+      setLoadError(false);
     } catch (err) {
+      setLoadError(true);
       console.error('Fetch activity error:', err);
-      if (isManual) toast.error('Error fetching activity');
+      if (isManual) toast.error('Failed to refresh activity data');
     } finally {
-      setLoading(false);
-      if (isManual) setRefreshing(false);
+      inFlight.current = false;
+      setRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -102,7 +74,7 @@ export function AdminActivity() {
       window.removeEventListener('focus', handleVisibility);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, []);
+  }, [fetchData]);
 
   // Reset pagination when search or filter changes
   useEffect(() => {
@@ -119,17 +91,19 @@ export function AdminActivity() {
       if (!matchesSearch) return false;
 
       // Status filter
-      if (usageFilter === 'low_balance') return !row.isUnlimited && row.wingitsBalance < WINGLE_SEND_COST;
-      if (usageFilter === 'active') return row.chatUsed > 0 || row.winglesUsed > 0 || row.winglesAccepted > 0;
+      if (usageFilter === 'low_balance') return hasLowBalance(row);
+      if (usageFilter === 'active') return hasActivity(row);
+      if (usageFilter === 'online') return !row.suspended && isOnlineAt(row.lastSeenAt, now);
       return true;
     });
-  }, [data, searchQuery, usageFilter]);
+  }, [data, searchQuery, usageFilter, now]);
 
   const totalPages = Math.ceil(filteredUsageRows.length / itemsPerPage) || 1;
+  const currentPage = Math.min(page, totalPages);
   const paginatedUsageRows = useMemo(() => {
-    const start = (page - 1) * itemsPerPage;
+    const start = (currentPage - 1) * itemsPerPage;
     return filteredUsageRows.slice(start, start + itemsPerPage);
-  }, [filteredUsageRows, page, itemsPerPage]);
+  }, [filteredUsageRows, currentPage, itemsPerPage]);
 
   const filteredWingles = useMemo(() => {
     if (!data) return [];
@@ -139,34 +113,39 @@ export function AdminActivity() {
 
   const activeMembersCount = useMemo(() => {
     if (!data) return 0;
-    return data.usageRows.filter(r => r.chatUsed > 0 || r.winglesUsed > 0 || r.winglesAccepted > 0).length;
+    return data.usageRows.filter(hasActivity).length;
   }, [data]);
 
   const lowBalanceMembersCount = useMemo(() => {
     if (!data) return 0;
-    return data.usageRows.filter(r => !r.isUnlimited && r.wingitsBalance < WINGLE_SEND_COST).length;
+    return data.usageRows.filter(hasLowBalance).length;
   }, [data]);
+  const onlineMembersCount = data?.usageRows.filter(row => !row.suspended && isOnlineAt(row.lastSeenAt, now)).length ?? 0;
 
-  if (loading && !data) {
+  if (!data) {
     return (
       <div>
         <AdminHeader
           title="Wingles & chat"
           body={`Sending costs ${WINGLE_SEND_COST} Wingits and accepting costs ${WINGLE_ACCEPT_COST} Wingits. Text chat is free once a Wingle is accepted.`} />
-        <div className="flex h-64 flex-col items-center justify-center gap-3 text-ink-muted">
-          <RefreshCwIcon className="h-6 w-6 animate-spin text-berry-500" />
-          <p className="text-sm">Loading activity data...</p>
+        <div role="status" className="flex h-64 flex-col items-center justify-center gap-3 text-ink-muted">
+          {loadError && !refreshing ? (
+            <>
+              <p className="text-sm">Activity data is unavailable.</p>
+              <button type="button" onClick={() => fetchData(true)} className="text-sm text-berry-500 underline">Try again</button>
+            </>
+          ) : (
+            <>
+              <RefreshCwIcon className="h-6 w-6 animate-spin text-berry-500" />
+              <p className="text-sm">Loading activity data...</p>
+            </>
+          )}
         </div>
       </div>
     );
   }
 
-  const winglesCount = data?.totalWingles ?? 0;
-  const acceptedCount = data?.acceptedWingles ?? 0;
-  const minglesSentCount = data?.minglesSent ?? 0;
-  const blocksCount = data?.blocksCount ?? 0;
-  const chatReportsCount = data?.chatReportsCount ?? 0;
-  const acceptRate = data?.acceptRate ?? 0;
+  const updatedAt = new Date(data.refreshedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
     <div>
@@ -176,8 +155,8 @@ export function AdminActivity() {
         action={
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 rounded-full bg-cream-deep px-3 py-1.5 text-xs text-ink-muted">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              Live sync
+              <span className={`h-2 w-2 rounded-full ${loadError ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+              {loadError ? 'Refresh failed' : `Updated at ${updatedAt}`}
             </div>
             <button
               onClick={() => fetchData(true)}
@@ -191,27 +170,30 @@ export function AdminActivity() {
           </div>
         }
       />
+      {loadError && <p role="status" className="mb-4 text-sm text-amber-500">
+        Showing the last successful update at {updatedAt}. Use Refresh to try again.
+      </p>}
 
       {/* KPI Stat Tiles */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatTile 
-          label="Total wingles" 
-          value={winglesCount} 
+        <StatTile
+          label="Total wingles"
+          value={data.totalWingles}
         />
-        <StatTile 
-          label="Accepted" 
-          value={acceptedCount} 
-          hint={`${acceptRate}% accept rate`} 
+        <StatTile
+          label="Accepted"
+          value={data.acceptedWingles}
+          hint={data.acceptRate === null ? 'No answered Wingles yet' : `${data.acceptRate}% of answered Wingles`}
         />
-        <StatTile 
-          label="Mingles" 
-          value={minglesSentCount} 
-          emphasis 
+        <StatTile
+          label="Messages sent"
+          value={data.minglesSent}
+          emphasis
         />
         <StatTile
           label="Blocks"
-          value={blocksCount}
-          hint={`${chatReportsCount} chat reports`} 
+          value={data.blocksCount}
+          hint={`${data.chatReportsCount} chat reports`}
         />
       </div>
 
@@ -223,7 +205,10 @@ export function AdminActivity() {
               Member activity and Wingits
             </h2>
             <p className="text-xs text-ink-muted mt-0.5">
-              Showing {filteredUsageRows.length} member{filteredUsageRows.length === 1 ? '' : 's'} · {activeMembersCount} active users
+              Showing {filteredUsageRows.length} of {data.usageRows.length} members
+            </p>
+            <p className="text-xs text-ink-muted mt-0.5">
+              Activity counts cover all recorded messages, Wingles sent, and Wingles accepted.
             </p>
           </div>
 
@@ -241,7 +226,7 @@ export function AdminActivity() {
             </div>
 
             {/* Filter Pills */}
-            <div className="inline-flex rounded-full bg-cream p-1 border border-sand/50 text-xs">
+            <div className="inline-flex flex-wrap rounded-full bg-cream p-1 border border-sand/50 text-xs">
               <button
                 onClick={() => setUsageFilter('all')}
                 className={`px-3 py-1 rounded-full transition-colors ${
@@ -251,12 +236,19 @@ export function AdminActivity() {
                 All
               </button>
               <button
+                type="button"
+                onClick={() => setUsageFilter('online')}
+                className={`px-3 py-1 rounded-full transition-colors ${usageFilter === 'online' ? 'bg-cream-deep text-ink shadow-sm font-medium' : 'text-ink-muted hover:text-ink'}`}
+              >
+                Online now ({onlineMembersCount})
+              </button>
+              <button
                 onClick={() => setUsageFilter('active')}
                 className={`px-3 py-1 rounded-full transition-colors ${
                   usageFilter === 'active' ? 'bg-cream-deep text-ink shadow-sm font-medium' : 'text-ink-muted hover:text-ink'
                 }`}
               >
-                Active ({activeMembersCount})
+                With activity ({activeMembersCount})
               </button>
               <button
                 onClick={() => setUsageFilter('low_balance')}
@@ -299,8 +291,8 @@ export function AdminActivity() {
                           </div>
                           <div>
                             <span className="block font-medium text-ink">{row.name}</span>
-                            <span className="block text-[12px] text-ink-muted">
-                              Active {relativeTime(row.lastActiveAt)}
+                            <span className={`block text-[12px] ${!row.suspended && isOnlineAt(row.lastSeenAt, now) ? 'text-emerald-600 dark:text-emerald-400' : 'text-ink-muted'}`}>
+                              {presenceLabel(row.lastSeenAt, !row.suspended)}
                             </span>
                           </div>
                         </div>
@@ -315,7 +307,7 @@ export function AdminActivity() {
                       <td className="px-5 py-3.5 text-ink-soft">{row.winglesAccepted}</td>
                       <td className="px-5 py-3.5 text-right text-ink-soft">
                         {row.wingitsBalance}
-                        {row.isUnlimited && <span className="ml-2 text-xs text-ink-muted">Unlimited access</span>}
+                        {row.isUnlimited && <> <span className="ml-1 text-xs text-ink-muted">Unlimited access</span></>}
                       </td>
                     </tr>
                 ))
@@ -328,20 +320,20 @@ export function AdminActivity() {
         {totalPages > 1 && (
           <div className="border-t border-sand px-5 py-3.5 flex items-center justify-between text-xs text-ink-muted">
             <span>
-              Page {page} of {totalPages} ({filteredUsageRows.length} total)
+              Page {currentPage} of {totalPages} ({filteredUsageRows.length} total)
             </span>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
+                onClick={() => setPage(currentPage - 1)}
+                disabled={currentPage === 1}
                 className="p-1.5 rounded-lg border border-sand hover:bg-sand/60 disabled:opacity-30 disabled:pointer-events-none transition-colors"
                 title="Previous page"
               >
                 <ChevronLeftIcon className="h-4 w-4" />
               </button>
               <button
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
+                onClick={() => setPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
                 className="p-1.5 rounded-lg border border-sand hover:bg-sand/60 disabled:opacity-30 disabled:pointer-events-none transition-colors"
                 title="Next page"
               >
@@ -360,7 +352,7 @@ export function AdminActivity() {
               Recent wingles
             </h2>
             <p className="text-xs text-ink-muted mt-0.5">
-              Live wingle connection requests sent across the platform
+              Showing the latest {data.recentWingles.length} Wingles across the platform
             </p>
           </div>
 

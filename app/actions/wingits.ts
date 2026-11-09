@@ -2,6 +2,7 @@
 
 import { db } from '@/lib/db';
 import { getSession } from '@/lib/session';
+import { lockWingitsWallet, MAX_WINGITS, type WalletTransaction } from '@/lib/wingits-wallet';
 
 export async function getWingitsBalanceAction(): Promise<number> {
   const session = await getSession();
@@ -15,10 +16,11 @@ export async function spendWingitsAction(amount: number, description: string): P
   const session = await getSession();
   if (!session?.userId) return { ok: false, error: 'Unauthorized' };
 
-  if (amount <= 0) return { ok: false, error: 'Invalid amount' };
+  if (!Number.isInteger(amount) || amount <= 0 || amount > MAX_WINGITS) return { ok: false, error: 'Invalid amount' };
 
   try {
     const result = await db.transaction(async (tx) => {
+      await lockWingitsWallet(tx, session.userId as string);
       const user = await tx.orm.public.User.select('wingitsBalance').first({ id: session.userId as string });
 
       if (!user || user.wingitsBalance < amount) {
@@ -46,36 +48,12 @@ export async function spendWingitsAction(amount: number, description: string): P
   }
 }
 
-export async function addWingitsAction(amount: number, description: string, paymentRef: string): Promise<{ ok: boolean; error?: string }> {
-  const session = await getSession();
-  if (!session?.userId) return { ok: false, error: 'Unauthorized' };
-
-  if (amount <= 0) return { ok: false, error: 'Invalid amount' };
-
-  try {
-    const result = await db.transaction(async (tx) => {
-      const user = await tx.orm.public.User.select('wingitsBalance').first({ id: session.userId as string });
-      const currentBalance = user?.wingitsBalance || 0;
-
-      await tx.orm.public.User
-        .where({ id: session.userId as string })
-        .update({ wingitsBalance: currentBalance + amount });
-
-      await tx.orm.public.WingitsTransaction.create({
-        id: crypto.randomUUID(),
-        userId: session.userId as string,
-        amount: amount,
-        type: 'purchase',
-        description: `${description} (Ref: ${paymentRef})`
-      });
-
-      return { ok: true };
-    });
-
-    return result;
-  } catch (error: any) {
-    return { ok: false, error: error.message || 'Transaction failed' };
-  }
+async function welcomeBonusDue(tx: WalletTransaction, userId: string, balance: number) {
+  const transfers = await tx.orm.public.WingitsTransaction.select('amount').where({ userId })
+    .where(t => t.type.in(['transfer_sent', 'transfer_received'])).all();
+  const netTransfers = transfers.reduce((total, transfer) => total + transfer.amount, 0);
+  // Legacy wallets may already hold the welcome credits. Gifts do not count toward that amount.
+  return Math.max(0, Math.min(20, 20 - (balance - netTransfers), MAX_WINGITS - balance));
 }
 
 export async function checkWelcomeBonusAction(): Promise<boolean> {
@@ -83,27 +61,19 @@ export async function checkWelcomeBonusAction(): Promise<boolean> {
     const session = await getSession();
     if (!session?.userId) return true; // prevent popup if not logged in
 
-    const transaction = await db.orm.public.WingitsTransaction
-      .where({ userId: session.userId as string, description: 'Welcome Bonus' })
-      .first();
-
-    if (transaction) return true;
-
-    // Safety check: if user already has 20 or more wingits (e.g. created previously),
-    // mark Welcome Bonus as claimed so they never get double-credited to 40.
-    const user = await db.orm.public.User.select('wingitsBalance').first({ id: session.userId as string });
-    if (user && user.wingitsBalance >= 20) {
-      await db.orm.public.WingitsTransaction.create({
-        id: crypto.randomUUID(),
-        userId: session.userId as string,
-        amount: 20,
-        type: 'bonus',
-        description: 'Welcome Bonus'
+    const userId = session.userId as string;
+    const claim = { userId, type: 'bonus', description: 'Welcome Bonus' };
+    if (await db.orm.public.WingitsTransaction.first(claim)) return true;
+    return await db.transaction(async tx => {
+      if (!await lockWingitsWallet(tx, userId)) return true;
+      if (await tx.orm.public.WingitsTransaction.first(claim)) return true;
+      const user = await tx.orm.public.User.select('wingitsBalance').first({ id: userId });
+      if (!user || await welcomeBonusDue(tx, userId, user.wingitsBalance) > 0) return false;
+      await tx.orm.public.WingitsTransaction.create({
+        ...claim, amount: 0,
       });
       return true;
-    }
-
-    return false;
+    });
   } catch (error) {
     console.error('checkWelcomeBonusAction error:', error);
     return true; // hide popup on error
@@ -116,28 +86,24 @@ export async function claimWelcomeBonusAction(): Promise<{ ok: boolean; error?: 
     if (!session?.userId) return { ok: false, error: 'Unauthorized' };
 
     await db.transaction(async (tx) => {
+      const userId = session.userId as string;
+      if (!await lockWingitsWallet(tx, userId)) throw new Error('Account not found');
       const existing = await tx.orm.public.WingitsTransaction
-        .where({ userId: session.userId as string, description: 'Welcome Bonus' })
+        .where({ userId, type: 'bonus', description: 'Welcome Bonus' })
         .first();
 
       if (existing) {
         throw new Error('Welcome bonus already claimed');
       }
 
-      const user = await tx.orm.public.User.select('wingitsBalance').first({ id: session.userId as string });
-      const currentBalance = user?.wingitsBalance || 0;
-
-      // Ensure user ends up with exactly 20 total Wingits (not 40)
-      const targetBalance = currentBalance >= 20 ? currentBalance : 20;
-
-      await tx.orm.public.User
-        .where({ id: session.userId as string })
-        .update({ wingitsBalance: targetBalance });
+      const user = await tx.orm.public.User.select('wingitsBalance').first({ id: userId });
+      if (!user) throw new Error('Account not found');
+      const amount = await welcomeBonusDue(tx, userId, user.wingitsBalance);
+      if (amount) await tx.orm.public.User.where({ id: userId }).update({ wingitsBalance: user.wingitsBalance + amount });
 
       await tx.orm.public.WingitsTransaction.create({
-        id: crypto.randomUUID(),
-        userId: session.userId as string,
-        amount: 20,
+        userId,
+        amount,
         type: 'bonus',
         description: 'Welcome Bonus'
       });
@@ -156,6 +122,7 @@ export async function getWingitsTransactionsAction(): Promise<any[]> {
 
   const txs = await db.orm.public.WingitsTransaction
     .where({ userId: session.userId as string })
+    .where(t => t.amount.neq(0))
     .orderBy(t => t.createdAt.desc())
     .limit(50)
     .all();

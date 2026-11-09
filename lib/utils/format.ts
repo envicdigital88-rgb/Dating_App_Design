@@ -25,9 +25,6 @@ amount === 0 ?
 'Free' :
 `Rs. ${new Intl.NumberFormat('en-US').format(amount)}`;
 
-export const presence = (online: boolean, lastActiveAt: string) =>
-online ? 'Online now' : `Last seen ${formatDistanceToNowStrict(new Date(lastActiveAt))} ago`;
-
 export const cn = (...parts: Array<string | false | null | undefined>) =>
 parts.filter(Boolean).join(' ');
 

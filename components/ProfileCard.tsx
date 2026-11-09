@@ -11,7 +11,7 @@ import { HeartIcon, SendIcon, XIcon, ZapIcon, SparklesIcon, HeartCrackIcon, Shie
 import { useRouter } from 'next/navigation';
 import { Badge } from './ui/Bits';
 import { useStore } from '@/lib/contexts/StoreContext';
-import { presence } from '@/lib/utils/format';
+import { presenceLabel } from '@/lib/presence';
 import { calculateVibeMatch } from '@/lib/utils/matching';
 import type { User } from '@/lib/types';
 import { CircularTestimonials } from './ui/circular-testimonials';
@@ -178,7 +178,7 @@ export function ProfileCard({
           testimonials={photos.map((photo) => ({
             src: photo.url,
             name: `${user.name}, ${user.age}`,
-            designation: `${user.location} · ${presence(user.online, user.lastActiveAt)}`,
+            designation: user.lastActiveAt ? `${user.location} · ${presenceLabel(user.lastActiveAt)}` : user.location,
             quote: user.bio || '',
           }))}
           autoplay={false}

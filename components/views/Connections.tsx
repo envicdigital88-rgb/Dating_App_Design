@@ -7,7 +7,8 @@ import { Page, PageHeader } from '@/components/AppShell';
 import { Button } from '@/components/ui/Button';
 import { EmptyState, VerifiedMark } from '@/components/ui/Bits';
 import { useStore } from '@/lib/contexts/StoreContext';
-import { presence, shortDate } from '@/lib/utils/format';
+import { shortDate } from '@/lib/utils/format';
+import { presenceLabel } from '@/lib/presence';
 
 export function Connections() {
   const router = useRouter();
@@ -52,7 +53,7 @@ export function Connections() {
                     {user.verified && <VerifiedMark />}
                   </div>
                   <p className="mt-1 text-[13px] text-ink-soft">
-                    {user.location} · {presence(user.online, user.lastActiveAt)}
+                    {user.location}{user.lastActiveAt && ` · ${presenceLabel(user.lastActiveAt)}`}
                   </p>
                   <p className="mt-0.5 text-[12px] text-ink-muted">
                     Connected {shortDate(connection.createdAt)}

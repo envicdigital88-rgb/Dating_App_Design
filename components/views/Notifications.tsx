@@ -6,6 +6,7 @@ import Link from 'next/link';
 import {
   BellIcon,
   CameraIcon,
+  CoinsIcon,
   CreditCardIcon,
   HeartIcon,
   LockIcon,
@@ -35,6 +36,8 @@ const icons: Record<NotificationType, React.ReactNode> = {
   payment_success: <CreditCardIcon className="h-4 w-4" />,
   subscription_expiring: <CreditCardIcon className="h-4 w-4" />,
   selfie_verification: <CameraIcon className="h-4 w-4" />,
+  wingits_request: <CoinsIcon className="h-4 w-4" />,
+  wingits_received: <CoinsIcon className="h-4 w-4" />,
   system: <ShieldCheckIcon className="h-4 w-4" />
 };
 

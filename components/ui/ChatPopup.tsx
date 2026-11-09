@@ -3,11 +3,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { XIcon, SendIcon, MinusIcon, Maximize2Icon, ChevronUpIcon, CheckIcon, CheckCheckIcon, ShieldCheckIcon } from 'lucide-react';
+import { XIcon, SendIcon, MinusIcon, Maximize2Icon, ChevronUpIcon, CheckIcon, CheckCheckIcon, ShieldCheckIcon, CoinsIcon } from 'lucide-react';
 import { Avatar } from './Bits';
 import { useStore } from '@/lib/contexts/StoreContext';
-import { dayLabel, mingleTime, presence } from '@/lib/utils/format';
+import { dayLabel, mingleTime } from '@/lib/utils/format';
+import { presenceLabel } from '@/lib/presence';
 import { toast } from 'sonner';
+import { WingitsChatDialog } from '@/components/WingitsChatDialog';
 
 export function ChatPopup() {
   const router = useRouter();
@@ -20,6 +22,7 @@ export function ChatPopup() {
     sendMingle,
     markConversationRead,
     userById,
+    observePresence,
     photosOf,
     typingIn,
     entitlements,
@@ -29,9 +32,11 @@ export function ChatPopup() {
 
   const [draft, setDraft] = useState('');
   const [minimized, setMinimized] = useState(false);
+  const [walletChatId, setWalletChatId] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   const conversation = db.conversations.find((c) => c.id === activePopupChatId);
+  const watchedMemberId = currentUser && conversation?.userIds.find(uid => uid !== currentUser.id);
   const mingles = useMemo(
     () => conversation ? minglesOf(conversation.id) : [],
     [conversation, minglesOf]
@@ -40,6 +45,10 @@ export function ChatPopup() {
   useEffect(() => {
     if (conversation) markConversationRead(conversation.id);
   }, [conversation, mingles.length, markConversationRead]);
+
+  useEffect(() => {
+    if (watchedMemberId) return observePresence(watchedMemberId);
+  }, [watchedMemberId, observePresence]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -90,10 +99,19 @@ export function ChatPopup() {
               )}
             </span>
             <span className="block truncate text-[11px] text-ink-muted">
-              {typingIn === conversation.id ? 'Typing...' : other ? presence(other.online, other.lastActiveAt) : ''}
+              {typingIn === conversation.id ? 'Typing...' : other ? presenceLabel(other.lastActiveAt) : ''}
             </span>
           </div>
           <div className="flex items-center gap-1">
+            {!isBlocked(otherId) && <button
+              type="button"
+              onClick={(event) => { event.stopPropagation(); setWalletChatId(conversation.id); }}
+              aria-label="Share Wingits"
+              title="Send or request Wingits"
+              className="rounded-full p-1.5 text-ink-muted hover:bg-cream hover:text-ink transition-colors"
+            >
+              <CoinsIcon className="h-4 w-4" aria-hidden />
+            </button>}
             <button
               onClick={(e) => { e.stopPropagation(); router.push(`/mingles/${conversation.id}`); closeChatPopup(); }}
               className="rounded-full p-1.5 text-ink-muted hover:bg-cream hover:text-ink transition-colors"
@@ -205,6 +223,11 @@ export function ChatPopup() {
         </div>
           </>
         )}
+        {walletChatId === conversation.id && <WingitsChatDialog
+          conversationId={conversation.id}
+          friendName={other?.name || 'your friend'}
+          onClose={() => setWalletChatId(null)}
+        />}
       </motion.div>
     </AnimatePresence>
   );

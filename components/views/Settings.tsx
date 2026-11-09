@@ -130,7 +130,7 @@ export function Settings() {
             {(
             [
             ['discoverable', 'Show me in Discover', 'Turn off to hide your profile completely.'],
-            ['showOnline', 'Show when I am online', 'Others see “Online now” on your profile.'],
+            ['showOnline', 'Show online and last seen', 'Let other members see when you are online or when you last used the app.'],
             ['showDistance', 'Show my area', 'Only ever your area, never an exact location.'],
             ['readReceipts', 'Read receipts', 'Let connections see when you have read a mingle.']] as
             const).

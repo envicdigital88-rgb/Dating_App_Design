@@ -6,6 +6,8 @@ import { getSession, deleteSession } from '@/lib/session'
 import { and, or } from '@prisma/orm-postgres/orm-client'
 import { getPhoneVariants } from '@/lib/notify'
 import type { Photo, User } from '@/lib/types'
+import { lockWingitsWallet, MAX_WINGITS } from '@/lib/wingits-wallet'
+import { isOnlineAt, recordedLastSeen } from '@/lib/presence'
 
 export async function getCurrentUser() {
   try {
@@ -23,18 +25,27 @@ export async function getCurrentUser() {
     const lastBonus = user.lastDailyBonusAt ? new Date(user.lastDailyBonusAt.toString()) : null;
     if (!lastBonus || lastBonus.toDateString() !== now.toDateString()) {
       const { Temporal } = await import('temporal-polyfill');
-      await db.orm.public.User.where({ id: user.id }).update({
-        wingitsBalance: user.wingitsBalance + 1,
-        lastDailyBonusAt: Temporal.Instant.from(now.toISOString())
+      const userId = user.id;
+      const wallet = await db.transaction(async tx => {
+        if (!await lockWingitsWallet(tx, userId)) return null;
+        const account = await tx.orm.public.User.select('wingitsBalance', 'lastDailyBonusAt').first({ id: userId });
+        if (!account) return null;
+        const previous = account.lastDailyBonusAt && new Date(account.lastDailyBonusAt.toString());
+        if (previous?.toDateString() === now.toDateString() || account.wingitsBalance >= MAX_WINGITS) return account;
+
+        const updated = {
+          wingitsBalance: account.wingitsBalance + 1,
+          lastDailyBonusAt: Temporal.Instant.from(now.toISOString()),
+        };
+        await tx.orm.public.User.where({ id: userId }).update(updated);
+        await tx.orm.public.WingitsTransaction.create({
+          userId, amount: 1, type: 'bonus', description: 'Daily Login Bonus',
+        });
+        return updated;
       });
-      await db.orm.public.WingitsTransaction.create({
-        userId: user.id,
-        amount: 1,
-        type: 'bonus',
-        description: 'Daily Login Bonus'
-      });
-      user.wingitsBalance += 1;
-      user.lastDailyBonusAt = now.toISOString() as any;
+      if (!wallet) return null;
+      user.wingitsBalance = wallet.wingitsBalance;
+      user.lastDailyBonusAt = wallet.lastDailyBonusAt;
     }
 
     // Ensure plain object for Next.js Client Components (Prisma 8 Temporal serialization)
@@ -51,10 +62,12 @@ export async function getCurrentUser() {
       : null;
 
     const { password, pushSubscription, ...safeUser } = user;
+    const lastSeen = recordedLastSeen(user);
     return {
       ...safeUser,
       verificationSelfie: selfieUrl,
-      lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
+      online: isOnlineAt(lastSeen),
+      lastActiveAt: lastSeen || '',
       createdAt: user.createdAt?.toString() || new Date().toISOString(),
       lastDailyBonusAt: user.lastDailyBonusAt?.toString() || null,
       interests: typeof user.interests === 'string' ? JSON.parse(user.interests) : user.interests,
@@ -86,7 +99,7 @@ export async function getUserProfile(userId: string) {
       db.orm.public.User.select(
         'id', 'name', 'age', 'location', 'bio', 'intention', 'interests', 'traits', 'lifestyle',
         'verified', 'isUnlimited', 'selfieStatus', 'isAnonymous', 'anonymousName',
-        'online', 'lastActiveAt', 'showOnline', 'discoverable', 'onboarded', 'suspended', 'role'
+        'lastActiveAt', 'createdAt', 'showOnline', 'discoverable', 'onboarded', 'suspended', 'role'
       ).first({ id: userId }),
       db.orm.public.Block.where(b => or(
         and(b.blockerId.eq(viewerId), b.blockedUserId.eq(userId)),
@@ -98,6 +111,7 @@ export async function getUserProfile(userId: string) {
     }
 
     const onDiscover = user.onboarded && user.discoverable && (user.isUnlimited || user.selfieStatus === 'approved');
+    const lastSeen = user.showOnline && onDiscover ? recordedLastSeen(user) : null;
     if (!onDiscover) {
       const phones = getPhoneVariants(viewer.phone);
       const relationships = await Promise.all([
@@ -156,8 +170,7 @@ export async function getUserProfile(userId: string) {
         isUnlimited: user.isUnlimited,
         selfieStatus: user.selfieStatus,
         isAnonymous: user.isAnonymous,
-        online: user.showOnline && user.online,
-        lastActiveAt: user.showOnline ? user.lastActiveAt.toString() : '',
+        lastActiveAt: lastSeen || '',
         heartReacts: hearts,
         prompts,
       },
@@ -283,11 +296,7 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
         if (filters.ageMin !== undefined && u.age < filters.ageMin) return false;
         if (filters.ageMax !== undefined && u.age > filters.ageMax) return false;
         if (filters.intention && filters.intention !== 'any' && u.intention !== filters.intention) return false;
-        if (filters.onlineOnly) {
-          const lastActive = u.lastActiveAt ? new Date(u.lastActiveAt.toString()).getTime() : 0;
-          const tenMinsAgo = Date.now() - 10 * 60 * 1000;
-          if (lastActive < tenMinsAgo) return false;
-        }
+        if (filters.onlineOnly && (!u.showOnline || !isOnlineAt(recordedLastSeen(u)))) return false;
         return true;
       });
     }
@@ -312,11 +321,7 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
           if (filters.ageMin !== undefined && u.age < filters.ageMin) return false;
           if (filters.ageMax !== undefined && u.age > filters.ageMax) return false;
           if (filters.intention && filters.intention !== 'any' && u.intention !== filters.intention) return false;
-          if (filters.onlineOnly) {
-            const lastActive = u.lastActiveAt ? new Date(u.lastActiveAt.toString()).getTime() : 0;
-            const tenMinsAgo = Date.now() - 10 * 60 * 1000;
-            if (lastActive < tenMinsAgo) return false;
-          }
+          if (filters.onlineOnly && (!u.showOnline || !isOnlineAt(recordedLastSeen(u)))) return false;
           return true;
         });
       }
@@ -394,16 +399,17 @@ export async function getDiscoverUsers(filters?: DiscoverFilters, seenIds: strin
       const fakeCount = ((user.id.charCodeAt(0) + user.id.charCodeAt(user.id.length - 1)) % 50) + 1;
 
       // Exclude sensitive credentials and private push notification keys
-      const { password, pushSubscription, verificationSelfie, email, phone, ...safeUser } = user;
+      const { password, pushSubscription, verificationSelfie, email, phone, lastDailyBonusAt, ...safeUser } = user;
+      const lastSeen = user.showOnline ? recordedLastSeen(user) : null;
 
       return {
         ...safeUser,
         verificationSelfie: verificationSelfie
           ? (verificationSelfie.startsWith('data:') ? `/api/selfie/${user.id}` : verificationSelfie)
           : null,
-        lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
+        online: isOnlineAt(lastSeen),
+        lastActiveAt: lastSeen || '',
         createdAt: user.createdAt?.toString() || new Date().toISOString(),
-        lastDailyBonusAt: user.lastDailyBonusAt?.toString() || null,
         interests: typeof user.interests === 'string' ? JSON.parse(user.interests) : (user.interests || []),
         traits: typeof user.traits === 'string' ? JSON.parse(user.traits) : (user.traits || []),
         lifestyle: typeof user.lifestyle === 'string' ? JSON.parse(user.lifestyle) : (user.lifestyle || {}),
@@ -463,6 +469,7 @@ export async function updateUserProfileAction(data: {
   lifestyle?: Record<string, string>;
   photoUrls?: string[];
   prompts?: { question: string; answer: string }[];
+  showOnline?: boolean;
 }) {
   try {
     const session = await getSession();
@@ -479,6 +486,7 @@ export async function updateUserProfileAction(data: {
     if (userData.interests !== undefined) updatePayload.interests = JSON.stringify(userData.interests);
     if (userData.traits !== undefined) updatePayload.traits = JSON.stringify(userData.traits);
     if (userData.lifestyle !== undefined) updatePayload.lifestyle = JSON.stringify(userData.lifestyle);
+    if (typeof userData.showOnline === 'boolean') updatePayload.showOnline = userData.showOnline;
 
     if (Object.keys(updatePayload).length > 0) {
       await db.orm.public.User.where({ id: userId }).update(updatePayload);
@@ -504,16 +512,20 @@ export async function updateUserProfileAction(data: {
 
     const updatedUser = await db.orm.public.User.where({ id: userId }).include('photos').include('prompts').first();
     if (!updatedUser) return { ok: false, error: 'User not found' };
+    const { password, pushSubscription, ...safeUser } = updatedUser;
+    const lastSeen = recordedLastSeen(updatedUser);
 
     return {
       ok: true,
       data: {
-        ...updatedUser,
+        ...safeUser,
         verificationSelfie: updatedUser.verificationSelfie
           ? (updatedUser.verificationSelfie.startsWith('data:') ? `/api/selfie/${updatedUser.id}` : updatedUser.verificationSelfie)
           : null,
-        lastActiveAt: updatedUser.lastActiveAt?.toString() || new Date().toISOString(),
+        online: isOnlineAt(lastSeen),
+        lastActiveAt: lastSeen ?? '',
         createdAt: updatedUser.createdAt?.toString() || new Date().toISOString(),
+        lastDailyBonusAt: updatedUser.lastDailyBonusAt?.toString() || null,
         interests: typeof updatedUser.interests === 'string' ? JSON.parse(updatedUser.interests) : (updatedUser.interests || []),
         traits: typeof updatedUser.traits === 'string' ? JSON.parse(updatedUser.traits) : (updatedUser.traits || []),
         lifestyle: typeof updatedUser.lifestyle === 'string' ? JSON.parse(updatedUser.lifestyle) : (updatedUser.lifestyle || {}),
@@ -617,6 +629,7 @@ export async function getUserStateAction() {
     ]);
     const acceptedPeerIds = new Set(wingles.filter(w => w.status === 'accepted')
       .map(w => w.fromUserId === userId ? w.toUserId : w.fromUserId));
+    const blockedPeerIds = new Set(blocks.map(b => b.blockerId === userId ? b.blockedUserId : b.blockerId));
     const connections = rawConnections
       .filter(c => acceptedPeerIds.has(c.userId1 === userId ? c.userId2 : c.userId1));
     let notifications = userNotifications;
@@ -667,6 +680,9 @@ export async function getUserStateAction() {
       const isBoosted = Boolean(
         parsedLifestyle?.boostedUntil && new Date(parsedLifestyle.boostedUntil).getTime() > Date.now()
       );
+      const discoverable = user.discoverable && user.onboarded && (user.isUnlimited || user.selfieStatus === 'approved');
+      const lastSeen = user.showOnline && !user.suspended && !blockedPeerIds.has(user.id) && (discoverable || acceptedPeerIds.has(user.id))
+        ? recordedLastSeen(user) : null;
       return {
         id: user.id,
         name: user.name,
@@ -677,9 +693,9 @@ export async function getUserStateAction() {
         verified: Boolean(user.verified),
         isUnlimited: Boolean(user.isUnlimited),
         selfieStatus: user.selfieStatus || null,
-        lastActiveAt: user.lastActiveAt ? user.lastActiveAt.toString() : new Date().toISOString(),
+        online: isOnlineAt(lastSeen),
+        lastActiveAt: lastSeen || '',
         createdAt: user.createdAt ? user.createdAt.toString() : new Date().toISOString(),
-        lastDailyBonusAt: user.lastDailyBonusAt?.toString() || null,
         interests: typeof user.interests === 'string' ? (() => { try { return JSON.parse(user.interests); } catch { return []; } })() : (user.interests || []),
         traits: typeof user.traits === 'string' ? (() => { try { return JSON.parse(user.traits); } catch { return []; } })() : (user.traits || []),
         lifestyle: parsedLifestyle,
@@ -871,36 +887,29 @@ export async function submitVerificationSelfieAction(verificationSelfie: string)
 export async function boostUserProfileAction() {
   try {
     const session = await getSession();
-    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
+    if (!session?.userId) return { ok: false as const, error: 'Unauthorized' };
     const userId = session.userId as string;
 
-    const user = await db.orm.public.User.where({ id: userId }).first();
-    if (!user) return { ok: false, error: 'User not found' };
-
     const BOOST_COST = 20;
-    if (!user.isUnlimited && (user.wingitsBalance ?? 0) < BOOST_COST) {
-      return {
-        ok: false,
-        error: `You need ${BOOST_COST} Wingits to activate 24-hour Profile Spotlight.`,
-        reason: 'insufficient_wingits'
-      };
-    }
+    return await db.transaction(async (tx) => {
+      if (!await lockWingitsWallet(tx, userId)) return { ok: false as const, error: 'User not found' };
+      const user = await tx.orm.public.User.where({ id: userId }).first();
+      if (!user) return { ok: false as const, error: 'User not found' };
+      if (!user.isUnlimited && user.wingitsBalance < BOOST_COST) {
+        return {
+          ok: false as const,
+          error: `You need ${BOOST_COST} Wingits to activate 24-hour Profile Spotlight.`,
+          reason: 'insufficient_wingits'
+        };
+      }
 
-    const currentLifestyle = typeof user.lifestyle === 'string' ? JSON.parse(user.lifestyle || '{}') : (user.lifestyle || {});
-    const currentBoostEnd = currentLifestyle.boostedUntil ? new Date(currentLifestyle.boostedUntil).getTime() : 0;
-    const baseTime = currentBoostEnd > Date.now() ? currentBoostEnd : Date.now();
-    const newBoostedUntil = new Date(baseTime + 24 * 60 * 60 * 1000).toISOString();
-
-    const newLifestyle = {
-      ...currentLifestyle,
-      boostedUntil: newBoostedUntil
-    };
-
-    const newBalance = user.isUnlimited ? user.wingitsBalance : Math.max(0, user.wingitsBalance - BOOST_COST);
-
-    await db.transaction(async (tx) => {
+      const currentLifestyle = JSON.parse(user.lifestyle || '{}');
+      const currentBoostEnd = currentLifestyle.boostedUntil ? new Date(currentLifestyle.boostedUntil).getTime() : 0;
+      const baseTime = currentBoostEnd > Date.now() ? currentBoostEnd : Date.now();
+      const newBoostedUntil = new Date(baseTime + 24 * 60 * 60 * 1000).toISOString();
+      const newBalance = user.isUnlimited ? user.wingitsBalance : user.wingitsBalance - BOOST_COST;
       await tx.orm.public.User.where({ id: userId }).update({
-        lifestyle: JSON.stringify(newLifestyle),
+        lifestyle: JSON.stringify({ ...currentLifestyle, boostedUntil: newBoostedUntil }),
         wingitsBalance: newBalance
       });
 
@@ -913,15 +922,11 @@ export async function boostUserProfileAction() {
           description: 'Profile Spotlight Boost (24 Hours)'
         });
       }
-    });
 
-    return {
-      ok: true,
-      boostedUntil: newBoostedUntil,
-      remainingBalance: newBalance
-    };
+      return { ok: true as const, boostedUntil: newBoostedUntil, remainingBalance: newBalance };
+    });
   } catch (err: any) {
     console.error('boostUserProfileAction error:', err);
-    return { ok: false, error: err?.message || 'Failed to boost profile' };
+    return { ok: false as const, error: 'Failed to boost profile' };
   }
 }

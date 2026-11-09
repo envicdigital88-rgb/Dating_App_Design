@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { getUserProfile } from '@/app/actions/user';
 import { toast } from 'sonner';
@@ -24,7 +24,7 @@ import { ReportDialog } from '@/components/ReportDialog';
 import { WingleDialog } from '@/components/WingleDialog';
 import { SelfieVerificationModal } from '@/components/SelfieVerificationModal';
 import { useStore } from '@/lib/contexts/StoreContext';
-import { presence } from '@/lib/utils/format';
+import { presenceLabel } from '@/lib/presence';
 import { calculateVibeMatch } from '@/lib/utils/matching';
 import { lifestyleFields } from '@/lib/data/interests';
 import { type Lifestyle, isSelfieVerified } from '@/lib/types';
@@ -44,12 +44,19 @@ export function ProfileDetail({ profile }: { profile: ProfileResult }) {
     hasReported,
     openChatPopup,
     currentUser,
+    observePresence,
+    lastSeenOf,
   } = useStore();
 
   const [reporting, setReporting] = useState(false);
   const [blocking, setBlocking] = useState(false);
   const [wingleing, setWingleing] = useState(false);
   const [showSelfieModal, setShowSelfieModal] = useState(false);
+  const profileId = profile.status === 'ready' ? profile.user.id : null;
+
+  useEffect(() => {
+    if (profileId) return observePresence(profileId);
+  }, [profileId, observePresence]);
 
   if (!currentUser) return null;
   if (profile.status !== 'ready') {
@@ -66,6 +73,7 @@ export function ProfileDetail({ profile }: { profile: ProfileResult }) {
   }
 
   const { user, photos } = profile;
+  const lastSeen = lastSeenOf(user.id, user.lastActiveAt);
   const wingle = wingleStatusWith(user.id);
   const conversation = conversationWith(user.id);
 
@@ -122,7 +130,7 @@ export function ProfileDetail({ profile }: { profile: ProfileResult }) {
               {!user.isAnonymous ? (
                 <p className="mt-2 flex items-center justify-center sm:justify-start gap-1.5 text-[14px] text-ink-soft">
                   <MapPinIcon className="h-4 w-4" />
-                  {user.location}{user.lastActiveAt && ` · ${presence(user.online, user.lastActiveAt)}`}
+                  {user.location}{lastSeen && ` · ${presenceLabel(lastSeen)}`}
                 </p>
               ) : (
                 <p className="mt-2 flex items-center justify-center sm:justify-start gap-1.5 text-[14px] text-ink-soft">

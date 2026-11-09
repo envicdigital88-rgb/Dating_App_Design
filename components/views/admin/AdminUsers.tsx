@@ -23,7 +23,8 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { Avatar, Badge } from '@/components/ui/Bits';
-import { relativeTime, shortDate } from '@/lib/utils/format';
+import { shortDate } from '@/lib/utils/format';
+import { isOnlineAt, presenceLabel } from '@/lib/presence';
 import { getAdminUsersAction, deleteUserAction, setUserSuspendedAction, setUserVerifiedAction, setUserUnlimitedAction, moderateSelfieAction } from '@/app/actions/admin';
 import type { User, Photo } from '@/lib/types';
 
@@ -162,7 +163,7 @@ export function AdminUsers() {
       return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
     }
     if (sortBy === 'active') {
-      return new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime();
+      return (Date.parse(b.lastActiveAt) || 0) - (Date.parse(a.lastActiveAt) || 0);
     }
     if (sortBy === 'name') {
       return a.name.localeCompare(b.name);
@@ -390,10 +391,10 @@ export function AdminUsers() {
                 scope="col" 
                 onClick={() => setSortBy(sortBy === 'active' ? 'newest' : 'active')}
                 className="hidden px-5 py-3 font-semibold lg:table-cell cursor-pointer hover:text-ink transition-colors select-none"
-                title="Click to sort by Last active"
+                title="Click to sort by Last seen"
               >
                 <div className="flex items-center gap-1.5">
-                  Last active
+                  Last seen
                   {sortBy === 'active' && <ArrowDownIcon className="h-3.5 w-3.5 text-berry-400" />}
                 </div>
               </th>
@@ -427,7 +428,9 @@ export function AdminUsers() {
                   {shortDate(user.createdAt)}
                 </td>
                 <td className="hidden px-5 py-3.5 text-ink-soft lg:table-cell">
-                  {relativeTime(user.lastActiveAt)}
+                  <span className={!user.suspended && isOnlineAt(user.lastActiveAt) ? 'text-emerald-600 dark:text-emerald-400' : undefined}>
+                    {presenceLabel(user.lastActiveAt, !user.suspended)}
+                  </span>
                 </td>
                 <td className="px-5 py-3.5">
                   {user.suspended ? (
@@ -690,6 +693,7 @@ export function AdminUsers() {
                 ['Intention', detailUser.intention || '—'],
                 ['Unlimited access', detailUser.isUnlimited ? 'Active (Unlimited)' : 'No (Standard)'],
                 ['Wingits balance', detailUser.wingitsBalance?.toString() ?? 'Unavailable'],
+                ['Presence', presenceLabel(detailUser.lastActiveAt, !detailUser.suspended)],
                 ['Email / Account', detailUser.verified ? 'Verified' : 'Unverified'],
                 ['Selfie Verification', (detailUser.isUnlimited || detailUser.selfieStatus === 'approved') ? 'Selfie Verified' : detailUser.selfieStatus === 'pending' ? 'Pending Review' : 'Unverified'],
                 ['Account state', detailUser.suspended ? 'Suspended' : 'Active'],

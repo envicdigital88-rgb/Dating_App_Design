@@ -77,7 +77,7 @@ export interface WingitsTransaction {
   id: string;
   userId: string;
   amount: number;
-  type: 'purchase' | 'spend' | 'refund' | 'bonus';
+  type: 'purchase' | 'spend' | 'refund' | 'bonus' | 'transfer_sent' | 'transfer_received';
   description: string;
   createdAt: string;
 }
@@ -224,6 +224,8 @@ export type NotificationType =
   | 'payment_success'
   | 'subscription_expiring'
   | 'selfie_verification'
+  | 'wingits_request'
+  | 'wingits_received'
   | 'system';
 
 export interface AppNotification {

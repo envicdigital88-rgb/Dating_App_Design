@@ -6,6 +6,7 @@ import { Temporal } from 'temporal-polyfill'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { sendAdminInviteEmail } from '@/lib/admin-invite-email'
+import { recordedLastSeen } from '@/lib/presence'
 
 export async function getAdminOverviewStatsAction() {
   try {
@@ -47,7 +48,9 @@ export async function getAdminOverviewStatsAction() {
       db.orm.public.User.where({ role: 'member', gender: 'man' }).aggregate((a) => ({ count: a.count() })).then(r => r.count),
       db.orm.public.User.where({ role: 'member', gender: 'non-binary' }).aggregate((a) => ({ count: a.count() })).then(r => r.count),
       db.orm.public.User.where({ role: 'member' }).where((u) => u.createdAt.gt(thirtyDaysAgo)).aggregate((a) => ({ count: a.count() })).then(r => r.count),
-      db.orm.public.User.where({ role: 'member' }).where((u) => u.lastActiveAt.gt(oneDayAgo)).aggregate((a) => ({ count: a.count() })).then(r => r.count),
+      db.orm.public.User.where({ role: 'member', suspended: false })
+        .where(u => u.lastActiveAt.gt(oneDayAgo))
+        .aggregate(a => ({ count: a.count() })).then(r => r.count),
       db.orm.public.Wingle.aggregate((a) => ({ count: a.count() })).then(r => r.count),
       db.orm.public.Wingle.where({ status: 'accepted' }).aggregate((a) => ({ count: a.count() })).then(r => r.count),
       db.orm.public.Payment.select('status', 'amount', 'packageId').all(),
@@ -58,7 +61,7 @@ export async function getAdminOverviewStatsAction() {
       db.orm.public.Report.where({ status: 'open' }).aggregate((a) => ({ count: a.count() })).then(r => r.count),
       db.orm.public.Report.aggregate((a) => ({ count: a.count() })).then(r => r.count),
       db.orm.public.TransactionLedger.select('id', 'status', 'amountLKR').all(),
-      db.orm.public.User.where({ isUnlimited: true }).aggregate((a) => ({ count: a.count() })).then(r => r.count),
+      db.orm.public.User.where({ role: 'member', isUnlimited: true }).aggregate(a => ({ count: a.count() })).then(r => r.count),
       db.orm.public.Wingle.orderBy(w => w.createdAt.desc()).limit(6).all()
     ]);
 
@@ -79,12 +82,12 @@ export async function getAdminOverviewStatsAction() {
 
     const activeSubs = subscriptions.filter(
       (s: any) => s.status === 'active' && new Date(s.expiresAt.toString()) > new Date()
-    ).length + unlimitedUsersCount;
+    ).length;
 
-    const popular = packages.map((pkg: any) => ({
-      pkg,
-      count: succeededPayments.filter((p: any) => p.packageId === pkg.id).length
-    })).sort((a: any, b: any) => b.count - a.count);
+    const popular = packages.map(pkg => {
+      const sales = succeededPayments.filter(p => p.packageId === pkg.id);
+      return { pkg, count: sales.length, revenue: sales.reduce((total, sale) => total + sale.amount, 0) };
+    }).sort((a, b) => b.count - a.count);
 
     return {
       ok: true,
@@ -98,28 +101,14 @@ export async function getAdminOverviewStatsAction() {
         revenue,
         succeededCount: succeededPayments.length + succeededLedgers.length,
         activeSubs,
+        unlimitedUsersCount,
         totalWingles,
         acceptedWingles,
         openReports: openReportsCount,
         totalReports: totalReportsCount,
         popular,
-        wingles: Array.from({ length: totalWingles }).map((_, i) => ({ id: String(i), status: i < acceptedWingles ? 'accepted' : 'other' })),
-        payments: [
-          ...payments.map(p => ({ status: p.status, amount: p.amount, packageId: p.packageId })),
-          ...transactionLedgers.map((l: any) => ({
-            status: l.status === 'SUCCESS' ? 'succeeded' : l.status === 'FAILED' ? 'failed' : 'pending',
-            amount: l.amountLKR,
-            packageId: 'wingits'
-          }))
-        ],
-        subscriptions: [
-          ...subscriptions.map(s => ({ status: s.status, expiresAt: s.expiresAt.toString() })),
-          ...Array.from({ length: unlimitedUsersCount }).map(() => ({ status: 'active', expiresAt: '2099-01-01T00:00:00Z' }))
-        ],
-        packages: packages.map(p => ({ id: p.id, name: p.name, price: p.price })),
         minglesCount,
         connectionsCount,
-        reports: Array.from({ length: totalReportsCount }).map((_, i) => ({ status: i < openReportsCount ? 'open' : 'resolved' })),
         latestActivity: latestWingles.map(w => ({
           id: w.id,
           createdAt: w.createdAt.toString(),
@@ -388,7 +377,7 @@ export async function getAdminUsersAction() {
         ...u,
         verificationSelfie: '',
         createdAt: u.createdAt ? u.createdAt.toString() : new Date().toISOString(),
-        lastActiveAt: u.lastActiveAt ? u.lastActiveAt.toString() : (u.createdAt ? u.createdAt.toString() : new Date().toISOString()),
+        lastActiveAt: recordedLastSeen(u) ?? '',
         lastDailyBonusAt: u.lastDailyBonusAt?.toString() || null,
         photos: photos.filter(p => p.userId === u.id).sort((a, b) => a.order - b.order).map(p => ({
           ...p,
@@ -623,17 +612,11 @@ export async function getAdminActivityDataAction() {
     if (admin?.role !== 'admin') return { ok: false, error: 'Forbidden' };
 
     const [
-      totalWingles,
-      acceptedWingles,
-      declinedWingles,
-      minglesSent,
+      wingleStatuses,
       blocksCount,
       chatReportsCount
     ] = await Promise.all([
-      db.orm.public.Wingle.aggregate(a => ({ count: a.count() })).then(r => r.count),
-      db.orm.public.Wingle.where({ status: 'accepted' }).aggregate(a => ({ count: a.count() })).then(r => r.count),
-      db.orm.public.Wingle.where({ status: 'declined' }).aggregate(a => ({ count: a.count() })).then(r => r.count),
-      db.orm.public.Mingle.aggregate(a => ({ count: a.count() })).then(r => r.count),
+      db.orm.public.Wingle.groupBy('status').aggregate(a => ({ count: a.count() })),
       db.orm.public.Block.aggregate(a => ({ count: a.count() })).then(r => r.count),
       db.orm.public.Report.where({ context: 'chat' }).aggregate(a => ({ count: a.count() })).then(r => r.count),
     ]);
@@ -649,12 +632,13 @@ export async function getAdminActivityDataAction() {
     ] = await Promise.all([
       db.orm.public.Wingle.orderBy(w => w.createdAt.desc()).limit(30).all(),
       db.orm.public.User.where({ role: 'member' })
-        .select('id', 'name', 'email', 'lastActiveAt', 'createdAt', 'wingitsBalance', 'isUnlimited').all(),
-      db.orm.public.Subscription.where({ status: 'active' }).all(),
+        .select('id', 'name', 'email', 'wingitsBalance', 'isUnlimited', 'suspended', 'createdAt', 'lastActiveAt').all(),
+      db.orm.public.Subscription.where({ status: 'active' }).orderBy(s => s.expiresAt.desc()).all(),
       db.orm.public.Package.select('id', 'name').all(),
-      db.orm.public.Mingle.groupBy('senderId').aggregate(a => ({ count: a.count() })),
-      db.orm.public.Wingle.groupBy('fromUserId').aggregate(a => ({ count: a.count() })),
-      db.orm.public.Wingle.where({ status: 'accepted' }).groupBy('toUserId').aggregate(a => ({ count: a.count() })),
+      db.orm.public.Mingle.groupBy('senderId').aggregate(a => ({ count: a.count(), latest: a.max('createdAt') })),
+      db.orm.public.Wingle.groupBy('fromUserId').aggregate(a => ({ count: a.count(), latest: a.max('createdAt') })),
+      db.orm.public.Wingle.where({ status: 'accepted' }).groupBy('toUserId')
+        .aggregate(a => ({ count: a.count(), latest: a.max('respondedAt') })),
     ]);
 
     const wingleUserIds = new Set<string>();
@@ -664,7 +648,7 @@ export async function getAdminActivityDataAction() {
     });
 
     const wingleUsers = wingleUserIds.size > 0
-      ? await db.orm.public.User.where(u => u.id.in(Array.from(wingleUserIds))).all()
+      ? await db.orm.public.User.where(u => u.id.in(Array.from(wingleUserIds))).select('id', 'name').all()
       : [];
 
     const recentWingles = sortedWingles.map(w => ({
@@ -675,17 +659,23 @@ export async function getAdminActivityDataAction() {
       toUserName: wingleUsers.find(u => u.id === w.toUserId)?.name || 'Member',
       note: w.note || '',
       status: w.status,
-      createdAt: w.createdAt ? w.createdAt.toString() : new Date().toISOString(),
+      createdAt: w.createdAt.toString(),
       respondedAt: w.respondedAt ? w.respondedAt.toString() : null
     }));
 
-    const chatsByUser = new Map(chatCounts.map(row => [row.senderId, row.count]));
-    const sentByUser = new Map(sentCounts.map(row => [row.fromUserId, row.count]));
-    const acceptedByUser = new Map(acceptedCounts.map(row => [row.toUserId, row.count]));
+    const chatsByUser = new Map(chatCounts.map(row => [row.senderId, row]));
+    const sentByUser = new Map(sentCounts.map(row => [row.fromUserId, row]));
+    const acceptedByUser = new Map(acceptedCounts.map(row => [row.toUserId, row]));
     const freePackage = { id: 'free', name: 'Free' };
 
     const nowMs = Date.now();
     const usageRows = allMembers.map(member => {
+      const chats = chatsByUser.get(member.id);
+      const sent = sentByUser.get(member.id);
+      const accepted = acceptedByUser.get(member.id);
+      const latestActivity = [chats?.latest, sent?.latest, accepted?.latest]
+        .reduce<Temporal.Instant | null>((latest, event) =>
+          event && (!latest || Temporal.Instant.compare(event, latest) > 0) ? event : latest, null);
       const userSub = allSubscriptions.find(s => {
         if (s.userId !== member.id) return false;
         const expiresAtMs = s.expiresAt ? new Date(s.expiresAt.toString()).getTime() : 0;
@@ -700,28 +690,33 @@ export async function getAdminActivityDataAction() {
         id: member.id,
         name: member.name,
         email: member.email,
-        lastActiveAt: member.lastActiveAt ? member.lastActiveAt.toString() : (member.createdAt ? member.createdAt.toString() : new Date().toISOString()),
+        lastSeenAt: recordedLastSeen(member),
+        suspended: member.suspended,
+        lastActivityAt: latestActivity?.toString() ?? null,
         pkg,
-        chatUsed: chatsByUser.get(member.id) ?? 0,
-        winglesUsed: sentByUser.get(member.id) ?? 0,
-        winglesAccepted: acceptedByUser.get(member.id) ?? 0,
+        chatUsed: chats?.count ?? 0,
+        winglesUsed: sent?.count ?? 0,
+        winglesAccepted: accepted?.count ?? 0,
         wingitsBalance: member.wingitsBalance,
         isUnlimited: member.isUnlimited,
       };
     }).sort((a, b) => 
       (b.chatUsed + b.winglesUsed) - (a.chatUsed + a.winglesUsed) ||
-      new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime()
+      (b.lastActivityAt ? Date.parse(b.lastActivityAt) : 0) - (a.lastActivityAt ? Date.parse(a.lastActivityAt) : 0) ||
+      a.name.localeCompare(b.name) || a.id.localeCompare(b.id)
     );
 
-    const acceptRate = (acceptedWingles + declinedWingles) > 0
-      ? Math.round((acceptedWingles / (acceptedWingles + declinedWingles)) * 100)
-      : totalWingles > 0
-        ? Math.round((acceptedWingles / totalWingles) * 100)
-        : 0;
+    const totalWingles = wingleStatuses.reduce((total, row) => total + row.count, 0);
+    const acceptedWingles = wingleStatuses.find(row => row.status === 'accepted')?.count ?? 0;
+    const declinedWingles = wingleStatuses.find(row => row.status === 'declined')?.count ?? 0;
+    const answeredWingles = acceptedWingles + declinedWingles;
+    const acceptRate = answeredWingles ? Math.round(acceptedWingles / answeredWingles * 100) : null;
+    const minglesSent = chatCounts.reduce((total, row) => total + row.count, 0);
 
     return {
       ok: true,
       data: {
+        refreshedAt: new Date(nowMs).toISOString(),
         totalWingles,
         acceptedWingles,
         declinedWingles,
@@ -763,7 +758,7 @@ export async function getAdminListAction() {
         verified: u.verified,
         suspended: u.suspended,
         createdAt: u.createdAt.toString(),
-        lastActiveAt: u.lastActiveAt?.toString() || u.createdAt.toString(),
+        lastActiveAt: recordedLastSeen(u) ?? '',
         isSuperAdmin: u.email === 'envicdigital88@gmail.com'
       }))
     };

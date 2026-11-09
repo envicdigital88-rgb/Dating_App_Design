@@ -12,6 +12,7 @@ import {
   FlagIcon,
   ImageIcon,
   MoreVerticalIcon,
+  CoinsIcon,
   SendIcon,
   SmileIcon,
   Trash2Icon,
@@ -32,8 +33,10 @@ import { Avatar, Badge } from '@/components/ui/Bits';
 import { Modal } from '@/components/ui/Modal';
 import { ReportDialog } from '@/components/ReportDialog';
 import { InsufficientWingitsModal } from '@/components/InsufficientWingitsModal';
+import { WingitsChatDialog } from '@/components/WingitsChatDialog';
 import { useStore } from '@/lib/contexts/StoreContext';
-import { dayLabel, mingleTime, presence } from '@/lib/utils/format';
+import { dayLabel, mingleTime } from '@/lib/utils/format';
+import { presenceLabel } from '@/lib/presence';
 import { processPhoto, screenPhoto, getCroppedImg } from '@/lib/utils/image';
 import EmojiPicker from 'emoji-picker-react';
 import Cropper from 'react-easy-crop';
@@ -52,6 +55,7 @@ export function Chat() {
     reactToMingle,
     forwardMingles,
     userById,
+    observePresence,
     photosOf,
     blockUser,
     unblockUser,
@@ -71,6 +75,7 @@ export function Chat() {
   const [reporting, setReporting] = useState(false);
   const [blocking, setBlocking] = useState(false);
   const [showTopup, setShowTopup] = useState(false);
+  const [wingitsDialog, setWingitsDialog] = useState<{ conversationId: string; mode: 'send' | 'request'; amount?: number } | null>(null);
   
   // New WhatsApp Features State
   const [selectedMingles, setSelectedMingles] = useState<string[]>([]);
@@ -92,6 +97,7 @@ export function Chat() {
 
   const conversation = conversationsOf().find(c => c.id === conversationId);
   const loadedConversationId = conversation?.id;
+  const watchedMemberId = currentUser && conversation?.userIds.find(uid => uid !== currentUser.id);
   const mingles = useMemo(
     () => conversation ? minglesOf(conversation.id) : [],
     [conversation, minglesOf]
@@ -100,6 +106,10 @@ export function Chat() {
   useEffect(() => {
     if (loadedConversationId) markConversationRead(loadedConversationId);
   }, [loadedConversationId, mingles.length, markConversationRead]);
+
+  useEffect(() => {
+    if (watchedMemberId) return observePresence(watchedMemberId);
+  }, [watchedMemberId, observePresence]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -285,7 +295,7 @@ export function Chat() {
                 )}
               </span>
               <span className="block truncate text-[12px] text-ink-muted">
-                {typingIn === conversation.id ? 'Typing ' : other ? presence(other.online, other.lastActiveAt) : ''}
+                {typingIn === conversation.id ? 'Typing ' : other ? presenceLabel(other.lastActiveAt) : ''}
               </span>
             </span>
           </button>
@@ -294,6 +304,14 @@ export function Chat() {
               Free text chat
             </Badge>
           </span>
+          <button
+            type="button"
+            onClick={() => setWingitsDialog({ conversationId: conversation.id, mode: 'send' })}
+            aria-label="Share Wingits"
+            title="Send or request Wingits"
+            className="rounded-full p-2 text-ink-soft transition-colors hover:bg-cream">
+            <CoinsIcon className="h-5 w-5" aria-hidden />
+          </button>
           <button
             onClick={() => setMenuOpen(true)}
             aria-label="Conversation options"
@@ -890,6 +908,7 @@ export function Chat() {
               </div>
               
               <button
+                aria-label="Send photos"
                 onClick={submitPreview}
                 className="w-12 h-12 rounded-full bg-[#00a884] flex items-center justify-center text-white hover:bg-[#008f6f] shadow-lg flex-shrink-0 ml-4"
               >
@@ -899,7 +918,30 @@ export function Chat() {
           </div>
         </div>
       )}
-      <InsufficientWingitsModal open={showTopup} onClose={() => setShowTopup(false)} currentBalance={currentUser?.wingitsBalance ?? 0} requiredAmount={imagePreviews.length * 3} />
+      {showTopup && <div className="fixed inset-0 z-[110]">
+        <InsufficientWingitsModal
+          open
+          onClose={() => setShowTopup(false)}
+          currentBalance={currentUser.wingitsBalance}
+          requiredAmount={imagePreviews.length * 3}
+          onRequestWingits={() => {
+            setShowTopup(false);
+            setWingitsDialog({
+              conversationId: conversation.id,
+              mode: 'request',
+              amount: Math.max(1, imagePreviews.length * 3 - currentUser.wingitsBalance),
+            });
+          }}
+        />
+      </div>}
+      {wingitsDialog?.conversationId === conversation.id && <WingitsChatDialog
+        key={conversation.id}
+        conversationId={conversation.id}
+        friendName={other?.name || 'your friend'}
+        initialMode={wingitsDialog.mode}
+        initialAmount={wingitsDialog.amount}
+        onClose={() => setWingitsDialog(null)}
+      />}
     </div>
   );
 }

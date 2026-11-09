@@ -32,6 +32,7 @@ import {
 import { id as makeId } from '@/lib/utils/format';
 import type { getConversationsAction } from '@/app/actions/chat';
 import type { getUserStateAction } from '@/app/actions/user';
+import { isOnlineAt, PRESENCE_BATCH_SIZE, PRESENCE_INTERVAL_MS } from '@/lib/presence';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -124,6 +125,8 @@ interface StoreValue {
   isDiscoverFetching: boolean;
   fetchDiscoverUsers: (filters: any, seenIds?: string[]) => Promise<number | void>;
   userById: (userId: string) => User | undefined;
+  observePresence: (userId: string) => () => void;
+  lastSeenOf: (userId: string, fallback?: string) => string;
   likeUser: (userId: string) => void;
   unlikeUser: (userId: string) => void;
   passUser: (userId: string) => void;
@@ -238,6 +241,15 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   const [typingIn] = useState<string | null>(null);
   const [activePopupChatId, setActivePopupChatId] = useState<string | null>(null);
   const [discoverIds, setDiscoverIds] = useState<string[]>([]);
+  const [presenceSnapshot, setPresenceSnapshot] = useState<{ userId: string; lastSeen: Map<string, string | null> }>();
+  const observedPresence = useRef(new Map<string, number>());
+  const refreshPresenceRef = useRef<(() => void) | null>(null);
+  const presenceTargets = useRef<string[]>([]);
+  const trackedPresenceIds = useMemo(() => [
+    ...db.conversations.flatMap(c => c.userIds.filter(id => id !== sessionId)),
+    ...discoverIds,
+  ], [db.conversations, discoverIds, sessionId]);
+  presenceTargets.current = trackedPresenceIds;
   const timers = useRef<number[]>([]);
   const sessionIdRef = useRef<string | null>(null);
   sessionIdRef.current = sessionId;
@@ -384,7 +396,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
 
           const mappedUser = {
             ...user,
-            lastActiveAt: user.lastActiveAt?.toString() || new Date().toISOString(),
+            lastActiveAt: user.lastActiveAt?.toString() || '',
             createdAt: user.createdAt?.toString() || new Date().toISOString(),
             isUnlimited: (user as any).isUnlimited ?? false,
             lifestyle: userLs,
@@ -695,6 +707,79 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
       });
     };
   }, [sessionId, isHydrated, refreshSecretWingles, showNotification]);
+
+  const observePresence = useCallback((userId: string) => {
+    const watched = observedPresence.current;
+    watched.set(userId, (watched.get(userId) ?? 0) + 1);
+    refreshPresenceRef.current?.();
+    return () => {
+      const count = watched.get(userId) ?? 0;
+      if (count <= 1) watched.delete(userId);
+      else watched.set(userId, count - 1);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!sessionId || !isHydrated) return;
+    let active = true;
+    let inFlight = false;
+    const refreshPresence = async () => {
+      if (!active || inFlight || document.visibilityState !== 'visible') return;
+      inFlight = true;
+      const ids = [...new Set([...observedPresence.current.keys(), ...presenceTargets.current])].slice(0, PRESENCE_BATCH_SIZE);
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 8000);
+      let lastSeen: Map<string, string | null> | undefined;
+      try {
+        const response = await fetch('/api/presence', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accountId: sessionId, ids }),
+          signal: controller.signal,
+        });
+        if (!response.ok) return;
+        const payload = await response.json();
+        if (payload.userId === sessionId) {
+          lastSeen = new Map(ids.map(id => [id, Object.prototype.hasOwnProperty.call(payload.lastSeen, id) ? payload.lastSeen[id] : null]));
+        }
+      } catch {
+        // Old online indicators still expire when a presence request fails.
+      } finally {
+        window.clearTimeout(timeout);
+        inFlight = false;
+        if (active && sessionIdRef.current === sessionId) {
+          setPresenceSnapshot(previous => ({
+            userId: sessionId,
+            lastSeen: lastSeen ?? (previous?.userId === sessionId ? previous.lastSeen : new Map()),
+          }));
+        }
+      }
+    };
+    refreshPresenceRef.current = refreshPresence;
+    void refreshPresence();
+    const timer = window.setInterval(refreshPresence, PRESENCE_INTERVAL_MS);
+    document.addEventListener('visibilitychange', refreshPresence);
+    window.addEventListener('online', refreshPresence);
+    return () => {
+      active = false;
+      refreshPresenceRef.current = null;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', refreshPresence);
+      window.removeEventListener('online', refreshPresence);
+    };
+  }, [sessionId, isHydrated]);
+
+  const lastSeenOf = useCallback((userId: string, fallback = '') => {
+    if (presenceSnapshot?.userId === sessionId && presenceSnapshot.lastSeen.has(userId)) {
+      return presenceSnapshot.lastSeen.get(userId) ?? '';
+    }
+    return fallback;
+  }, [presenceSnapshot, sessionId]);
+
+  const withPresence = useCallback((user: User) => {
+    const lastActiveAt = lastSeenOf(user.id, user.lastActiveAt);
+    return { ...user, lastActiveAt, online: isOnlineAt(lastActiveAt) };
+  }, [lastSeenOf]);
 
   useEffect(() => {
     if (db.mingles !== initialDb.mingles && typeof window !== 'undefined') {
@@ -1336,9 +1421,9 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   const userById = useCallback<StoreValue['userById']>(
     (userId) => {
       const u = db.users.find((user) => user.id === userId);
-      return u ? maskUser(u, sessionIdRef.current) : undefined;
+      return u ? maskUser(withPresence(u), sessionIdRef.current) : undefined;
     },
-    [db.users]
+    [db.users, withPresence]
   );
 
   const discoverFeed = useCallback<StoreValue['discoverFeed']>(() => {
@@ -1387,7 +1472,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     for (const id of discoverIds) {
       const u = userMap.get(id);
       if (u && isEligible(u) && !included.has(id)) {
-        feed.push(maskUser(u, sessionId));
+        feed.push(maskUser(withPresence(u), sessionId));
         included.add(id);
       }
     }
@@ -1408,11 +1493,11 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
           const bPref = b.gender?.toLowerCase() === targetGender ? 1 : 0;
           if (aPref !== bPref) return bPref - aPref;
         }
-        return new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime();
+        return (Date.parse(lastSeenOf(b.id, b.lastActiveAt)) || 0) - (Date.parse(lastSeenOf(a.id, a.lastActiveAt)) || 0);
       });
 
       for (const u of candidates) {
-        feed.push(maskUser(u, sessionId));
+        feed.push(maskUser(withPresence(u), sessionId));
       }
     }
 
@@ -1430,7 +1515,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
 
       const recycledCandidates = db.users.filter((u) => isEligibleRecycled(u) && !included.has(u.id));
       for (const u of recycledCandidates) {
-        feed.push(maskUser(u, sessionId));
+        feed.push(maskUser(withPresence(u), sessionId));
       }
     }
 
@@ -1442,7 +1527,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     });
 
     return feed;
-  }, [db.blocks, db.packages, db.passes, db.heartBucket, db.likes, db.subscriptions, db.users, discoverIds, sessionId]);
+  }, [db.blocks, db.packages, db.passes, db.heartBucket, db.likes, db.subscriptions, db.users, discoverIds, sessionId, lastSeenOf, withPresence]);
 
   const likeUser = useCallback<StoreValue['likeUser']>((userId) => {
     // 1. Optimistic Like update
@@ -2485,6 +2570,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     isDiscoverFetching,
     fetchDiscoverUsers,
     userById,
+    observePresence,
+    lastSeenOf,
     likeUser,
     unlikeUser,
     passUser,

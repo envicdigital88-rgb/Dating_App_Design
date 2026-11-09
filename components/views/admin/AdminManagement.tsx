@@ -18,7 +18,8 @@ import { Button } from '@/components/ui/Button';
 import { Input, Label } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Bits';
-import { shortDate, relativeTime } from '@/lib/utils/format';
+import { shortDate } from '@/lib/utils/format';
+import { presenceLabel } from '@/lib/presence';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { 
   getAdminListAction, 
@@ -348,7 +349,7 @@ export function AdminManagement() {
                         {shortDate(admin.createdAt)}
                       </td>
                       <td className="hidden px-5 py-4 text-ink-muted lg:table-cell text-xs">
-                        Active {relativeTime(admin.lastActiveAt)}
+                        {presenceLabel(admin.lastActiveAt)}
                       </td>
                       <td className="px-5 py-4 text-right">
                         {isSuperAdmin ? (

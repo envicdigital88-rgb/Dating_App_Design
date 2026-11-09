@@ -7,77 +7,22 @@ import { RefreshCwIcon } from 'lucide-react';
 import { money, relativeTime } from '@/lib/utils/format';
 import { getAdminOverviewStatsAction } from '@/app/actions/admin';
 
-interface AdminStats {
-  totalMembers: number;
-  womenCount: number;
-  menCount: number;
-  nonBinaryCount: number;
-  newThisMonth: number;
-  activeToday: number;
-  revenue: number;
-  succeededCount: number;
-  activeSubs: number;
-  totalWingles: number;
-  acceptedWingles: number;
-  minglesCount: number;
-  connectionsCount: number;
-  openReports: number;
-  totalReports: number;
-  popular: {
-    pkg: any;
-    count: number;
-  }[];
-  latestWingles: {
-    id: string;
-    createdAt: string | Date;
-    status: string;
-    fromUserName: string;
-    toUserName: string;
-  }[];
-}
+type AdminStats = NonNullable<Awaited<ReturnType<typeof getAdminOverviewStatsAction>>['data']>;
+
 export function AdminOverview() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   const fetchStats = async (isManual = false) => {
     if (isManual) setRefreshing(true);
     try {
       const res = await getAdminOverviewStatsAction();
-      if (res.ok && res.data) {
-        const d = res.data;
-
-        const acceptedWingles = d.acceptedWingles ?? d.wingles?.filter((w: any) => w.status === 'accepted').length ?? 0;
-        const succeeded = d.payments?.filter((p: any) => p.status === 'succeeded') || [];
-        const revenue = d.revenue ?? succeeded.reduce((t: number, p: any) => t + (Number(p.amount) || 0), 0);
-        const activeSubs = d.activeSubs ?? d.subscriptions?.filter(
-          (s: any) => s.status === 'active' && new Date(s.expiresAt) > new Date()
-        ).length ?? 0;
-
-        const popular = d.popular ?? d.packages?.map((pkg: any) => ({
-          pkg,
-          count: succeeded.filter((p: any) => p.packageId === pkg.id).length
-        })).sort((a: any, b: any) => b.count - a.count) ?? [];
-
-        setStats({
-          totalMembers: d.totalMembers,
-          womenCount: d.womenCount,
-          menCount: d.menCount,
-          nonBinaryCount: d.nonBinaryCount,
-          newThisMonth: d.newThisMonth,
-          activeToday: d.activeToday,
-          revenue,
-          succeededCount: d.succeededCount ?? succeeded.length,
-          activeSubs,
-          totalWingles: d.totalWingles ?? d.wingles?.length ?? 0,
-          acceptedWingles,
-          minglesCount: d.minglesCount,
-          connectionsCount: d.connectionsCount,
-          openReports: d.openReports ?? d.reports?.filter((r: any) => r.status === 'open').length ?? 0,
-          totalReports: d.totalReports ?? d.reports?.length ?? 0,
-          popular,
-          latestWingles: d.latestActivity
-        });
-      }
+      if (!res.ok || !res.data) throw new Error(res.error || 'Dashboard data unavailable');
+      setStats(res.data);
+      setLoadError(false);
+    } catch {
+      setLoadError(true);
     } finally {
       if (isManual) setRefreshing(false);
     }
@@ -112,21 +57,26 @@ export function AdminOverview() {
       <div>
         <AdminHeader
           title="Overview"
-          body="Live platform activity. Real-time updates active." />
-        <div className="flex h-64 items-center justify-center text-[14px] text-ink-soft">
-          Loading live data...
+          body="Platform activity and payments." />
+        <div role="status" className="flex h-64 flex-col items-center justify-center gap-2 text-[14px] text-ink-soft">
+          {loadError && !refreshing ? (
+            <>
+              <p>Dashboard data is unavailable.</p>
+              <button type="button" className="text-berry-500 underline" onClick={() => fetchStats(true)}>Try again</button>
+            </>
+          ) : 'Loading dashboard data...'}
         </div>
       </div>
     );
   }
 
-  const maxCount = Math.max(1, ...stats.popular.map((p: any) => p.count));
+  const maxCount = Math.max(1, ...stats.popular.map(p => p.count));
 
   return (
     <div>
       <AdminHeader
         title="Overview"
-        body="Live platform activity. Real-time updates active."
+        body="Platform activity and payments."
         action={
           <button
             onClick={() => fetchStats(true)}
@@ -138,18 +88,20 @@ export function AdminOverview() {
             <span>Refresh</span>
           </button>
         } />
+      {loadError && <p role="status" className="mb-4 text-sm text-amber-500">Refresh failed. Showing the last successful update.</p>}
       
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile label="Total members" value={stats.totalMembers} hint={`${stats.womenCount} women · ${stats.menCount} men${stats.nonBinaryCount > 0 ? ` · ${stats.nonBinaryCount} NB` : ''}`} />
-        <StatTile label="Active in last 24h" value={stats.activeToday} />
+        <StatTile label="Members seen in last 24h" value={stats.activeToday} hint="Recorded signup or app activity" />
         <StatTile
           label="Revenue"
           value={money(stats.revenue)}
           hint={`${stats.succeededCount} successful payments`}
           emphasis />
         
-        <StatTile label="Active subscriptions" value={stats.activeSubs} />
+        <StatTile label="Active subscriptions" value={stats.activeSubs}
+          hint={`${stats.unlimitedUsersCount} ${stats.unlimitedUsersCount === 1 ? 'member' : 'members'} with Unlimited access`} />
       </div>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -171,12 +123,12 @@ export function AdminOverview() {
         <section className="rounded-4xl bg-cream-deep p-6 shadow-card">
           <h2 className="font-display text-xl text-ink">Package performance</h2>
           <ul className="mt-5 space-y-4">
-            {stats.popular.map(({ pkg, count }: any) =>
+            {stats.popular.map(({ pkg, count, revenue }) =>
             <li key={pkg.id}>
                 <div className="flex items-baseline justify-between gap-4 text-[14px]">
                   <span className="font-medium text-ink">{pkg.name}</span>
                   <span className="text-ink-muted">
-                    {count} sold · {money(pkg.price * count)}
+                    {count} sold · {money(revenue)}
                   </span>
                 </div>
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-cream-deep">
@@ -191,9 +143,9 @@ export function AdminOverview() {
         </section>
 
         <section className="rounded-4xl bg-cream-deep p-6 shadow-card">
-          <h2 className="font-display text-xl text-ink">Latest activity</h2>
+          <h2 className="font-display text-xl text-ink">Latest Wingles</h2>
           <ul className="mt-4 divide-y divide-sand">
-            {stats.latestWingles.map((wingle: any) => {
+            {stats.latestActivity.map(wingle => {
               return (
                 <li key={wingle.id} className="flex items-center justify-between gap-3 py-3">
                     <div className="min-w-0">
