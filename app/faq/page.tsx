@@ -18,7 +18,7 @@ const faqs = [
     question: "Is WingleMingle free?",
     answer: [
       "Yes! Joining WingleMingle is completely free.",
-      "When you create your account, you'll receive 20 free Wingits, and you'll receive 1 free Wingit every day you login just for coming back.",
+      "When you create your account, you'll receive 20 free Wingits, and you'll receive 1 free Wingit per day you log in during your first 7 days after signup. Daily login bonuses stop after those 7 days.",
       "You can purchase additional Wingits whenever you need them, starting from just LKR 100."
     ]
   },
@@ -34,7 +34,7 @@ const faqs = [
     question: "How many Wingits do I get when I join?",
     answer: [
       "Every new member receives 20 free Wingits when they join WingleMingle.",
-      "You'll also receive 1 free Wingit every day."
+      "You'll also receive 1 free Wingit per day you log in during your first 7 days after signup. Daily login bonuses stop after those 7 days."
     ]
   },
   {
@@ -88,7 +88,7 @@ const faqs = [
     question: "Can I earn Wingits for free?",
     answer: [
       "Yes.",
-      "You'll receive 20 Wingits when you join and 1 free Wingit every day.",
+      "You'll receive 20 Wingits when you join and 1 free Wingit per day you log in during your first 7 days after signup. Daily login bonuses stop after those 7 days.",
       "We may also introduce additional ways to earn Wingits through referrals, promotions and other activities as WingleMingle grows."
     ]
   },

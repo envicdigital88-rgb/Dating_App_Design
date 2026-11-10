@@ -259,18 +259,33 @@ export function Chat() {
     <div className="flex h-[100dvh] flex-col bg-cream">
       {/* Header */}
       {selectedMingles.length > 0 ? (
-        <header className="flex items-center justify-between border-b border-sand/70 bg-berry-50 px-3 py-2.5 sm:px-5">
+        <header className="flex items-center justify-between border-b border-berry-500/30 bg-cream-deep px-3 py-2.5 sm:px-5">
           <div className="flex items-center gap-3">
-            <button onClick={() => setSelectedMingles([])} className="p-2 text-ink">
+            <button
+              type="button"
+              onClick={() => setSelectedMingles([])}
+              aria-label="Clear selection"
+              title="Clear selection"
+              className="rounded-full p-2 text-ink transition-colors hover:bg-berry-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-berry-400">
               <XIcon className="h-5 w-5" />
             </button>
             <span className="font-medium text-ink">{selectedMingles.length} Selected</span>
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setForwardModalOpen(true)} className="p-2 text-ink transition-colors hover:text-berry-600">
+            <button
+              type="button"
+              onClick={() => setForwardModalOpen(true)}
+              aria-label="Forward selected messages"
+              title="Forward selected messages"
+              className="rounded-full p-2 text-ink transition-colors hover:bg-berry-500/15 hover:text-berry-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-berry-400">
               <ForwardIcon className="h-5 w-5" />
             </button>
-            <button onClick={handleDeleteSelected} className="p-2 text-ink transition-colors hover:text-red-500">
+            <button
+              type="button"
+              onClick={handleDeleteSelected}
+              aria-label="Delete selected messages"
+              title="Delete selected messages"
+              className="rounded-full p-2 text-ink transition-colors hover:bg-red-500/10 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-berry-400">
               <Trash2Icon className="h-5 w-5" />
             </button>
           </div>
@@ -351,7 +366,7 @@ export function Chat() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
-                  className={`group flex items-center gap-2 ${mine ? 'justify-end' : 'justify-start'} ${isSelected ? 'bg-berry-50/50 -mx-3 px-3 py-1' : ''}`}
+                  className={`group flex items-center gap-2 ${mine ? 'justify-end' : 'justify-start'} ${isSelected ? 'rounded-xl bg-berry-500/15 -mx-3 px-3 py-1' : ''}`}
                 >
                   
                   {selectedMingles.length > 0 && (

@@ -9,6 +9,18 @@ import type { Photo, User } from '@/lib/types'
 import { lockWingitsWallet, MAX_WINGITS } from '@/lib/wingits-wallet'
 import { isOnlineAt, recordedLastSeen } from '@/lib/presence'
 
+function isDailyLoginBonusDue(account: {
+  createdAt: { toString(): string };
+  lastDailyBonusAt: { toString(): string } | null;
+}, now: Date) {
+  // Daily login rewards expire exactly seven days after signup.
+  const accountAge = now.getTime() - Date.parse(account.createdAt.toString());
+  if (!(accountAge >= 0 && accountAge < 7 * 24 * 60 * 60 * 1000)) return false;
+
+  const lastBonus = account.lastDailyBonusAt && new Date(account.lastDailyBonusAt.toString());
+  return !lastBonus || lastBonus.toDateString() !== now.toDateString();
+}
+
 export async function getCurrentUser() {
   try {
     const session = await getSession()
@@ -21,17 +33,15 @@ export async function getCurrentUser() {
     console.log('getCurrentUser user found:', !!user)
     if (!user) return null
 
-    const now = new Date();
-    const lastBonus = user.lastDailyBonusAt ? new Date(user.lastDailyBonusAt.toString()) : null;
-    if (!lastBonus || lastBonus.toDateString() !== now.toDateString()) {
+    if (isDailyLoginBonusDue(user, new Date())) {
       const { Temporal } = await import('temporal-polyfill');
       const userId = user.id;
       const wallet = await db.transaction(async tx => {
         if (!await lockWingitsWallet(tx, userId)) return null;
-        const account = await tx.orm.public.User.select('wingitsBalance', 'lastDailyBonusAt').first({ id: userId });
+        const account = await tx.orm.public.User.select('wingitsBalance', 'lastDailyBonusAt', 'createdAt').first({ id: userId });
         if (!account) return null;
-        const previous = account.lastDailyBonusAt && new Date(account.lastDailyBonusAt.toString());
-        if (previous?.toDateString() === now.toDateString() || account.wingitsBalance >= MAX_WINGITS) return account;
+        const now = new Date();
+        if (!isDailyLoginBonusDue(account, now) || account.wingitsBalance >= MAX_WINGITS) return account;
 
         const updated = {
           wingitsBalance: account.wingitsBalance + 1,
