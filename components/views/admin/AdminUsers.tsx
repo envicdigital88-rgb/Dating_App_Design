@@ -20,12 +20,13 @@ import {
 } from 'lucide-react';
 import { AdminHeader } from './AdminShell';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Field';
+import { Input, Label } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { Avatar, Badge } from '@/components/ui/Bits';
 import { shortDate } from '@/lib/utils/format';
 import { isOnlineAt, presenceLabel } from '@/lib/presence';
-import { getAdminUsersAction, deleteUserAction, setUserSuspendedAction, setUserVerifiedAction, setUserUnlimitedAction, moderateSelfieAction } from '@/app/actions/admin';
+import { addMemberWingitsAction, getAdminUsersAction, deleteUserAction, setUserSuspendedAction, setUserVerifiedAction, setUserUnlimitedAction, moderateSelfieAction } from '@/app/actions/admin';
+import { MAX_WINGITS } from '@/lib/wingits-wallet';
 import type { User, Photo } from '@/lib/types';
 
 type AdminUser = User & { photos: Photo[] };
@@ -52,6 +53,47 @@ export function AdminUsers() {
   const [suspensionReason, setSuspensionReason] = useState('');
   const [busySelfieId, setBusySelfieId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [wingitsAmount, setWingitsAmount] = useState('');
+  const [addingWingits, setAddingWingits] = useState(false);
+  const addingWingitsRef = useRef(false);
+  const creditAttempt = useRef<{ userId: string; amount: number; id: string } | null>(null);
+  const usersVersion = useRef(0);
+
+  const amount = Number(wingitsAmount);
+  const validAmount = Number.isInteger(amount) && amount >= 1 && amount <= MAX_WINGITS;
+
+  const handleAddWingits = async (event: React.FormEvent<HTMLFormElement>, user: AdminUser) => {
+    event.preventDefault();
+    if (addingWingitsRef.current || !validAmount) return;
+
+    addingWingitsRef.current = true;
+    setAddingWingits(true);
+    try {
+      let attempt = creditAttempt.current;
+      if (!attempt || attempt.userId !== user.id || attempt.amount !== amount) {
+        attempt = { userId: user.id, amount, id: crypto.randomUUID() };
+        creditAttempt.current = attempt;
+      }
+      const result = await addMemberWingitsAction(user.id, amount, attempt.id);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+
+      usersVersion.current++;
+      setRealUsers(users => users?.map(member => member.id === user.id
+        ? { ...member, wingitsBalance: result.balance }
+        : member) ?? null);
+      creditAttempt.current = null;
+      setWingitsAmount('');
+      toast.success(`Added ${amount} Wingits to ${user.name}.`);
+    } catch {
+      toast.error('Could not confirm the credit. Try again with the same amount.');
+    } finally {
+      addingWingitsRef.current = false;
+      setAddingWingits(false);
+    }
+  };
 
   const handleModerateSelfie = async (userId: string, status: 'approved' | 'rejected') => {
     setBusySelfieId(userId);
@@ -83,8 +125,10 @@ export function AdminUsers() {
   useEffect(() => {
     let mounted = true;
     const fetchUsers = async () => {
+      const version = usersVersion.current;
       const res = await getAdminUsersAction();
-      if (res.ok && res.data && mounted) {
+      if (!mounted || version !== usersVersion.current) return;
+      if (res.ok && res.data) {
         const now = Date.now();
         // Clean up overrides older than 30 seconds
         for (const [id, override] of recentOverridesRef.current.entries()) {
@@ -114,7 +158,7 @@ export function AdminUsers() {
           });
 
         setRealUsers(merged);
-      } else if (!res.ok && mounted) {
+      } else if (!res.ok) {
         setRealUsers([]);
         toast.error(res.error || 'Failed to load members');
       }
@@ -574,7 +618,11 @@ export function AdminUsers() {
 
       <Modal
         open={!!detailUser}
-        onClose={() => setDetail(null)}
+        onClose={() => {
+          if (addingWingitsRef.current) return;
+          setDetail(null);
+          setWingitsAmount('');
+        }}
         title={detailUser ? `${detailUser.name}, ${detailUser.age}${detailUser.gender ? ` (${formatGender(detailUser.gender)})` : ''}` : ''}
         description={detailUser?.email}
         size="md">
@@ -735,6 +783,17 @@ export function AdminUsers() {
                 </div>
               )}
             </dl>
+            <form onSubmit={event => handleAddWingits(event, detailUser)} className="rounded-xl border border-sand p-3.5">
+              <Label htmlFor="admin-wingits-amount">Wingits to add</Label>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Input id="admin-wingits-amount" type="number" inputMode="numeric" min={1}
+                  max={MAX_WINGITS} step={1} required placeholder="e.g. 20" value={wingitsAmount}
+                  disabled={addingWingits} onChange={event => setWingitsAmount(event.target.value)} />
+                <Button type="submit" loading={addingWingits} disabled={!validAmount} className="shrink-0">
+                  Add Wingits
+                </Button>
+              </div>
+            </form>
           </div>
         }
       </Modal>

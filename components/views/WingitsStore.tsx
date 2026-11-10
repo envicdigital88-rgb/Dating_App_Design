@@ -26,13 +26,15 @@ export default function WingitsStore() {
   const [pendingLedgerId, setPendingLedgerId] = useState<string | null>(null);
   const [pendingAmount, setPendingAmount] = useState<number | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  const balance = currentUser?.wingitsBalance;
 
-  // Load transaction history
   useEffect(() => {
+    let active = true;
     getWingitsTransactionsAction().then((txs) => {
-      setTransactions(txs || []);
+      if (active) setTransactions(txs || []);
     });
-  }, []);
+    return () => { active = false; };
+  }, [balance]);
 
   // Verify and complete pending payment
   const verifyAndComplete = useCallback(async (ledgerId: string, amount?: number | null) => {
@@ -266,7 +268,7 @@ export default function WingitsStore() {
           <div>
             <p className="text-sm text-ink-muted font-medium">Your current balance</p>
             <p className="text-3xl font-display font-bold text-ink">
-              {currentUser?.wingitsBalance || 0} <span className="text-lg text-ink-muted font-normal font-sans">Wingits</span>
+              {balance ?? 0} <span className="text-lg text-ink-muted font-normal font-sans">Wingits</span>
             </p>
           </div>
         </div>

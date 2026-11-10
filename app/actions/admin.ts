@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { sendAdminInviteEmail } from '@/lib/admin-invite-email'
 import { recordedLastSeen } from '@/lib/presence'
+import { lockWingitsWallet, MAX_WINGITS } from '@/lib/wingits-wallet'
 
 export async function getAdminOverviewStatsAction() {
   try {
@@ -389,6 +390,62 @@ export async function getAdminUsersAction() {
   } catch (err) {
     console.error('getAdminUsersAction error:', err);
     return { ok: false, error: 'Failed to fetch admin users' };
+  }
+}
+
+export async function addMemberWingitsAction(userId: string, amount: number, operationId: string) {
+  try {
+    const session = await getSession();
+    if (typeof session?.userId !== 'string') return { ok: false as const, error: 'Unauthorized' };
+    const admin = await db.orm.public.User.select('id', 'role', 'suspended').first({ id: session.userId });
+    if (admin?.role !== 'admin' || admin.suspended || session.verified === false) {
+      return { ok: false as const, error: 'Forbidden' };
+    }
+
+    if (typeof userId !== 'string' || !userId || userId.length > 128 ||
+        !Number.isInteger(amount) || amount < 1 || amount > MAX_WINGITS ||
+        typeof operationId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(operationId)) {
+      return { ok: false as const, error: 'Enter a valid whole number of Wingits.' };
+    }
+
+    const id = `admin-credit:${admin.id}:${operationId.toLowerCase()}`;
+    const result = await db.transaction(async tx => {
+      const memberQuery = tx.orm.public.User.where({ id: userId, role: 'member' });
+      if (!await lockWingitsWallet(tx, userId)) return { ok: false as const, error: 'Member account not found.' };
+      const member = await memberQuery.select('wingitsBalance').first();
+      if (!member) return { ok: false as const, error: 'Member account not found.' };
+
+      const existing = await tx.orm.public.WingitsTransaction.first({ id });
+      if (existing) {
+        if (existing.userId !== userId || existing.amount !== amount) {
+          return { ok: false as const, error: 'This credit has already been used.' };
+        }
+        return { ok: true as const, balance: member.wingitsBalance };
+      }
+      if (member.wingitsBalance > MAX_WINGITS - amount) {
+        return { ok: false as const, error: 'This amount would exceed the member’s wallet limit.' };
+      }
+
+      const balance = member.wingitsBalance + amount;
+      await memberQuery.update({ wingitsBalance: balance });
+      await tx.orm.public.WingitsTransaction.create({
+        id, userId, amount, type: 'admin_credit', description: 'Wingits added by an administrator',
+      });
+      return { ok: true as const, balance };
+    });
+
+    if (result.ok && process.env.PUSHER_APP_ID && process.env.PUSHER_SECRET) {
+      try {
+        const { pusherServer } = await import('@/lib/pusher');
+        await pusherServer.trigger(`private-user-${userId}`, 'state-changed', {});
+      } catch (error) {
+        console.error('Could not broadcast admin Wingits credit:', error);
+      }
+    }
+    return result;
+  } catch (error) {
+    console.error('Could not confirm admin Wingits credit:', error);
+    return { ok: false as const, error: 'Could not confirm the credit. Try again with the same amount.' };
   }
 }
 
