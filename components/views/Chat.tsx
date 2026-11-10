@@ -34,6 +34,7 @@ import { Modal } from '@/components/ui/Modal';
 import { ReportDialog } from '@/components/ReportDialog';
 import { InsufficientWingitsModal } from '@/components/InsufficientWingitsModal';
 import { WingitsChatDialog } from '@/components/WingitsChatDialog';
+import { useWingitsChatTimeline, WingitsChatNotice } from '@/components/WingitsChatHistory';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { dayLabel, mingleTime } from '@/lib/utils/format';
 import { presenceLabel } from '@/lib/presence';
@@ -102,6 +103,7 @@ export function Chat() {
     () => conversation ? minglesOf(conversation.id) : [],
     [conversation, minglesOf]
   );
+  const timeline = useWingitsChatTimeline(loadedConversationId, mingles);
 
   useEffect(() => {
     if (loadedConversationId) markConversationRead(loadedConversationId);
@@ -113,7 +115,7 @@ export function Chat() {
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [mingles.length, typingIn]);
+  }, [timeline.length, typingIn]);
 
   if (isHydrated && currentUser && !conversation && conversationsLoadState !== 'loading') {
     const failed = conversationsLoadState === 'error';
@@ -324,7 +326,16 @@ export function Chat() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-3 py-5 sm:px-6 relative">
         <div className="mx-auto max-w-2xl space-y-2">
-          {mingles.map((mingle) => {
+          {timeline.map((mingle) => {
+            if ('kind' in mingle) {
+              const day = dayLabel(mingle.createdAt);
+              const showDay = day !== lastDay;
+              lastDay = day;
+              return <React.Fragment key={mingle.id}>
+                {showDay && <p className="py-3 text-center text-[12px] font-medium text-ink-muted">{day}</p>}
+                <WingitsChatNotice event={mingle} mine={mingle.senderId === currentUser.id} />
+              </React.Fragment>;
+            }
             if (mingle.deletedFor?.includes(currentUser.id) && !mingle.viewOnce) return null;
             const mine = mingle.senderId === currentUser.id;
             const day = dayLabel(mingle.createdAt);

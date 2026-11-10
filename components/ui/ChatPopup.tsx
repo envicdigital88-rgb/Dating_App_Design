@@ -10,6 +10,7 @@ import { dayLabel, mingleTime } from '@/lib/utils/format';
 import { presenceLabel } from '@/lib/presence';
 import { toast } from 'sonner';
 import { WingitsChatDialog } from '@/components/WingitsChatDialog';
+import { useWingitsChatTimeline, WingitsChatNotice } from '@/components/WingitsChatHistory';
 
 export function ChatPopup() {
   const router = useRouter();
@@ -41,6 +42,7 @@ export function ChatPopup() {
     () => conversation ? minglesOf(conversation.id) : [],
     [conversation, minglesOf]
   );
+  const timeline = useWingitsChatTimeline(minimized ? undefined : conversation?.id, mingles);
 
   useEffect(() => {
     if (conversation) markConversationRead(conversation.id);
@@ -52,7 +54,7 @@ export function ChatPopup() {
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [mingles.length, typingIn, activePopupChatId]);
+  }, [timeline.length, typingIn, activePopupChatId]);
 
   if (!activePopupChatId || !conversation || !currentUser || !entitlements) return null;
 
@@ -136,7 +138,16 @@ export function ChatPopup() {
         {!minimized && (
           <>
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
-          {mingles.map((mingle) => {
+          {timeline.map((mingle) => {
+            if ('kind' in mingle) {
+              const day = dayLabel(mingle.createdAt);
+              const showDay = day !== lastDay;
+              lastDay = day;
+              return <React.Fragment key={mingle.id}>
+                {showDay && <p className="my-2 text-center text-[11px] text-ink-muted">{day}</p>}
+                <WingitsChatNotice event={mingle} mine={mingle.senderId === currentUser.id} />
+              </React.Fragment>;
+            }
             if (mingle.deleted) return null;
             const isMe = mingle.senderId === currentUser.id;
             const day = dayLabel(mingle.createdAt);

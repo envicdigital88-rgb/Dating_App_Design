@@ -4,6 +4,7 @@ import { getSession } from '@/lib/session';
 import { db } from '@/lib/db';
 import { GenieError, createGenieSignature, genieRequest, getGenieConfig, getGeniePaymentUrl } from '@/lib/genie';
 import { checkPendingGeniePayment, verifyGeniePayment } from '@/lib/payment-verification';
+import { SECRET_WINGLE_CASH_LKR } from '@/lib/wingle-pricing';
 
 async function getAppUrl(): Promise<string> {
   const configured = (process.env.NEXT_PUBLIC_APP_URL || '').trim();
@@ -116,11 +117,12 @@ export async function initiateSecretWinglePaymentAction(
 ): Promise<PaymentInitResult> {
   try {
     const session = await getSession();
-    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
+    if (!session?.userId || session.verified === false) return { ok: false, error: 'Unauthorized' };
     const userId = session.userId as string;
 
-    if (!targetPhone?.trim() || !message?.trim()) {
-      return { ok: false, error: 'Phone number and message are required' };
+    if (typeof targetPhone !== 'string' || !targetPhone.trim() || targetPhone.length > 40 ||
+        typeof message !== 'string' || !message.trim() || message.trim().length > 250) {
+      return { ok: false, error: 'Enter a mobile number and a message of up to 250 characters.' };
     }
 
     const { formatNotifyPhoneNumber } = await import('@/lib/notify');
@@ -130,16 +132,19 @@ export async function initiateSecretWinglePaymentAction(
     }
 
     const currentUser = await db.orm.public.User.where({ id: userId }).first();
-    if (!currentUser) return { ok: false, error: 'User not found' };
+    if (!currentUser || currentUser.suspended) return { ok: false, error: 'This account cannot send Secret Wingles.' };
 
     if (currentUser.phone && formatNotifyPhoneNumber(currentUser.phone) === formattedPhone) {
       return { ok: false, error: 'You cannot send a Secret Wingle to your own phone number!' };
     }
 
-    const AMOUNT_LKR = 50;
     const WINGITS_REWARD = 0;
 
-    const resolvedRecipientName = options?.recipientName?.trim() || options?.senderName?.trim() || null;
+    const name = options?.recipientName ?? options?.senderName;
+    if (name !== undefined && (typeof name !== 'string' || name.trim().length > 30)) {
+      return { ok: false, error: 'Enter a recipient name of up to 30 characters.' };
+    }
+    const resolvedRecipientName = name?.trim() || null;
 
     // Metadata saved in transactionReference during PENDING state
     const metadata = JSON.stringify({
@@ -151,7 +156,7 @@ export async function initiateSecretWinglePaymentAction(
 
     return await initializePayment({
       userId,
-      amountLKR: AMOUNT_LKR,
+      amountLKR: SECRET_WINGLE_CASH_LKR,
       wingitsCredited: WINGITS_REWARD,
       transactionReference: metadata,
       secretWingle: true,

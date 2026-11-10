@@ -93,7 +93,7 @@ export default async function PaymentSuccessPage({
             Secret Wingle Sent! 💌
           </h1>
           <p className="text-[15px] leading-relaxed text-ink-soft mb-6 max-w-sm mx-auto">
-            Your payment of <strong>Rs. 50</strong> was successful! Your anonymous SMS is on its way, and both of you have received bonus Wingits!
+            Dialog Genie confirmed your Secret Wingle payment. You can view the Secret Wingle in Sent History.
           </p>
           {typeof result.invoiceSent === 'boolean' && (
             <p className="text-sm leading-relaxed text-ink-soft mb-6">
@@ -103,32 +103,7 @@ export default async function PaymentSuccessPage({
             </p>
           )}
 
-          {/* Rewards Callout Card */}
-          <div className="rounded-2xl bg-white/60 dark:bg-white/5 border border-sand/80 p-4 mb-6 text-left space-y-3">
-            <div className="flex items-center justify-between text-xs sm:text-sm">
-              <span className="flex items-center gap-1.5 text-ink font-medium">
-                <CoinsIcon className="w-4 h-4 text-amber-500" />
-                <span>Your Reward</span>
-              </span>
-              <span className="font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full">
-                +20 Wingits Credited
-              </span>
-            </div>
-
-            <div className="h-px bg-sand/40 w-full" />
-
-            <div className="flex items-center justify-between text-xs sm:text-sm">
-              <span className="flex items-center gap-1.5 text-ink font-medium">
-                <span className="text-sm">🎁</span>
-                <span>Crush's Gift</span>
-              </span>
-              <span className="font-bold text-pink-600 dark:text-pink-400 bg-pink-500/10 px-2.5 py-0.5 rounded-full">
-                +20 Wingits Gifted
-              </span>
-            </div>
-
-            <div className="h-px bg-sand/40 w-full" />
-
+          <div className="rounded-2xl bg-white/60 dark:bg-white/5 border border-sand/80 p-4 mb-6 text-left">
             <div className="flex items-center justify-between text-xs">
               <span className="text-ink-muted">Transaction ID</span>
               <span className="font-mono text-ink-soft text-[11px] truncate max-w-[180px]">

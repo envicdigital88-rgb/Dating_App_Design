@@ -1,4 +1,4 @@
-import { WINGLE_SEND_COST, WINGLE_ACCEPT_COST } from '@/lib/wingle-pricing';
+import { WINGLE_SEND_COST, WINGLE_ACCEPT_COST, SECRET_WINGLE_SEND_COST, SECRET_WINGLE_CASH_LKR } from '@/lib/wingle-pricing';
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { PlusIcon } from 'lucide-react';
@@ -24,7 +24,7 @@ const landingFaqs = [
   },
   {
     q: "What is a Secret Wingle?",
-    a: "Secret Wingle is for the brave... and the curious. Have a crush on someone but don't want to reveal yourself straight away? Send them a Secret Wingle. They'll know that someone has a crush on them, but they won't know who sent it. For text chat, a regular Wingle between you must be accepted."
+    a: `Send a Secret Wingle for ${SECRET_WINGLE_SEND_COST} Wingits or Rs. ${SECRET_WINGLE_CASH_LKR} via Dialog Genie. The SMS keeps your name private. The recipient can see your profile in the app. For text chat, a regular Wingle between you must be accepted.`
   },
   {
     q: "Do I need a subscription?",

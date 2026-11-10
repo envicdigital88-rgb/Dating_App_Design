@@ -1,6 +1,7 @@
 import React from 'react';
 import { LockIcon, HeartIcon, SmartphoneIcon } from 'lucide-react';
 import { SectionHeading } from '../ui/Bits';
+import { SECRET_WINGLE_SEND_COST, SECRET_WINGLE_CASH_LKR } from '@/lib/wingle-pricing';
 
 export function SecretWingleSection() {
   return (
@@ -33,7 +34,7 @@ export function SecretWingleSection() {
             align="responsive"
             overline="Secret Wingle"
             title="Someone likes you. But who?"
-            body={<>Got a crush you can't confess to? Send them a Secret Wingle and let the mystery begin.<br /><br />They'll know someone has a crush on them, but your identity stays secret. If they join WingleMingle, they can respond, chat with their mystery admirer and exchange hints until one of you decides it's time to reveal the truth.</>}
+            body={<>Got a crush you can't confess to? Send them a Secret Wingle.<br /><br />The SMS keeps your name private. The recipient can see your profile in the app. A regular Wingle must be accepted before you can chat.</>}
           />
           
           <ul className="mt-8 space-y-4">
@@ -42,7 +43,7 @@ export function SecretWingleSection() {
               'Stay anonymous',
               'Chat, exchange hints & build the suspense',
               "Reveal yourself when you're ready",
-              '20 Wingits to send'
+              `${SECRET_WINGLE_SEND_COST} Wingits or Rs. ${SECRET_WINGLE_CASH_LKR} via Genie`
             ].map((point) => (
               <li key={point} className="flex gap-3 text-[15px] leading-relaxed text-ink-soft">
                 <HeartIcon className="mt-0.5 h-4 w-4 shrink-0 text-berry-500" />

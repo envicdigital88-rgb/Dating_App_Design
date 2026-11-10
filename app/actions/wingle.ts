@@ -3,10 +3,10 @@
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { Temporal } from 'temporal-polyfill'
-import { or } from '@prisma/orm-postgres/orm-client'
-import { formatNotifyPhoneNumber, getPhoneVariants, sendNotifySms } from '@/lib/notify'
+import { and, or } from '@prisma/orm-postgres/orm-client'
+import { buildSecretWingleSms, formatNotifyPhoneNumber, getPhoneVariants, sendNotifySms, validatePhoneNumber } from '@/lib/notify'
 
-import { getWingleGift, WINGLE_ACCEPT_COST, WINGLE_SEND_COST } from '@/lib/wingle-pricing'
+import { getWingleGift, SECRET_WINGLE_SEND_COST, WINGLE_ACCEPT_COST, WINGLE_SEND_COST } from '@/lib/wingle-pricing'
 import { lockWingitsWallet } from '@/lib/wingits-wallet'
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -217,116 +217,104 @@ export async function respondToWingle(wingleId: string, accept: boolean) {
   }
 }
 
-export async function sendSecretWingleAction(
-  targetPhone: string,
-  message: string,
-  options?: {
-    recipientName?: string;
-    senderName?: string;
-    isAnonymous?: boolean;
-    language?: 'en' | 'si' | 'ta';
-  }
-) {
+export async function sendSecretWingleAction(targetPhone: string, message: string, operationId: string, recipientName?: string) {
   try {
     const session = await getSession();
-    if (!session?.userId) return { ok: false, error: 'Unauthorized' };
-
-    if (!targetPhone?.trim() || !message?.trim()) {
-      return { ok: false, error: 'Phone number and message are required' };
+    if (typeof session?.userId !== 'string' || session.verified === false) {
+      return { ok: false as const, error: 'Please sign in to send a Secret Wingle.' };
+    }
+    if (typeof targetPhone !== 'string' || targetPhone.length > 40 || typeof message !== 'string' ||
+        !message.trim() || message.trim().length > 250 || typeof operationId !== 'string' ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(operationId) ||
+        (recipientName !== undefined && (typeof recipientName !== 'string' || recipientName.trim().length > 30))) {
+      return { ok: false as const, error: 'Enter a mobile number and a message of up to 250 characters.' };
     }
 
-    const formattedPhone = formatNotifyPhoneNumber(targetPhone);
-    if (!formattedPhone || formattedPhone.length < 9) {
-      return { ok: false, error: 'Please enter a valid mobile number' };
-    }
-
-    const currentUser = await db.orm.public.User.where({ id: session.userId as string }).first();
-    if (!currentUser) return { ok: false, error: 'User not found' };
-
-    if (currentUser.phone && formatNotifyPhoneNumber(currentUser.phone) === formattedPhone) {
-      return { ok: false, error: 'You cannot send a Secret Wingle to your own phone number!' };
-    }
-
-    const SECRET_WINGLE_COST = 20;
-    // Deduct Wingits and save SecretWingle atomically
-    const newSecretWingle = await db.transaction(async (tx) => {
-      await lockWingitsWallet(tx, currentUser.id);
-      const wallet = await tx.orm.public.User.select('wingitsBalance').first({ id: currentUser.id });
-      if (!wallet || wallet.wingitsBalance < SECRET_WINGLE_COST) {
-        throw new WingleError('Insufficient Wingits balance (20 Wingits required)', 'insufficient_wingits');
-      }
-      await tx.orm.public.User.where({ id: currentUser.id }).update({
-        wingitsBalance: wallet.wingitsBalance - SECRET_WINGLE_COST
-      });
-
-      await tx.orm.public.WingitsTransaction.create({
-        id: crypto.randomUUID(),
-        userId: currentUser.id,
-        amount: -SECRET_WINGLE_COST,
-        type: 'spend',
-        description: 'Sent a Secret Wingle'
-      });
-
-      return await tx.orm.public.SecretWingle.create({
-        senderId: currentUser.id,
-        targetPhone: formattedPhone,
-        message: message.trim()
-      });
-    });
-
-    // Send SMS via Notify.lk using structured multilingual template
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.winglemingle.com';
-    const { buildSecretWingleSms } = await import('@/lib/notify');
-    const smsText = buildSecretWingleSms({
-      recipientName: options?.recipientName || options?.senderName,
-      appUrl
-    });
-
-    const smsRes = await sendNotifySms({
-      to: formattedPhone,
-      message: smsText
-    });
-
-    // If the recipient is already registered, send in-app notification & push
-    try {
-      const phoneVariants = getPhoneVariants(formattedPhone);
-      const existingUser = await db.orm.public.User.where(u => u.phone.in(phoneVariants)).first();
-
-      if (existingUser && existingUser.id !== currentUser.id) {
-        await db.orm.public.Notification.create({
-          userId: existingUser.id,
-          type: 'secret_wingle',
-          title: 'Secret Wingle Received! 🤫',
-          body: 'Someone sent you a Secret Wingle. Check your Secret Wingles tab to see who it is!',
-          href: '/secret-wingles'
-        });
-
-        const { sendPushNotificationAction } = await import('@/app/actions/push');
-        await sendPushNotificationAction(existingUser.id, {
-          title: 'Secret Wingle Received! 🤫',
-          body: 'Someone sent you a Secret Wingle. Open the app to see it!',
-          url: '/secret-wingles'
-        });
-
-        const { pusherServer } = await import('@/lib/pusher');
-        await pusherServer.trigger(`private-user-${existingUser.id}`, 'secret-wingle-received', {});
-      }
-    } catch (pushErr) {
-      console.error('Error notifying existing recipient:', pushErr);
-    }
-
-    return {
-      ok: true,
-      data: {
-        ...newSecretWingle,
-        createdAt: newSecretWingle.createdAt.toString()
-      },
-      smsStatus: smsRes.status || (smsRes.simulated ? 'simulated' : 'sent')
+    const phone = validatePhoneNumber(targetPhone);
+    if (!phone.valid) return { ok: false as const, error: phone.error || 'Enter a valid mobile number.' };
+    const userId = session.userId;
+    const note = message.trim();
+    const id = 'secret-wingle:' + userId + ':' + operationId.toLowerCase();
+    const refundId = 'secret-wingle-refund:' + id;
+    const notice = {
+      type: 'secret_wingle',
+      title: 'Secret Wingle received',
+      body: 'Someone sent you a Secret Wingle. Open Secret Wingles to see it.',
+      href: '/secret-wingles',
     };
-  } catch (err: any) {
-    if (err instanceof WingleError) return { ok: false, error: err.message };
-    console.error('Send Secret Wingle error:', err);
-    return { ok: false, error: err?.message || 'Failed to send Secret Wingle' };
+    const saved = await db.transaction(async tx => {
+      if (!await lockWingitsWallet(tx, userId)) throw new WingleError('Account not found.');
+      const sender = await tx.orm.public.User.select('phone', 'suspended', 'wingitsBalance').first({ id: userId });
+      if (!sender || sender.suspended) throw new WingleError('This account cannot send Secret Wingles.');
+      if (sender.phone && formatNotifyPhoneNumber(sender.phone) === phone.formatted) {
+        throw new WingleError('You cannot send a Secret Wingle to your own phone number.');
+      }
+
+      const existing = await tx.orm.public.SecretWingle.first({ id });
+      if (existing) {
+        if (existing.targetPhone !== phone.formatted || existing.message !== note) {
+          throw new WingleError('This send was already used for a different Secret Wingle.');
+        }
+        return { duplicate: true, recipientId: null };
+      }
+      if (await tx.orm.public.WingitsTransaction.first({ id: refundId })) {
+        return { duplicate: false, refunded: true as const, recipientId: null };
+      }
+      if (sender.wingitsBalance < SECRET_WINGLE_SEND_COST) {
+        throw new WingleError('You need ' + SECRET_WINGLE_SEND_COST + ' Wingits to send a Secret Wingle.', 'insufficient_wingits');
+      }
+
+      const recipient = await tx.orm.public.User.select('id', 'suspended')
+        .where(u => u.phone.in(getPhoneVariants(phone.formatted))).first();
+      if (recipient) {
+        const blocked = await tx.orm.public.Block.where(b => or(
+          and(b.blockerId.eq(userId), b.blockedUserId.eq(recipient.id)),
+          and(b.blockerId.eq(recipient.id), b.blockedUserId.eq(userId))
+        )).first();
+        if (recipient.id === userId || recipient.suspended || blocked) throw new WingleError('This recipient is unavailable.');
+      }
+
+      await adjustWingleBalance(tx, userId, -SECRET_WINGLE_SEND_COST);
+      await tx.orm.public.SecretWingle.create({ id, senderId: userId, targetPhone: phone.formatted, message: note });
+      await tx.orm.public.WingitsTransaction.create({
+        id, userId, amount: -SECRET_WINGLE_SEND_COST, type: 'spend', description: 'Sent a Secret Wingle',
+      });
+      if (recipient) await tx.orm.public.Notification.create({ ...notice, userId: recipient.id });
+      return { duplicate: false, recipientId: recipient?.id ?? null };
+    });
+
+    if (saved.refunded) return { ok: false as const, refunded: true, error: 'SMS could not be sent. Your Wingits were returned.' };
+    if (saved.duplicate) return { ok: true as const, delivery: 'saved' as const };
+    const sms = await sendNotifySms({
+      to: phone.formatted,
+      message: buildSecretWingleSms({ recipientName: recipientName?.trim(), appUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://www.winglemingle.com' }),
+      signal: AbortSignal.timeout(10_000),
+    }).catch(() => ({ ok: false }));
+
+    if (saved.recipientId) {
+      const recipientId = saved.recipientId;
+      await Promise.allSettled([
+        import('@/lib/pusher').then(({ pusherServer }) => pusherServer.trigger('private-user-' + recipientId, 'secret-wingle-received', {})),
+        import('@/app/actions/push').then(({ sendPushNotificationAction }) => sendPushNotificationAction(recipientId, {
+          title: notice.title, body: notice.body, url: notice.href,
+        })),
+      ]);
+      return { ok: true as const, delivery: sms.ok ? 'sms' as const : 'in_app' as const };
+    }
+    if (sms.ok) return { ok: true as const, delivery: 'sms' as const };
+
+    await db.transaction(async tx => {
+      await adjustWingleBalance(tx, userId, SECRET_WINGLE_SEND_COST);
+      await tx.orm.public.SecretWingle.where({ id }).delete();
+      await tx.orm.public.WingitsTransaction.create({
+        id: refundId, userId, amount: SECRET_WINGLE_SEND_COST, type: 'refund', description: 'Secret Wingle SMS could not be sent',
+      });
+    });
+    return { ok: false as const, refunded: true, error: 'SMS could not be sent. Your Wingits were returned.' };
+  } catch (error) {
+    if (error instanceof WingleError) return { ok: false as const, error: error.message, reason: error.reason };
+    console.error('Could not complete Secret Wingle send.');
+    return { ok: false as const, error: 'Could not confirm this Secret Wingle. Please try again.' };
   }
 }
 

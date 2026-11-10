@@ -21,9 +21,10 @@ import { toast } from 'sonner';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getSentSecretWinglesAction } from '@/app/actions/wingle';
-import { initiateSecretWinglePaymentAction, checkAndVerifyPendingPaymentAction } from '@/app/actions/payments';
+import { getSentSecretWinglesAction, sendSecretWingleAction } from '@/app/actions/wingle';
+import { checkAndVerifyPendingPaymentAction, initiateSecretWinglePaymentAction } from '@/app/actions/payments';
 import { buildSecretWingleSms } from '@/lib/notify';
+import { SECRET_WINGLE_CASH_LKR, SECRET_WINGLE_SEND_COST } from '@/lib/wingle-pricing';
 
 interface SentSecretWingle {
   id: string;
@@ -44,6 +45,9 @@ export function SecretWingleTab() {
   const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'genie'>('wallet');
+  const sending = useRef(false);
+  const sendAttempt = useRef<{ phone: string; message: string; name: string; id: string } | null>(null);
 
   // Recipient / Crush name option
   const [recipientName, setRecipientName] = useState('');
@@ -52,6 +56,8 @@ export function SecretWingleTab() {
   const [pendingLedgerId, setPendingLedgerId] = useState<string | null>(null);
   const [pendingPaymentUrl, setPendingPaymentUrl] = useState<string | null>(null);
   const [isCheckingPayment, setIsCheckingPayment] = useState(false);
+  const [autoChecking, setAutoChecking] = useState(false);
+  const checkingPayment = useRef(false);
 
   const smsPreview = buildSecretWingleSms({
     recipientName,
@@ -60,8 +66,10 @@ export function SecretWingleTab() {
 
   const [sentList, setSentList] = useState<SentSecretWingle[]>([]);
   const [loadingSent, setLoadingSent] = useState(false);
+  const [sentVersion, setSentVersion] = useState(0);
 
-  const SECRET_WINGLE_PRICE_LKR = 50;
+  const balance = currentUser?.wingitsBalance ?? 0;
+  const payWithWallet = paymentMethod === 'wallet';
 
   const receivedWingles = secretWinglesReceived().filter(sw => !isBlocked(sw.senderId));
 
@@ -69,6 +77,8 @@ export function SecretWingleTab() {
 
   // Helper to verify and finalize pending payment
   const verifyAndCompletePending = async (ledgerId: string) => {
+    if (checkingPayment.current) return false;
+    checkingPayment.current = true;
     try {
       setIsCheckingPayment(true);
       const check = await checkAndVerifyPendingPaymentAction(ledgerId);
@@ -81,20 +91,18 @@ export function SecretWingleTab() {
           paymentPopupRef.current = null;
         }
 
-        if (typeof window !== 'undefined') {
+        try {
           localStorage.removeItem('wm_pending_secret_wingle_ledger');
           localStorage.removeItem('wm_pending_secret_wingle_url');
-        }
+        } catch {}
         setPendingLedgerId(null);
         setPendingPaymentUrl(null);
-        toast.success('🎉 Payment Confirmed! Secret Wingle dispatched successfully!');
+        toast.success('Secret Wingle payment confirmed.');
         setPhone('');
         setMessage('');
         setRecipientName('');
-        const sentRes = await getSentSecretWinglesAction();
-        if (sentRes.ok && sentRes.data) {
-          setSentList(sentRes.data as SentSecretWingle[]);
-        }
+        refreshAccountState();
+        setSentVersion(version => version + 1);
         setActiveTab('sent');
         return true;
       }
@@ -103,22 +111,24 @@ export function SecretWingleTab() {
       console.error('Check error:', err);
       return false;
     } finally {
+      checkingPayment.current = false;
       setIsCheckingPayment(false);
     }
   };
 
   // Restore pending ledger from localStorage if user reloaded/returned
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    try {
       const savedLedgerId = localStorage.getItem('wm_pending_secret_wingle_ledger');
       const savedUrl = localStorage.getItem('wm_pending_secret_wingle_url');
       if (savedLedgerId) {
+        setPaymentMethod('genie');
         setPendingLedgerId(savedLedgerId);
         setPendingPaymentUrl(savedUrl);
         // Immediately try checking
         verifyAndCompletePending(savedLedgerId);
       }
-    }
+    } catch {}
   }, []);
 
   // Window focus listener: when user switches back from Dialog tab, check automatically
@@ -135,21 +145,24 @@ export function SecretWingleTab() {
 
   // Load sent secret wingles
   useEffect(() => {
+    if (activeTab !== 'sent') return;
+    let active = true;
     async function loadSent() {
       setLoadingSent(true);
       try {
         const res = await getSentSecretWinglesAction();
-        if (res.ok && res.data) {
+        if (active && res.ok && res.data) {
           setSentList(res.data as SentSecretWingle[]);
         }
       } catch (e) {
         console.error('Failed to load sent secret wingles', e);
       } finally {
-        setLoadingSent(false);
+        if (active) setLoadingSent(false);
       }
     }
     loadSent();
-  }, []);
+    return () => { active = false; };
+  }, [activeTab, sentVersion]);
 
   // Auto-polling for payment confirmation while pendingLedgerId is active
   useEffect(() => {
@@ -158,18 +171,14 @@ export function SecretWingleTab() {
     let cancelled = false;
     let attempts = 0;
     const maxAttempts = 60; // Poll for 3 minutes
+    setAutoChecking(true);
 
     const interval = setInterval(async () => {
-      if (cancelled) return;
+      if (cancelled || document.hidden) return;
       attempts++;
       if (attempts > maxAttempts) {
         clearInterval(interval);
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('wm_pending_secret_wingle_ledger');
-          localStorage.removeItem('wm_pending_secret_wingle_url');
-        }
-        setPendingLedgerId(null);
-        setPendingPaymentUrl(null);
+        setAutoChecking(false);
         return;
       }
 
@@ -183,73 +192,70 @@ export function SecretWingleTab() {
   }, [pendingLedgerId]);
 
   const handleSendClick = async () => {
+    if (sending.current || pendingLedgerId) return;
     const cleanPhone = phone.trim();
-    if (!cleanPhone) {
-      toast.error('Please enter a recipient phone number');
-      return;
-    }
-    if (cleanPhone.replace(/[^0-9]/g, '').length < 9) {
-      toast.error('Please enter a valid mobile number (e.g. 077 123 4567)');
-      return;
-    }
-    if (!message.trim()) {
-      toast.error('Please enter a secret message');
-      return;
-    }
+    const cleanMessage = message.trim();
+    const name = recipientName.trim();
+    if (!cleanPhone || !cleanMessage) return;
 
+    sending.current = true;
     setLoading(true);
-
+    let checkout: Window | null = null;
     try {
-      const res = await initiateSecretWinglePaymentAction(cleanPhone, message, {
-        recipientName: recipientName.trim() || undefined
-      });
-
-      if (!res.ok) {
-        toast.error(res.error || 'Failed to connect to Genie payment gateway');
-        return;
-      }
-
-      if (!res.redirectUrl) {
-        toast.error('Failed to connect to Genie payment gateway');
-        return;
-      }
-
-      toast.info('Connecting to Genie payment gateway...');
-      if (res.ledgerId) {
-        setPendingLedgerId(res.ledgerId);
-        setPendingPaymentUrl(res.redirectUrl);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('wm_pending_secret_wingle_ledger', res.ledgerId);
-          localStorage.setItem('wm_pending_secret_wingle_url', res.redirectUrl);
+      if (!payWithWallet) {
+        checkout = window.open('', 'GeniePaymentWindow', 'width=550,height=750,left=250,top=100');
+        if (checkout) checkout.opener = null;
+        const result = await initiateSecretWinglePaymentAction(cleanPhone, cleanMessage, { recipientName: name || undefined });
+        if (!result.ok) {
+          checkout?.close();
+          toast.error(result.error);
+          return;
         }
-      }
-      const win = window.open(
-        res.redirectUrl,
-        'GeniePaymentWindow',
-        'width=550,height=750,left=250,top=100'
-      );
-      paymentPopupRef.current = win;
-      if (!win) {
-        window.location.href = res.redirectUrl;
-      }
-    } catch (err: any) {
-      const msg = err?.message || '';
-      if (
-        msg.includes('Server Action') ||
-        msg.includes('deployment') ||
-        msg.includes('Unexpected token') ||
-        msg.includes('not valid JSON')
-      ) {
-        toast.info('New deployment detected! Refreshing page...');
-        setTimeout(() => window.location.reload(), 500);
+
+        setPendingLedgerId(result.ledgerId);
+        setPendingPaymentUrl(result.redirectUrl);
+        try {
+          localStorage.setItem('wm_pending_secret_wingle_ledger', result.ledgerId);
+          localStorage.setItem('wm_pending_secret_wingle_url', result.redirectUrl);
+        } catch {}
+        if (checkout && !checkout.closed) {
+          paymentPopupRef.current = checkout;
+          checkout.location.assign(result.redirectUrl);
+        } else {
+          window.location.assign(result.redirectUrl);
+        }
         return;
       }
-      if (msg.includes('Minified React error') || msg.includes('react.dev/errors')) {
-        toast.error('Payment gateway is temporarily busy. Please try again shortly.');
+
+      let attempt = sendAttempt.current;
+      if (!attempt || attempt.phone !== cleanPhone || attempt.message !== cleanMessage || attempt.name !== name) {
+        attempt = { phone: cleanPhone, message: cleanMessage, name, id: crypto.randomUUID() };
+        sendAttempt.current = attempt;
+      }
+      const result = await sendSecretWingleAction(cleanPhone, cleanMessage, attempt.id, name || undefined);
+      if (!result.ok) {
+        if (result.refunded) sendAttempt.current = null;
+        refreshAccountState();
+        toast.error(result.error);
         return;
       }
-      toast.error(msg || 'An unexpected error occurred');
+
+      sendAttempt.current = null;
+      refreshAccountState();
+      if (result.delivery === 'in_app') toast.info('Secret Wingle delivered in the app. The SMS could not be sent.');
+      else if (result.delivery === 'saved') toast.info('Your Secret Wingle was already saved. Check Sent History.');
+      else toast.success('Secret Wingle sent.');
+      setPhone('');
+      setMessage('');
+      setRecipientName('');
+      setActiveTab('sent');
+    } catch {
+      checkout?.close();
+      toast.error(payWithWallet
+        ? 'Could not confirm this Secret Wingle. Try again with the same details.'
+        : 'Could not open Dialog Genie. If the checkout is pending, use Reopen Payment Window.');
     } finally {
+      sending.current = false;
       setLoading(false);
     }
   };
@@ -464,15 +470,30 @@ export function SecretWingleTab() {
 
                 {/* Submit Action */}
                 <div className="pt-2 space-y-3">
+                  <fieldset disabled={loading || !!pendingLedgerId} className="grid gap-2 sm:grid-cols-2">
+                    <legend className="mb-2 text-sm font-semibold text-ink">Payment method</legend>
+                    <label className={`flex cursor-pointer items-start gap-2 rounded-xl border p-3 text-sm ${payWithWallet ? 'border-berry-500' : 'border-sand'}`}>
+                      <input type="radio" name="secret-wingle-payment" checked={payWithWallet}
+                        onChange={() => setPaymentMethod('wallet')} className="mt-1 accent-[#ec4899]" />
+                      <span><strong className="block text-ink">Pay {SECRET_WINGLE_SEND_COST} Wingits</strong>
+                        <span className="text-xs text-ink-muted">Wallet balance {balance} Wingits</span></span>
+                    </label>
+                    <label className={`flex cursor-pointer items-start gap-2 rounded-xl border p-3 text-sm ${!payWithWallet ? 'border-berry-500' : 'border-sand'}`}>
+                      <input type="radio" name="secret-wingle-payment" checked={!payWithWallet}
+                        onChange={() => setPaymentMethod('genie')} className="mt-1 accent-[#ec4899]" />
+                      <span><strong className="block text-ink">Pay Rs. {SECRET_WINGLE_CASH_LKR}</strong>
+                        <span className="text-xs text-ink-muted">Dialog Genie checkout</span></span>
+                    </label>
+                  </fieldset>
                   {pendingLedgerId && (
                     <div className="bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-blue-500/10 border border-pink-500/25 rounded-2xl p-4 text-xs space-y-3 shadow-md backdrop-blur-sm">
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-sm text-gray-900 dark:text-white flex items-center gap-2">
                           <Clock className="w-4 h-4 text-pink-500 animate-spin" />
-                          <span>Dialog Genie Payment in Progress...</span>
+                          <span>Dialog Genie payment pending</span>
                         </span>
                         <span className="text-[10px] bg-pink-500/15 text-pink-600 dark:text-pink-300 font-semibold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                          Auto-Verifying
+                          {autoChecking ? 'Auto-verifying' : 'Check status'}
                         </span>
                       </div>
 
@@ -521,16 +542,17 @@ export function SecretWingleTab() {
                                 } catch {}
                                 paymentPopupRef.current = null;
                               }
-                              if (typeof window !== 'undefined') {
+                              try {
                                 localStorage.removeItem('wm_pending_secret_wingle_ledger');
                                 localStorage.removeItem('wm_pending_secret_wingle_url');
-                              }
+                              } catch {}
                               setPendingLedgerId(null);
                               setPendingPaymentUrl(null);
                             }}
+                            disabled={isCheckingPayment}
                             className="text-xs py-2 text-gray-400 hover:text-red-400"
                           >
-                            Cancel
+                            Dismiss
                           </Button>
                         </div>
                       </div>
@@ -541,12 +563,13 @@ export function SecretWingleTab() {
                     className="w-full py-4 text-base font-semibold flex items-center justify-center gap-2 shadow-lg shadow-[#ec4899]/25 bg-gradient-to-r from-[#ec4899] to-[#8b2fc9] text-white hover:opacity-95"
                     onClick={handleSendClick}
                     loading={loading}
-                    disabled={loading || !phone.trim() || !message.trim()}
+                    disabled={loading || !!pendingLedgerId || !phone.trim() || !message.trim() ||
+                      (payWithWallet && balance < SECRET_WINGLE_SEND_COST)}
                   >
                     <SendIcon className="w-4 h-4" />
-                    <span>Send Secret Wingle</span>
+                    <span>{payWithWallet ? 'Send Secret Wingle' : 'Continue to Dialog Genie'}</span>
                     <span className="text-xs px-2.5 py-0.5 rounded-full bg-white/20 font-bold ml-1">
-                      Rs. {SECRET_WINGLE_PRICE_LKR}
+                      {payWithWallet ? `${SECRET_WINGLE_SEND_COST} Wingits` : `Rs. ${SECRET_WINGLE_CASH_LKR}`}
                     </span>
                   </Button>
 
@@ -554,12 +577,18 @@ export function SecretWingleTab() {
                     <div className="flex items-center justify-between text-gray-700 dark:text-gray-300 font-medium">
                       <span className="flex items-center gap-1.5">
                         <Lock className="w-3.5 h-3.5 text-[#ec4899]" />
-                        <span>Genie Payment Gateway</span>
+                        <span>{payWithWallet ? 'Your Wingits balance' : 'Dialog Genie checkout'}</span>
                       </span>
-                      <span className="font-bold text-gray-900 dark:text-white">Rs. {SECRET_WINGLE_PRICE_LKR} LKR</span>
+                      <span className="font-bold text-gray-900 dark:text-white">
+                        {payWithWallet ? `${balance} Wingits` : `Rs. ${SECRET_WINGLE_CASH_LKR}`}
+                      </span>
                     </div>
                     <p className="text-[10px] text-gray-400 dark:text-gray-500 pt-0.5 leading-normal">
-                      🔒 An anonymous SMS is sent immediately after successful Genie payment.
+                      {!payWithWallet
+                        ? 'Your Secret Wingle will be sent after Dialog Genie confirms the payment.'
+                        : balance < SECRET_WINGLE_SEND_COST
+                          ? <Link href="/store" className="font-semibold text-berry-500 underline">Get more Wingits or select Dialog Genie</Link>
+                          : `${SECRET_WINGLE_SEND_COST} Wingits come out of your wallet when you send.`}
                     </p>
                   </div>
                 </div>
@@ -719,7 +748,7 @@ export function SecretWingleTab() {
                     No sent Secret Wingles yet
                   </h3>
                   <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-                    When you send a Secret Wingle, you can track whether it was delivered via SMS and unlocked right here.
+                    Secret Wingles you send appear here. You can see when the recipient opens one.
                   </p>
                   <Button
                     variant="outline"
@@ -749,7 +778,7 @@ export function SecretWingleTab() {
                           </span>
                         ) : (
                           <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-full">
-                            <Clock className="w-3 h-3" /> Delivered via SMS
+                            <Clock className="w-3 h-3" /> Sent
                           </span>
                         )}
                       </div>

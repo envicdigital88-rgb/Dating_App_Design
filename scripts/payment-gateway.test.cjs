@@ -86,6 +86,7 @@ function harness(options = {}) {
     cache.set(relativePath, module);
     const mockedRequire = specifier => {
       if (specifier === '@/lib/genie') return load('lib/genie.ts');
+      if (specifier === '@/lib/wingle-pricing') return load('lib/wingle-pricing.ts');
       if (Object.hasOwn(mocks, specifier)) return mocks[specifier];
       throw new Error(`Unexpected dependency in isolated payment test: ${specifier}`);
     };

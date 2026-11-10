@@ -8,6 +8,7 @@ import { useStore } from '@/lib/contexts/StoreContext';
 import { Button } from '@/components/ui/Button';
 import { Input, Label } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
+import { announceWingitsChatChange } from '@/lib/wingits-chat-events';
 
 export function WingitsChatDialog({
   conversationId,
@@ -62,7 +63,8 @@ export function WingitsChatDialog({
       }
       attempts.current.delete(key);
       try { sessionStorage.removeItem(key); } catch {}
-      if (!requesting) refreshAccountState();
+      announceWingitsChatChange(conversationId);
+      refreshAccountState();
       toast.success(requesting ? `Wingits request sent to ${friendName}.` : `Sent ${value} Wingits to ${friendName}.`);
       onClose();
     } catch {

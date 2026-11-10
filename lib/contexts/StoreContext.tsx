@@ -33,6 +33,7 @@ import { id as makeId } from '@/lib/utils/format';
 import type { getConversationsAction } from '@/app/actions/chat';
 import type { getUserStateAction } from '@/app/actions/user';
 import { isOnlineAt, PRESENCE_BATCH_SIZE, PRESENCE_INTERVAL_MS } from '@/lib/presence';
+import { announceWingitsChatChange } from '@/lib/wingits-chat-events';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -156,7 +157,6 @@ interface StoreValue {
   secretWinglesReceived: () => SecretWingle[];
   secretWinglesLoadState: LoadState;
   refreshSecretWingles: () => void;
-  sendSecretWingle: (targetPhone: string, message: string) => Promise<ServerResult<SecretWingle>>;
   // chat
   conversationsOf: () => Conversation[];
   conversationWith: (userId: string) => Conversation | undefined;
@@ -649,7 +649,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         fetchState();
       });
 
-      channel.bind('state-changed', () => {
+      channel.bind('state-changed', (event?: { wingitsConversationId?: string }) => {
+        if (event?.wingitsConversationId) announceWingitsChatChange(event.wingitsConversationId);
         fetchState();
       });
       channel.bind('secret-wingle-received', () => {
@@ -1933,24 +1934,6 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     [db.secretWingles, secretWinglesLoad?.userId, sessionId]
   );
 
-  const sendSecretWingle = useCallback<StoreValue['sendSecretWingle']>(
-    async (targetPhone, message) => {
-      const { sendSecretWingleAction } = await import('@/app/actions/wingle');
-      const res = await sendSecretWingleAction(targetPhone, message);
-      if (res.ok && res.data) {
-        setDb((d) => ({
-          ...d,
-          users: d.users.map((u) =>
-            u.id === sessionId ? { ...u, wingitsBalance: Math.max(0, u.wingitsBalance - 20) } : u
-          )
-        }));
-        return { ok: true, data: res.data as any };
-      }
-      return { ok: false, error: res.error || 'Failed to send' };
-    },
-    [sessionId]
-  );
-
   /* ---------------------------------------------------------------- chat */
 
   const conversationsOf = useCallback<StoreValue['conversationsOf']>(
@@ -2599,7 +2582,6 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     secretWinglesReceived,
     secretWinglesLoadState: secretWinglesLoad?.userId === sessionId ? secretWinglesLoad.state : 'loading',
     refreshSecretWingles,
-    sendSecretWingle,
     conversationsOf,
     conversationWith,
     conversationsLoadState: conversationsLoad?.userId === sessionId ? conversationsLoad.state : 'loading',

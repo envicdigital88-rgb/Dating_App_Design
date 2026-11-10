@@ -42,10 +42,10 @@ async function getChatMembers(tx: WalletTransaction, conversationId: string, use
   return { sender, friend, senderName: sender.isAnonymous ? sender.anonymousName || 'Anonymous' : sender.name };
 }
 
-async function publishWalletUpdate(userIds: string[]) {
+async function publishWalletUpdate(userIds: string[], conversationId: string) {
   try {
     const { pusherServer } = await import('@/lib/pusher');
-    await pusherServer.trigger(userIds.map(id => `private-user-${id}`), 'state-changed', {});
+    await pusherServer.trigger(userIds.map(id => `private-user-${id}`), 'state-changed', { wingitsConversationId: conversationId });
   } catch {
     console.warn('Could not refresh Wingits activity in real time.');
   }
@@ -122,7 +122,7 @@ async function shareWingits(mode: 'send' | 'request', conversationId: string, am
       return { friendId: friend.id };
     });
 
-    await publishWalletUpdate(mode === 'send' ? [userId, friendId] : [friendId]);
+    await publishWalletUpdate([userId, friendId], conversationId);
     return { ok: true as const };
   } catch (error) {
     if (error instanceof WingitsChatError) return { ok: false as const, error: error.message };

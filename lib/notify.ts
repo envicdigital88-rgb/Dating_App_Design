@@ -7,6 +7,7 @@ export interface SendSmsParams {
   to: string;
   message: string;
   senderId?: string;
+  signal?: AbortSignal;
 }
 
 export interface SendSmsResult {
@@ -227,7 +228,8 @@ export function getPhoneVariants(phone: string): string[] {
 export async function sendNotifySms({
   to,
   message,
-  senderId
+  senderId,
+  signal
 }: SendSmsParams): Promise<SendSmsResult> {
   const userId = process.env.NOTIFY_USER_ID?.trim();
   const apiKey = process.env.NOTIFY_API_KEY?.trim();
@@ -273,7 +275,8 @@ export async function sendNotifySms({
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
       },
-      body: params.toString()
+      body: params.toString(),
+      signal,
     });
 
     const resJson = await response.json();
