@@ -92,8 +92,10 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
-  // Exclude API routes, next data, Pusher requests, chrome extension schemes
+  // Keep admin pages and their navigation data off the service worker cache.
   if (
+    url.pathname === '/admin' ||
+    url.pathname.startsWith('/admin/') ||
     url.pathname.startsWith('/api/') ||
     url.pathname.startsWith('/_next/data/') ||
     url.hostname.includes('pusher.com') ||

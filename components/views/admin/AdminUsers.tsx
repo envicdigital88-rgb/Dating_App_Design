@@ -629,6 +629,21 @@ export function AdminUsers() {
         
         {detailUser &&
         <div className="space-y-4">
+            <form onSubmit={event => handleAddWingits(event, detailUser)} className="space-y-2 rounded-xl border border-berry-400/40 bg-berry-500/5 p-3.5">
+              <dl className="flex items-center justify-between gap-3 text-sm">
+                <dt className="font-semibold text-ink">Wingits balance</dt>
+                <dd className="font-semibold text-ink" aria-live="polite">{detailUser.wingitsBalance?.toString() ?? 'Unavailable'}</dd>
+              </dl>
+              <Label htmlFor="admin-wingits-amount">Wingits to add</Label>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Input id="admin-wingits-amount" type="number" inputMode="numeric" min={1}
+                  max={MAX_WINGITS} step={1} required placeholder="e.g. 20" value={wingitsAmount}
+                  disabled={addingWingits} onChange={event => setWingitsAmount(event.target.value)} />
+                <Button type="submit" loading={addingWingits} disabled={!validAmount} className="shrink-0">
+                  Add Wingits
+                </Button>
+              </div>
+            </form>
             <ul className="flex gap-2">
               {(detailUser.photos || []).map((photo) =>
             <li key={photo.id}>
@@ -740,7 +755,6 @@ export function AdminUsers() {
                 ['Location', detailUser.location || '—'],
                 ['Intention', detailUser.intention || '—'],
                 ['Unlimited access', detailUser.isUnlimited ? 'Active (Unlimited)' : 'No (Standard)'],
-                ['Wingits balance', detailUser.wingitsBalance?.toString() ?? 'Unavailable'],
                 ['Presence', presenceLabel(detailUser.lastActiveAt, !detailUser.suspended)],
                 ['Email / Account', detailUser.verified ? 'Verified' : 'Unverified'],
                 ['Selfie Verification', (detailUser.isUnlimited || detailUser.selfieStatus === 'approved') ? 'Selfie Verified' : detailUser.selfieStatus === 'pending' ? 'Pending Review' : 'Unverified'],
@@ -783,17 +797,6 @@ export function AdminUsers() {
                 </div>
               )}
             </dl>
-            <form onSubmit={event => handleAddWingits(event, detailUser)} className="rounded-xl border border-sand p-3.5">
-              <Label htmlFor="admin-wingits-amount">Wingits to add</Label>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <Input id="admin-wingits-amount" type="number" inputMode="numeric" min={1}
-                  max={MAX_WINGITS} step={1} required placeholder="e.g. 20" value={wingitsAmount}
-                  disabled={addingWingits} onChange={event => setWingitsAmount(event.target.value)} />
-                <Button type="submit" loading={addingWingits} disabled={!validAmount} className="shrink-0">
-                  Add Wingits
-                </Button>
-              </div>
-            </form>
           </div>
         }
       </Modal>
