@@ -77,7 +77,7 @@ export interface WingitsTransaction {
   id: string;
   userId: string;
   amount: number;
-  type: 'purchase' | 'spend' | 'refund' | 'bonus' | 'transfer_sent' | 'transfer_received';
+  type: 'purchase' | 'spend' | 'refund' | 'bonus' | 'transfer_sent' | 'transfer_received' | 'transfer_received_paid';
   description: string;
   createdAt: string;
 }

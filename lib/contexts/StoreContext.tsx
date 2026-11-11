@@ -35,6 +35,8 @@ import type { getUserStateAction } from '@/app/actions/user';
 import { isOnlineAt, PRESENCE_BATCH_SIZE, PRESENCE_INTERVAL_MS } from '@/lib/presence';
 import { announceWingitsChatChange } from '@/lib/wingits-chat-events';
 import { chatImageSendCost, chatImageViewCost, type ChatImageViewResult } from '@/lib/chat-images';
+import { markActivityReadAction } from '@/app/actions/activity';
+import { activityItemId, preserveActivityReadState, type ActivitySection } from '@/lib/activity-read-state';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -255,6 +257,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   const sessionIdRef = useRef<string | null>(null);
   sessionIdRef.current = sessionId;
   const refreshChatStateRef = useRef<(() => void) | null>(null);
+  const pendingActivityReads = useRef(new Set<string>());
   const secretWinglesRequest = useRef<string | null>(null);
   const peerRef = useRef<any>(null);
   const connsRef = useRef<{ [userId: string]: any }>({});
@@ -287,6 +290,38 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   }, []);
 
   const refreshAccountState = useCallback(() => refreshChatStateRef.current?.(), []);
+
+  const markActivityRead = useCallback((section: ActivitySection, notificationId?: string) => {
+    const userId = sessionId;
+    if (!userId) return;
+    const flag = section === 'notifications' ? 'read' : 'viewed';
+    const pendingKey = (id: string) => JSON.stringify([userId, section, id]);
+    const ids = new Set(db[section].flatMap(item => {
+      const id = activityItemId(section, item, userId);
+      const seen = 'read' in item ? item.read : item.viewed;
+      return id && !seen && !pendingActivityReads.current.has(pendingKey(id)) && (!notificationId || id === notificationId) ? [id] : [];
+    }));
+    if (ids.size === 0) return;
+
+    ids.forEach(id => pendingActivityReads.current.add(pendingKey(id)));
+    markActivityReadAction(section, [...ids]).then(result => {
+      if (!result.ok) throw new Error('Read status was not saved');
+      if (sessionIdRef.current !== userId) return;
+      setDb(d => ({
+        ...d,
+        [section]: d[section].map(item => {
+          const id = activityItemId(section, item, userId);
+          return id && ids.has(id) ? { ...item, [flag]: true } : item;
+        }),
+      }));
+    }).catch(error => {
+      if (sessionIdRef.current !== userId) return;
+      console.error('Activity read status error:', error);
+      toast.error('Could not save read status. Please try again.');
+    }).finally(() => {
+      ids.forEach(id => pendingActivityReads.current.delete(pendingKey(id)));
+    });
+  }, [sessionId, db.likes, db.heartBucket, db.passes, db.wingles, db.notifications]);
 
   const showNotification = useCallback((title: string, body: string, icon?: string) => {
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted' && document.hidden) {
@@ -562,7 +597,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
                 const age = m.createdAt ? now - new Date(m.createdAt).getTime() : 0;
                 return age < 60000;
               });
-              return [...remote, ...recentLocal];
+              return [...remote.map(item => preserveActivityReadState(item, local.find(previous => isSameItem(previous, item)))), ...recentLocal];
             };
 
             const newWingles = mergeItems(d.wingles, stateRes.data.wingles as any[]);
@@ -1602,13 +1637,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   );
 
   const markLikesViewed = useCallback<StoreValue['markLikesViewed']>(() => {
-    setDb((d) => ({
-      ...d,
-      likes: d.likes.map((l) => 
-        l.toUserId === sessionIdRef.current ? { ...l, viewed: true } : l
-      )
-    }));
-  }, []);
+    markActivityRead('likes');
+  }, [markActivityRead]);
 
   const heartBucketOf = useCallback<StoreValue['heartBucketOf']>(() => {
     if (!sessionId) return [];
@@ -1713,13 +1743,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   }, [db.heartBucket, sessionId]);
 
   const markHeartBucketViewed = useCallback<StoreValue['markHeartBucketViewed']>(() => {
-    setDb((d) => ({
-      ...d,
-      heartBucket: d.heartBucket.map((h) => 
-        h.userId === sessionIdRef.current ? { ...h, viewed: true } : h
-      )
-    }));
-  }, []);
+    markActivityRead('heartBucket');
+  }, [markActivityRead]);
 
   const unreadBrokenHeartCount = useCallback<StoreValue['unreadBrokenHeartCount']>(() => {
     if (!sessionId) return 0;
@@ -1727,13 +1752,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   }, [db.passes, sessionId]);
 
   const markBrokenHeartViewed = useCallback<StoreValue['markBrokenHeartViewed']>(() => {
-    setDb((d) => ({
-      ...d,
-      passes: d.passes.map((p) => 
-        p.userId === sessionIdRef.current ? { ...p, viewed: true } : p
-      )
-    }));
-  }, []);
+    markActivityRead('passes');
+  }, [markActivityRead]);
 
   /* ------------------------------------------------------------ wingles */
 
@@ -1907,16 +1927,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   );
 
   const markWinglesViewed = useCallback<StoreValue['markWinglesViewed']>(() => {
-    setDb((d) => ({
-      ...d,
-      wingles: d.wingles.map((w) => 
-        w.toUserId === sessionIdRef.current && w.status === 'pending' ? { ...w, viewed: true } : w
-      )
-    }));
-    import('@/app/actions/wingle').then(({ markWinglesViewedAction }) => {
-      markWinglesViewedAction().catch(console.error);
-    });
-  }, []);
+    markActivityRead('wingles');
+  }, [markActivityRead]);
 
   const wingleStatusWith = useCallback<StoreValue['wingleStatusWith']>(
     (userId) =>
@@ -2362,26 +2374,12 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   );
 
   const markNotificationRead = useCallback<StoreValue['markNotificationRead']>((notificationId) => {
-    setDb((d) => ({
-      ...d,
-      notifications: d.notifications.map((n) => n.id === notificationId ? { ...n, read: true } : n)
-    }));
-    import('@/app/actions/user').then(({ markNotificationReadAction }) => {
-      markNotificationReadAction(notificationId).catch(console.error);
-    });
-  }, []);
+    markActivityRead('notifications', notificationId);
+  }, [markActivityRead]);
 
   const markAllNotificationsRead = useCallback(() => {
-    setDb((d) => ({
-      ...d,
-      notifications: d.notifications.map((n) =>
-      n.userId === sessionIdRef.current ? { ...n, read: true } : n
-      )
-    }));
-    import('@/app/actions/user').then(({ markAllNotificationsReadAction }) => {
-      markAllNotificationsReadAction().catch(console.error);
-    });
-  }, []);
+    markActivityRead('notifications');
+  }, [markActivityRead]);
 
   /* --------------------------------------------------------------- admin */
 

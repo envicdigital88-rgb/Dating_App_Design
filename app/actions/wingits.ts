@@ -50,7 +50,7 @@ export async function spendWingitsAction(amount: number, description: string): P
 
 async function welcomeBonusDue(tx: WalletTransaction, userId: string, balance: number) {
   const adjustments = await tx.orm.public.WingitsTransaction.select('amount').where({ userId })
-    .where(t => t.type.in(['transfer_sent', 'transfer_received', 'admin_credit'])).all();
+    .where(t => t.type.in(['transfer_sent', 'transfer_received', 'transfer_received_paid', 'admin_credit'])).all();
   const netAdjustments = adjustments.reduce((total, adjustment) => total + adjustment.amount, 0);
   // Legacy wallets may already hold the welcome credits. Gifts and admin credits are separate.
   return Math.max(0, Math.min(20, 20 - (balance - netAdjustments), MAX_WINGITS - balance));

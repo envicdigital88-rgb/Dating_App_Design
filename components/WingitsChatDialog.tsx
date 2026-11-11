@@ -1,14 +1,15 @@
 'use client';
 
-import { useId, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
-import { requestWingitsFromChatMemberAction, sendWingitsToChatMemberAction } from '@/app/actions/wingits-chat';
+import { getWingitsSharingStatusAction, requestWingitsFromChatMemberAction, sendWingitsToChatMemberAction } from '@/app/actions/wingits-chat';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { Button } from '@/components/ui/Button';
 import { Input, Label } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { announceWingitsChatChange } from '@/lib/wingits-chat-events';
+import { WINGITS_SHARING_BALANCE_THRESHOLD, type WingitsSharingStatus } from '@/lib/wingits-sharing';
 
 export function WingitsChatDialog({
   conversationId,
@@ -28,10 +29,25 @@ export function WingitsChatDialog({
   const [amount, setAmount] = useState(initialAmount ? String(initialAmount) : '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [sharing, setSharing] = useState<WingitsSharingStatus | null>(null);
   const submitting = useRef(false);
   const attempts = useRef(new Map<string, string>());
   const inputId = useId();
   const requesting = mode === 'request';
+
+  useEffect(() => {
+    let active = true;
+    setSharing(null);
+    if (!currentUser || requesting) return;
+    getWingitsSharingStatusAction().then(result => {
+      if (!active) return;
+      if (result.ok) setSharing(result.data);
+      else setError(result.error);
+    }).catch(() => {
+      if (active) setError('Could not check your available Wingits. Please reopen this dialog.');
+    });
+    return () => { active = false; };
+  }, [currentUser?.id, currentUser?.wingitsBalance, requesting]);
 
   if (!currentUser) return null;
 
@@ -42,6 +58,17 @@ export function WingitsChatDialog({
     if (!/^\d+$/.test(amount.trim()) || !Number.isSafeInteger(value) || value < 1) {
       setError('Enter a positive whole number of Wingits.');
       return;
+    }
+    if (!requesting) {
+      if (!sharing) { setError('Please wait while we check your available Wingits.'); return; }
+      if (sharing.balance <= WINGITS_SHARING_BALANCE_THRESHOLD) {
+        setError(`Your balance must be greater than ${WINGITS_SHARING_BALANCE_THRESHOLD} Wingits to send Wingits.`);
+        return;
+      }
+      if (value > sharing.transferable) {
+        setError(`You can send up to ${sharing.transferable} purchased Wingits. Free and bonus Wingits cannot be shared.`);
+        return;
+      }
     }
 
     const key = `wm-wingits:${currentUser.id}:${conversationId}:${mode}:${value}`;
@@ -97,10 +124,14 @@ export function WingitsChatDialog({
           <p className="text-sm text-ink-muted">
             {requesting
               ? `${friendName} will get a notification and can choose how many Wingits to send.`
-              : `Your balance is ${currentUser.wingitsBalance} Wingits. The amount you send will come out of your balance.`}
+              : sharing ? `Your balance is ${sharing.balance} Wingits. ${sharing.transferable} Wingits are available to send.`
+              : 'Checking your available Wingits…'}
           </p>
+          {!requesting && <p className="text-xs text-ink-muted">
+            Your balance must be greater than {WINGITS_SHARING_BALANCE_THRESHOLD} Wingits. Free and bonus Wingits are for your own use and cannot be shared.
+          </p>}
           {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
-          <Button type="submit" block loading={busy} disabled={!amount.trim()}>
+          <Button type="submit" block loading={busy} disabled={!amount.trim() || (!requesting && (!sharing || sharing.balance <= WINGITS_SHARING_BALANCE_THRESHOLD || sharing.transferable < 1))}>
             {requesting ? 'Request Wingits' : 'Send Wingits'}
           </Button>
         </form>

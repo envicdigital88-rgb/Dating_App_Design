@@ -5,8 +5,32 @@ import { Temporal } from 'temporal-polyfill';
 import { db } from '@/lib/db';
 import { getSession } from '@/lib/session';
 import { lockWingitsWallet, MAX_WINGITS, type WalletTransaction } from '@/lib/wingits-wallet';
+import { PAID_WINGITS_RECEIVED_TYPE, transferableWingits, WINGITS_SHARING_BALANCE_THRESHOLD } from '@/lib/wingits-sharing';
 
 class WingitsChatError extends Error {}
+
+async function sharingStatus(tx: WalletTransaction, userId: string, balance: number) {
+  const transactions = await tx.orm.public.WingitsTransaction.select('type', 'amount')
+    .where({ userId }).orderBy([t => t.createdAt.asc(), t => t.id.asc()]).all();
+  return { balance, transferable: transferableWingits(balance, transactions) };
+}
+
+export async function getWingitsSharingStatusAction() {
+  try {
+    const session = await getSession();
+    if (typeof session?.userId !== 'string' || session.verified === false) return { ok: false as const, error: 'Please sign in to share Wingits.' };
+    const userId = session.userId;
+    const data = await db.transaction(async tx => {
+      if (!await lockWingitsWallet(tx, userId)) throw new WingitsChatError('Account not found.');
+      const user = await tx.orm.public.User.select('wingitsBalance').first({ id: userId });
+      if (!user) throw new WingitsChatError('Account not found.');
+      return sharingStatus(tx, userId, user.wingitsBalance);
+    });
+    return { ok: true as const, data };
+  } catch {
+    return { ok: false as const, error: 'Could not check your available Wingits. Please reopen this dialog.' };
+  }
+}
 
 async function getChatMembers(tx: WalletTransaction, conversationId: string, userId: string) {
   const unavailable = 'Wingits can only be shared in an active chat.';
@@ -102,18 +126,28 @@ async function shareWingits(mode: 'send' | 'request', conversationId: string, am
         return { friendId: friend.id };
       }
       if (sender.wingitsBalance < amount) throw new WingitsChatError('You do not have enough Wingits.');
+      if (sender.wingitsBalance <= WINGITS_SHARING_BALANCE_THRESHOLD) {
+        throw new WingitsChatError(`Your balance must be greater than ${WINGITS_SHARING_BALANCE_THRESHOLD} Wingits to send Wingits.`);
+      }
+      const status = await sharingStatus(tx, userId, sender.wingitsBalance);
+      if (amount > status.transferable) {
+        throw new WingitsChatError(`You can send up to ${status.transferable} purchased Wingits. Free and bonus Wingits cannot be shared.`);
+      }
       if (friend.wingitsBalance > MAX_WINGITS - amount) {
         throw new WingitsChatError('This amount would exceed your friend’s wallet limit.');
       }
 
       const friendName = friend.isAnonymous ? friend.anonymousName || 'Anonymous' : friend.name;
+      const transferredAt = Temporal.Now.instant();
       await tx.orm.public.User.where({ id: userId }).update({ wingitsBalance: sender.wingitsBalance - amount });
       await tx.orm.public.User.where({ id: friend.id }).update({ wingitsBalance: friend.wingitsBalance + amount });
       await tx.orm.public.WingitsTransaction.create({
         id: debitId, userId, amount: -amount, type: 'transfer_sent', description: `Sent Wingits to ${friendName}`,
+        createdAt: transferredAt,
       });
       await tx.orm.public.WingitsTransaction.create({
-        id: creditId, userId: friend.id, amount, type: 'transfer_received', description: `Received Wingits from ${senderName}`,
+        id: creditId, userId: friend.id, amount, type: PAID_WINGITS_RECEIVED_TYPE, description: `Received Wingits from ${senderName}`,
+        createdAt: transferredAt,
       });
       await tx.orm.public.Notification.create({
         userId: friend.id, type: 'wingits_received', href,
