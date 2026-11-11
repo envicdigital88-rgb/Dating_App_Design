@@ -20,8 +20,6 @@ import {
   CornerUpLeftIcon,
   InfoIcon,
   XIcon,
-  EyeIcon,
-  EyeOffIcon,
   CropIcon,
   StickerIcon,
   TypeIcon,
@@ -34,6 +32,8 @@ import { Modal } from '@/components/ui/Modal';
 import { ReportDialog } from '@/components/ReportDialog';
 import { InsufficientWingitsModal } from '@/components/InsufficientWingitsModal';
 import { WingitsChatDialog } from '@/components/WingitsChatDialog';
+import { ChatImage } from '@/components/ChatImage';
+import { CHAT_IMAGE_SEND_COST } from '@/lib/chat-images';
 import { useWingitsChatTimeline, WingitsChatNotice } from '@/components/WingitsChatHistory';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { dayLabel, mingleTime } from '@/lib/utils/format';
@@ -64,7 +64,6 @@ export function Chat() {
     hasReported,
     typingIn,
     conversationsOf,
-    viewImage,
     isHydrated,
     conversationsLoadState,
     refreshAccountState,
@@ -81,7 +80,6 @@ export function Chat() {
   // New WhatsApp Features State
   const [selectedMingles, setSelectedMingles] = useState<string[]>([]);
   const [replyToId, setReplyToId] = useState<string | null>(null);
-  const [lightboxMingleId, setLightboxMingleId] = useState<string | null>(null);
   const [activeMingleId, setActiveMingleId] = useState<string | null>(null);
   const [forwardModalOpen, setForwardModalOpen] = useState(false);
   const [infoModalMingle, setInfoModalMingle] = useState<string | null>(null);
@@ -204,7 +202,7 @@ export function Chat() {
   const submitPreview = async () => {
     if (imagePreviews.length === 0 || !conversation) return;
     
-    const imageCost = currentUser?.isUnlimited ? 0 : imagePreviews.length * 3;
+    const imageCost = currentUser?.isUnlimited ? 0 : imagePreviews.length * CHAT_IMAGE_SEND_COST;
     if ((currentUser?.wingitsBalance ?? 0) < imageCost) {
       setShowTopup(true);
       return;
@@ -416,60 +414,7 @@ export function Chat() {
 
                         {mingle.imageUrl && (
                           <div className="relative">
-                            {mingle.viewOnce || (!mine && mingle.imageViewCount > 0) || !mine ? (
-                              <div
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (!mine) {
-                                    if (mingle.deletedFor?.includes(currentUser.id)) return;
-                                    
-                                    if (mingle.viewOnce && mingle.imageViewCount > 0) {
-                                      toast.error("Image Expired");
-                                      return;
-                                    }
-                                    
-                                    if (!mingle.viewOnce && mingle.imageViewCount >= 1) {
-                                      if (confirm('Spend 4 Wingits to view this image again?')) {
-                                        viewImage(mingle.id).then(res => {
-                                          if (res.ok) setLightboxMingleId(mingle.id);
-                                          else toast.error(res.error);
-                                        });
-                                      }
-                                      return;
-                                    }
-                                    
-                                    viewImage(mingle.id).then(res => {
-                                      if (res.ok) {
-                                        setLightboxMingleId(mingle.id);
-                                        if (mingle.viewOnce) {
-                                          deleteMingle(mingle.id, 'me');
-                                        }
-                                      }
-                                    });
-                                  } else {
-                                    setLightboxMingleId(mingle.id);
-                                  }
-                                }}
-                                className={`flex items-center gap-2 p-3 bg-black/20 rounded-xl cursor-pointer ${mingle.body ? 'mb-2' : ''}`}
-                              >
-                                {mine || mingle.deletedFor?.includes(currentUser.id) ? <EyeOffIcon className="h-5 w-5 opacity-50" /> : <EyeIcon className="h-5 w-5" />}
-                                <span className="font-semibold italic opacity-90 text-[14px]">
-                                  {(mine && mingle.deletedFor?.length) || (!mine && mingle.deletedFor?.includes(currentUser.id)) ? 'Opened' : 
-                                   (mingle.viewOnce && mingle.imageViewCount > 0 ? 'Image Expired' : 
-                                   (!mingle.viewOnce && mingle.imageViewCount >= 1 ? 'Tap to View (4 Wingits)' : 'Tap to View (Free)'))}
-                                </span>
-                              </div>
-                            ) : (
-                              <img
-                                src={mingle.imageUrl}
-                                alt="Shared photo"
-                                onClick={(e) => { 
-                                  e.stopPropagation(); 
-                                  setLightboxMingleId(mingle.id);
-                                }}
-                                className={`max-h-72 max-w-full object-contain rounded-2xl cursor-zoom-in ${mingle.body ? 'mb-2' : ''}`} 
-                              />
-                            )}
+                            <ChatImage mingle={mingle} />
                             
                             {!mingle.body && (
                               <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 backdrop-blur-sm">
@@ -762,31 +707,6 @@ export function Chat() {
         </div>
       </Modal>
 
-      {/* Lightbox Modal */}
-      {lightboxMingleId && (() => {
-        const m = mingles.find(msg => msg.id === lightboxMingleId);
-        if (!m || !m.imageUrl) return null;
-        return (
-          <div 
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
-            onClick={() => {
-              setLightboxMingleId(null);
-            }}
-          >
-            <button 
-              className="absolute top-4 right-4 text-white p-2"
-              onClick={(e) => {
-                e.stopPropagation();
-                setLightboxMingleId(null);
-              }}
-            >
-              <XIcon className="h-6 w-6" />
-            </button>
-            <img src={m.imageUrl} className="max-w-full max-h-full object-contain" alt="Fullscreen" />
-          </div>
-        );
-      })()}
-
       {/* Existing Modals */}
       <Modal
         open={menuOpen}
@@ -894,6 +814,10 @@ export function Chat() {
               <div className="flex items-center gap-4 text-white/60 ml-2">
                 <button 
                   onClick={() => setViewOnce(!viewOnce)} 
+                  type="button"
+                  aria-label="Send as one-view photo"
+                  aria-pressed={viewOnce}
+                  title="One-view photo: recipient pays 4 Wingits to open once"
                   className={`flex items-center justify-center transition-colors ${viewOnce ? 'text-[#53bdeb]' : 'text-white/60'}`}
                 >
                   <div className="w-5 h-5 rounded-full border-[1.5px] border-current flex items-center justify-center text-[10px] font-bold">1</div>
@@ -949,13 +873,13 @@ export function Chat() {
           open
           onClose={() => setShowTopup(false)}
           currentBalance={currentUser.wingitsBalance}
-          requiredAmount={imagePreviews.length * 3}
+          requiredAmount={imagePreviews.length * CHAT_IMAGE_SEND_COST}
           onRequestWingits={() => {
             setShowTopup(false);
             setWingitsDialog({
               conversationId: conversation.id,
               mode: 'request',
-              amount: Math.max(1, imagePreviews.length * 3 - currentUser.wingitsBalance),
+              amount: Math.max(1, imagePreviews.length * CHAT_IMAGE_SEND_COST - currentUser.wingitsBalance),
             });
           }}
         />

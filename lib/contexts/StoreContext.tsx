@@ -34,6 +34,7 @@ import type { getConversationsAction } from '@/app/actions/chat';
 import type { getUserStateAction } from '@/app/actions/user';
 import { isOnlineAt, PRESENCE_BATCH_SIZE, PRESENCE_INTERVAL_MS } from '@/lib/presence';
 import { announceWingitsChatChange } from '@/lib/wingits-chat-events';
+import { CHAT_IMAGE_SEND_COST, chatImageViewCost, type ChatImageViewResult } from '@/lib/chat-images';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -166,7 +167,7 @@ interface StoreValue {
   sendMingle: (conversationId: string, body: string, imageUrl?: string, replyToId?: string | null, forwarded?: boolean, viewOnce?: boolean) => ServerResult<Mingle>;
   markConversationRead: (conversationId: string) => void;
   deleteMingle: (mingleId: string, type: 'me' | 'everyone') => void;
-  viewImage: (mingleId: string) => Promise<{ok: boolean, error?: string, data?: { imageViewCount: number }}>;
+  viewImage: (mingleId: string) => Promise<ChatImageViewResult>;
   reactToMingle: (mingleId: string, emoji: string) => void;
   forwardMingles: (mingleIds: string[], conversationIds: string[]) => void;
   typingIn: string | null;
@@ -2000,7 +2001,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         ),
         users: d.users.map((u) => {
           if (u.id === currentUser.id && imageUrl && !u.isUnlimited) {
-            return { ...u, wingitsBalance: Math.max(0, u.wingitsBalance - 3) };
+            return { ...u, wingitsBalance: Math.max(0, u.wingitsBalance - CHAT_IMAGE_SEND_COST) };
           }
           return u;
         })
@@ -2123,8 +2124,10 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
   }, [db.mingles, db.conversations]);
 
   const viewImage = useCallback<StoreValue['viewImage']>(async (mingleId) => {
+    const mingle = db.mingles.find(m => m.id === mingleId);
+    if (!mingle || !currentUser) return { ok: false, error: 'Image is unavailable' };
     const { viewImageAction } = await import('@/app/actions/chat');
-    const res = await viewImageAction(mingleId);
+    const res = await viewImageAction(mingleId, mingle.senderId === currentUser.id ? 0 : chatImageViewCost(mingle));
     
     if (res.ok && res.data) {
       setDb((d) => ({
@@ -2132,17 +2135,14 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         mingles: d.mingles.map((m) =>
           m.id === mingleId ? { ...m, imageViewCount: res.data!.imageViewCount } : m
         ),
-        users: d.users.map((u) => {
-          if (u.id === currentUser?.id && !u.isUnlimited && res.data!.imageViewCount > 1) {
-            return { ...u, wingitsBalance: Math.max(0, u.wingitsBalance - 4) };
-          }
-          return u;
-        })
+        users: d.users.map(u => u.id === currentUser.id
+          ? { ...u, wingitsBalance: res.data.remainingBalance } : u)
       }));
-      return { ok: true, data: { imageViewCount: res.data.imageViewCount } };
+      return res;
     }
-    return { ok: false, error: res.error || 'Failed to view image' };
-  }, [currentUser]);
+    refreshAccountState();
+    return res;
+  }, [currentUser, db.mingles, refreshAccountState]);
 
   const reactToMingle = useCallback<StoreValue['reactToMingle']>((mingleId, emoji) => {
     if (!sessionIdRef.current) return;

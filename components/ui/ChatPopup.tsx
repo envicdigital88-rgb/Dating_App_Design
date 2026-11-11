@@ -10,6 +10,7 @@ import { dayLabel, mingleTime } from '@/lib/utils/format';
 import { presenceLabel } from '@/lib/presence';
 import { toast } from 'sonner';
 import { WingitsChatDialog } from '@/components/WingitsChatDialog';
+import { ChatImage } from '@/components/ChatImage';
 import { useWingitsChatTimeline, WingitsChatNotice } from '@/components/WingitsChatHistory';
 
 export function ChatPopup() {
@@ -164,7 +165,7 @@ export function ChatPopup() {
                 <div className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'}`}>
                   <div className={`relative max-w-[85%] rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed ${isMe ? 'bg-berry-500 text-white rounded-tr-sm' : 'bg-cream-deep text-ink border border-sand/40 rounded-tl-sm shadow-sm'}`}>
                     {mingle.imageUrl && (
-                      <img src={mingle.imageUrl} alt="" className="mb-2 max-h-48 w-full rounded-xl object-cover" />
+                      <ChatImage mingle={mingle} />
                     )}
                     {mingle.body && <p className="whitespace-pre-wrap break-words">{mingle.body}</p>}
                     <span className={`mt-1 flex items-center gap-1 text-[10px] ${isMe ? 'justify-end text-white/70' : 'justify-start text-ink-muted'}`}>
