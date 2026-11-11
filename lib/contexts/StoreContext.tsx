@@ -34,7 +34,7 @@ import type { getConversationsAction } from '@/app/actions/chat';
 import type { getUserStateAction } from '@/app/actions/user';
 import { isOnlineAt, PRESENCE_BATCH_SIZE, PRESENCE_INTERVAL_MS } from '@/lib/presence';
 import { announceWingitsChatChange } from '@/lib/wingits-chat-events';
-import { CHAT_IMAGE_SEND_COST, chatImageViewCost, type ChatImageViewResult } from '@/lib/chat-images';
+import { chatImageSendCost, chatImageViewCost, type ChatImageViewResult } from '@/lib/chat-images';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -1969,6 +1969,10 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     (conversationId, body, imageUrl, replyToId, forwarded, viewOnce) => {
       if (!currentUser || !entitlements) return { ok: false, error: 'Sign in first.' };
       if (!body.trim() && !imageUrl) return { ok: false, error: 'Write something first.', reason: 'invalid' };
+      const imageCost = imageUrl ? chatImageSendCost(currentUser) : 0;
+      if (imageUrl && currentUser.wingitsBalance < imageCost) {
+        return { ok: false, error: `You need ${imageCost} Wingits to send a photo.`, reason: 'insufficient_wingits' };
+      }
 
       const conversation = db.conversations.find(c =>
         c.id === conversationId && c.userIds.includes(currentUser.id));
@@ -2000,8 +2004,8 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         c.id === conversationId ? { ...c, lastMingleAt: mingle.createdAt } : c
         ),
         users: d.users.map((u) => {
-          if (u.id === currentUser.id && imageUrl && !u.isUnlimited) {
-            return { ...u, wingitsBalance: Math.max(0, u.wingitsBalance - CHAT_IMAGE_SEND_COST) };
+          if (u.id === currentUser.id && imageUrl) {
+            return { ...u, wingitsBalance: Math.max(0, u.wingitsBalance - chatImageSendCost(u)) };
           }
           return u;
         })
@@ -2020,10 +2024,15 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
         }
         if (sessionIdRef.current !== currentUser.id) return;
         const confirmed = res.data as unknown as Mingle;
+        const remainingBalance = res.remainingBalance;
         setDb(d => ({
           ...d,
           mingles: d.mingles.map(m => m.id === mingleId ? confirmed : m),
+          users: typeof remainingBalance === 'number'
+            ? d.users.map(u => u.id === currentUser.id ? { ...u, wingitsBalance: remainingBalance } : u)
+            : d.users,
         }));
+        if (imageUrl) refreshChatStateRef.current?.();
         if (otherId) sendPeerEvent(otherId, { type: 'mingle', mingle: confirmed });
       }).catch(() => handleFailure('Failed to send message.'));
 
@@ -2127,7 +2136,7 @@ export function StoreProvider({ children }: {children: React.ReactNode;}) {
     const mingle = db.mingles.find(m => m.id === mingleId);
     if (!mingle || !currentUser) return { ok: false, error: 'Image is unavailable' };
     const { viewImageAction } = await import('@/app/actions/chat');
-    const res = await viewImageAction(mingleId, mingle.senderId === currentUser.id ? 0 : chatImageViewCost(mingle));
+    const res = await viewImageAction(mingleId, mingle.senderId === currentUser.id ? 0 : chatImageViewCost(mingle, currentUser));
     
     if (res.ok && res.data) {
       setDb((d) => ({

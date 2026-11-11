@@ -5,7 +5,9 @@ import { getSession } from '@/lib/session'
 import { Temporal } from 'temporal-polyfill'
 import { and, or } from '@prisma/orm-postgres/orm-client'
 import { lockWingitsWallet } from '@/lib/wingits-wallet'
-import { CHAT_IMAGE_SEND_COST, chatImageViewCost, type ChatImageViewResult } from '@/lib/chat-images'
+import { chatImageSendCost, chatImageViewCost, type ChatImageViewResult } from '@/lib/chat-images'
+
+class ImageSendError extends Error {}
 
 export async function sendMingleAction(conversationId: string, body: string, imageUrl?: string, replyToId?: string | null, forwarded?: boolean, viewOnce?: boolean, clientId?: string) {
   try {
@@ -55,31 +57,33 @@ export async function sendMingleAction(conversationId: string, body: string, ima
     }
     if (clientId) data.id = clientId;
 
-    const mingle = await db.transaction(async (tx) => {
+    const { mingle, remainingBalance } = await db.transaction(async (tx) => {
+      let remainingBalance: number | undefined;
       if (imageUrl) {
-        await lockWingitsWallet(tx, senderId);
-        const sender = await tx.orm.public.User.where({ id: senderId }).first();
-        if (sender && !sender.isUnlimited) {
-          if (sender.wingitsBalance < CHAT_IMAGE_SEND_COST) {
-            throw new Error('Not enough Wingits to send image');
-          }
-          await tx.orm.public.User.where({ id: senderId }).update({
-            wingitsBalance: sender.wingitsBalance - CHAT_IMAGE_SEND_COST
-          });
+        if (!await lockWingitsWallet(tx, senderId)) throw new ImageSendError('Account not found');
+        const sender = await tx.orm.public.User.select('wingitsBalance', 'isUnlimited').first({ id: senderId });
+        if (!sender) throw new ImageSendError('Account not found');
+        const cost = chatImageSendCost(sender);
+        if (sender.wingitsBalance < cost) {
+          throw new ImageSendError(`You need ${cost} Wingits to send a photo.`);
+        }
+        remainingBalance = sender.wingitsBalance - cost;
+        if (cost > 0) {
+          await tx.orm.public.User.where({ id: senderId }).update({ wingitsBalance: remainingBalance });
           await tx.orm.public.WingitsTransaction.create({
             userId: senderId,
-            amount: -CHAT_IMAGE_SEND_COST,
+            amount: -cost,
             type: 'spend',
             description: 'Sent an image in chat'
           });
         }
       }
-      return await tx.orm.public.Mingle.create(data);
+      const mingle = await tx.orm.public.Mingle.create(data);
+      await tx.orm.public.Conversation.where({ id: conversationId }).update({
+        lastMingleAt: Temporal.Now.instant()
+      });
+      return { mingle, remainingBalance };
     });
-
-    await db.orm.public.Conversation.where({ id: conversationId }).update({
-      lastMingleAt: Temporal.Now.instant()
-    })
 
     const formattedMingle = {
       ...mingle,
@@ -90,10 +94,14 @@ export async function sendMingleAction(conversationId: string, body: string, ima
     };
 
     if (otherId) {
-      const { pusherServer } = await import('@/lib/pusher');
-      // Omit imageUrl from pusher payload to avoid exceeding the 10KB limit
-      const { imageUrl: _discard, ...pusherPayload } = formattedMingle;
-      await pusherServer.trigger(`private-user-${otherId}`, 'new-mingle', pusherPayload).catch(console.error);
+      try {
+        const { pusherServer } = await import('@/lib/pusher');
+        // Omit imageUrl from pusher payload to avoid exceeding the 10KB limit
+        const { imageUrl: _discard, ...pusherPayload } = formattedMingle;
+        await pusherServer.trigger(`private-user-${otherId}`, 'new-mingle', pusherPayload);
+      } catch (err) {
+        console.error('Message notification error:', err);
+      }
       
       try {
         const { sendPushNotificationAction } = await import('@/app/actions/push');
@@ -109,9 +117,11 @@ export async function sendMingleAction(conversationId: string, body: string, ima
 
     return { 
       ok: true, 
-      data: formattedMingle
+      data: formattedMingle,
+      remainingBalance,
     }
   } catch (err) {
+    if (err instanceof ImageSendError) return { ok: false, error: err.message };
     console.error('sendMingleAction error:', err)
     return { ok: false, error: 'Failed to send message' }
   }
@@ -313,7 +323,7 @@ export async function viewImageAction(mingleId: string, expectedCost: number): P
       if (!conv || (conv.userId1 !== userId && conv.userId2 !== userId)) {
         throw new ImageViewError('Image is unavailable');
       }
-      const user = await tx.orm.public.User.select('wingitsBalance').first({ id: userId });
+      const user = await tx.orm.public.User.select('wingitsBalance', 'isUnlimited').first({ id: userId });
       if (!user) throw new ImageViewError('Account not found');
 
       if (mingle.senderId === userId) {
@@ -322,9 +332,9 @@ export async function viewImageAction(mingleId: string, expectedCost: number): P
       }
       if (mingle.viewOnce && mingle.imageViewCount > 0) throw new ImageViewError('Image has expired');
 
-      const cost = chatImageViewCost(mingle);
+      const cost = chatImageViewCost(mingle, user);
       if (cost !== expectedCost) {
-        throw new ImageViewError('This photo now costs 4 Wingits to open. Please try again.', 'price_changed');
+        throw new ImageViewError('The photo viewing cost has changed. Please try again.', 'price_changed');
       }
       if (user.wingitsBalance < cost) {
         throw new ImageViewError('You need 4 Wingits to view this photo.', 'insufficient_wingits');

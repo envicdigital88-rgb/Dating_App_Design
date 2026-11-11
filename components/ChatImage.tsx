@@ -16,7 +16,7 @@ export function ChatImage({ mingle }: { mingle: Mingle }) {
   const mine = mingle.senderId === currentUser?.id;
   const expired = !mine && (mingle.deletedFor?.includes(currentUser?.id ?? '') ||
     (mingle.viewOnce && mingle.imageViewCount > 0));
-  const cost = mine ? 0 : chatImageViewCost(mingle);
+  const cost = mine ? 0 : chatImageViewCost(mingle, currentUser);
 
   useEffect(() => {
     if (!openedImage) return;
@@ -68,7 +68,7 @@ export function ChatImage({ mingle }: { mingle: Mingle }) {
             {expired ? <EyeOffIcon className="h-5 w-5 shrink-0" /> : <EyeIcon className="h-5 w-5 shrink-0" />}
             <span className="text-[14px] font-semibold">
               {opening ? 'Opening…' : mine ? `One-view photo${mingle.imageViewCount > 0 ? ' (Opened)' : ''}`
-                : expired ? 'Opened' : mingle.viewOnce ? `Open once (${cost} Wingits)`
+                : expired ? 'Opened' : mingle.viewOnce ? `Open once (${cost === 0 ? 'Free' : `${cost} Wingits`})`
                 : `Tap to View (${cost === 0 ? 'Free' : `${cost} Wingits`})`}
             </span>
           </>

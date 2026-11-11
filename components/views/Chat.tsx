@@ -33,7 +33,7 @@ import { ReportDialog } from '@/components/ReportDialog';
 import { InsufficientWingitsModal } from '@/components/InsufficientWingitsModal';
 import { WingitsChatDialog } from '@/components/WingitsChatDialog';
 import { ChatImage } from '@/components/ChatImage';
-import { CHAT_IMAGE_SEND_COST } from '@/lib/chat-images';
+import { chatImageSendCost } from '@/lib/chat-images';
 import { useWingitsChatTimeline, WingitsChatNotice } from '@/components/WingitsChatHistory';
 import { useStore } from '@/lib/contexts/StoreContext';
 import { dayLabel, mingleTime } from '@/lib/utils/format';
@@ -202,7 +202,7 @@ export function Chat() {
   const submitPreview = async () => {
     if (imagePreviews.length === 0 || !conversation) return;
     
-    const imageCost = currentUser?.isUnlimited ? 0 : imagePreviews.length * CHAT_IMAGE_SEND_COST;
+    const imageCost = imagePreviews.length * chatImageSendCost(currentUser);
     if ((currentUser?.wingitsBalance ?? 0) < imageCost) {
       setShowTopup(true);
       return;
@@ -817,7 +817,7 @@ export function Chat() {
                   type="button"
                   aria-label="Send as one-view photo"
                   aria-pressed={viewOnce}
-                  title="One-view photo: recipient pays 4 Wingits to open once"
+                  title="Recipient can open once: 4 Wingits, or free with Unlimited access"
                   className={`flex items-center justify-center transition-colors ${viewOnce ? 'text-[#53bdeb]' : 'text-white/60'}`}
                 >
                   <div className="w-5 h-5 rounded-full border-[1.5px] border-current flex items-center justify-center text-[10px] font-bold">1</div>
@@ -873,13 +873,13 @@ export function Chat() {
           open
           onClose={() => setShowTopup(false)}
           currentBalance={currentUser.wingitsBalance}
-          requiredAmount={imagePreviews.length * CHAT_IMAGE_SEND_COST}
+          requiredAmount={imagePreviews.length * chatImageSendCost(currentUser)}
           onRequestWingits={() => {
             setShowTopup(false);
             setWingitsDialog({
               conversationId: conversation.id,
               mode: 'request',
-              amount: Math.max(1, imagePreviews.length * CHAT_IMAGE_SEND_COST - currentUser.wingitsBalance),
+              amount: Math.max(1, imagePreviews.length * chatImageSendCost(currentUser) - currentUser.wingitsBalance),
             });
           }}
         />

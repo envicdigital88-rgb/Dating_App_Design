@@ -40,7 +40,10 @@ function fixture(options = {}) {
   };
   const orm = { public: {
     User: {
-      select() { return { async first() { assert.ok(state.locked); return { ...state.user }; } }; },
+      select(...fields) { return { async first() {
+        assert.ok(state.locked);
+        return Object.fromEntries(fields.map(field => [field, state.user[field]]));
+      } }; },
       where({ id }) { return { async first() {
         assert.ok(state.locked);
         return id === state.user.id ? { ...state.user } : null;
@@ -69,7 +72,9 @@ function fixture(options = {}) {
     }; } },
     Conversation: { where() { return { async first() {
       return options.noConversation ? null : { id: 'chat', userId1: 'sender', userId2: 'recipient' };
-    }, async update() {} }; } },
+    }, async update() {
+      if (options.failConversationUpdate) throw new Error('Synthetic conversation update failure');
+    } }; } },
     Wingle: { where() { return { where() { return this; }, async first() { return { status: 'accepted' }; } }; } },
     Block: { where() { return { async first() { return null; } }; } },
     WingitsTransaction: { async create(record) { state.records.push(JSON.parse(JSON.stringify(record))); } },
@@ -131,6 +136,34 @@ test('sending either a normal or one-view image charges exactly two Wingits', as
   }
 });
 
+test('Unlimited senders send both normal and one-view images free with an unchanged balance', async () => {
+  for (const viewOnce of [false, true]) {
+    const { state, send } = fixture({ viewer: 'sender', user: { isUnlimited: true, wingitsBalance: 6 } });
+    const result = await send(IMAGE_URL, viewOnce);
+    assert.equal(result.ok, true);
+    assert.equal(state.user.wingitsBalance, 6);
+    assert.equal(result.remainingBalance, 6);
+    assert.equal(state.sent.length, 1);
+    assert.equal(state.records.length, 0);
+  }
+});
+
+test('Unlimited senders can send photos with a zero balance', async () => {
+  const { state, send } = fixture({ viewer: 'sender', user: { isUnlimited: true, wingitsBalance: 0 } });
+  const result = await send(IMAGE_URL, true);
+  assert.equal(result.ok, true);
+  assert.equal(state.user.wingitsBalance, 0);
+  assert.equal(state.sent.length, 1);
+  assert.equal(state.records.length, 0);
+});
+
+test('an unavailable sender wallet prevents sending an uncharged image', async () => {
+  const { state, send } = fixture({ viewer: 'sender', noAccount: true });
+  assert.equal((await send(IMAGE_URL)).ok, false);
+  assert.equal(state.sent.length, 0);
+  assert.equal(state.records.length, 0);
+});
+
 test('sending with less than two Wingits fails without a message or charge', async () => {
   const { state, send } = fixture({ viewer: 'sender', user: { wingitsBalance: 1 } });
   assert.equal((await send(IMAGE_URL)).ok, false);
@@ -156,6 +189,95 @@ test('text messages are free and failed image sends roll back the charge', async
   assert.equal((await failed.send(IMAGE_URL)).ok, false);
   assert.equal(failed.state.user.wingitsBalance, 12);
   assert.equal(failed.state.records.length, 0);
+});
+
+test('concurrent sends with only two Wingits send and charge for one photo', async () => {
+  const { state, send } = fixture({ viewer: 'sender', user: { wingitsBalance: 2 } });
+  const results = await Promise.all([send(IMAGE_URL), send(IMAGE_URL)]);
+  assert.equal(results.filter(result => result.ok).length, 1);
+  assert.equal(state.user.wingitsBalance, 0);
+  assert.equal(state.sent.length, 1);
+  assert.equal(state.records.length, 1);
+});
+
+test('conversation update failures roll back the image send, charge, and ledger', async () => {
+  const { state, send } = fixture({ viewer: 'sender', failConversationUpdate: true });
+  assert.equal((await send(IMAGE_URL)).ok, false);
+  assert.equal(state.user.wingitsBalance, 12);
+  assert.equal(state.sent.length, 0);
+  assert.equal(state.records.length, 0);
+});
+
+test('notification failures do not turn a charged image send into a failed send', async () => {
+  const { state, send } = fixture({ viewer: 'sender', failNotification: true });
+  const result = await send(IMAGE_URL);
+  assert.equal(result.ok, true);
+  assert.equal(result.remainingBalance, 10);
+  assert.equal(state.sent.length, 1);
+  assert.equal(state.records.length, 1);
+});
+
+function storeSendFixture(options = {}) {
+  const source = fs.readFileSync(path.join(__dirname, '../lib/contexts/StoreContext.tsx'), 'utf8');
+  const file = ts.createSourceFile('StoreContext.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  let initializer;
+  const find = node => {
+    if (ts.isVariableDeclaration(node) && node.name.getText(file) === 'sendMingle') initializer = node.initializer;
+    ts.forEachChild(node, find);
+  };
+  find(file);
+  assert.ok(initializer);
+  // Run the production callback with just its surrounding React/store dependencies mocked.
+  const code = ts.transpileModule(`exports.send = ${initializer.getText(file)};`, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+  }).outputText;
+  const currentUser = { id: 'sender', wingitsBalance: 6, isUnlimited: false, ...options.user };
+  const state = { db: {
+    users: [currentUser], conversations: [{ id: 'chat', userIds: ['sender', 'recipient'] }], mingles: [],
+  }, refreshes: 0, requests: 0 };
+  const exports = {};
+  vm.runInNewContext(code, {
+    exports, currentUser, db: state.db, entitlements: {},
+    useCallback(callback) { return callback; },
+    chatImageSendCost: imagePolicy.chatImageSendCost,
+    crypto: { randomUUID() { return 'sent-photo'; } },
+    setDb(update) { state.db = update(state.db); },
+    sessionIdRef: { current: currentUser.id },
+    refreshChatStateRef: { current() { state.refreshes++; } },
+    sendPeerEvent() {},
+    toast: { error(message) { assert.fail(message); } },
+    async sendMingleAction(_conversationId, _body, _image, _reply, _forwarded, _viewOnce, id) {
+      state.requests++;
+      return { ok: true, data: { id, imageUrl: IMAGE_URL }, remainingBalance: options.confirmedBalance ?? 4 };
+    },
+  });
+  return { state, send: () => exports.send('chat', '', IMAGE_URL) };
+}
+
+test('the chat skips Unlimited deductions and adopts the confirmed server balance', async () => {
+  for (const isUnlimited of [false, true]) {
+    const confirmedBalance = isUnlimited ? 6 : 2;
+    const { state, send } = storeSendFixture({ user: { isUnlimited }, confirmedBalance });
+    assert.equal(send().ok, true);
+    assert.equal(state.db.users[0].wingitsBalance, isUnlimited ? 6 : 4);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(state.db.users[0].wingitsBalance, confirmedBalance);
+    assert.equal(state.requests, 1);
+    assert.equal(state.refreshes, 1);
+  }
+});
+
+test('the chat allows a zero-balance Unlimited sender and blocks a standard sender', async () => {
+  for (const isUnlimited of [false, true]) {
+    const { state, send } = storeSendFixture({ user: { isUnlimited, wingitsBalance: 0 }, confirmedBalance: 0 });
+    const result = send();
+    assert.equal(result.ok, isUnlimited);
+    if (!isUnlimited) assert.equal(result.reason, 'insufficient_wingits');
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(state.requests, isUnlimited ? 1 : 0);
+    assert.equal(state.db.users[0].wingitsBalance, 0);
+    assert.equal(state.db.mingles.length, isUnlimited ? 1 : 0);
+  }
 });
 
 test('normal photos are free once, then cost four Wingits on every reopen', async () => {
@@ -279,9 +401,27 @@ test('notification failures do not report a completed paid view as failed', asyn
   assert.equal(state.records.length, 1);
 });
 
-test('paid recipient views cost four Wingits for every account', async () => {
-  const { open } = fixture({ mingle: { viewOnce: true }, user: { isUnlimited: true } });
-  assert.equal((await open(4)).data.charged, 4);
+test('Unlimited recipients can repeatedly view normal photos free with zero Wingits', async () => {
+  const { state, open } = fixture({ user: { isUnlimited: true, wingitsBalance: 0 } });
+  for (let count = 1; count <= 3; count++) {
+    const result = await open(0);
+    assert.equal(result.ok, true);
+    assert.equal(result.data.charged, 0);
+    assert.equal(result.data.remainingBalance, 0);
+    assert.equal(result.data.imageViewCount, count);
+  }
+  assert.equal(state.records.length, 0);
+});
+
+test('Unlimited recipients view one-view photos free, but only once', async () => {
+  const { state, open } = fixture({ mingle: { viewOnce: true }, user: { isUnlimited: true, wingitsBalance: 0 } });
+  const result = await open(0);
+  assert.equal(result.ok, true);
+  assert.equal(result.data.charged, 0);
+  assert.equal(result.data.remainingBalance, 0);
+  assert.equal((await open(0)).ok, false);
+  assert.equal(state.records.length, 0);
+  assert.equal(state.mingle.imageViewCount, 1);
 });
 
 test('both chat surfaces use a photo gate that shows the right price without loading received images', () => {
@@ -303,6 +443,17 @@ test('both chat surfaces use a photo gate that shows the right price without loa
     assert.ok(!html.includes('<img'));
     assert.ok(!html.includes(IMAGE_URL));
     if (label === 'Opened') assert.match(html, /disabled=""/);
+  }
+  state.user.isUnlimited = true;
+  for (const [photo, label] of [
+    [{ ...state.mingle, imageViewCount: 1 }, 'Tap to View (Free)'],
+    [{ ...state.mingle, viewOnce: true }, 'Open once (Free)'],
+    [{ ...state.mingle, viewOnce: true, imageViewCount: 1 }, 'Opened'],
+  ]) {
+    const html = renderToStaticMarkup(React.createElement(ChatImage, { mingle: photo }));
+    assert.ok(html.includes(label));
+    assert.ok(!html.includes('4 Wingits'));
+    assert.ok(!html.includes('<img'));
   }
   for (const file of ['components/views/Chat.tsx', 'components/ui/ChatPopup.tsx']) {
     const source = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
