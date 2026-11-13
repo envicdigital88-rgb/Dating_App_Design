@@ -1,0 +1,950 @@
+[
+  {
+    "id": "table.secretWingle",
+    "label": "Create table \"secretWingle\"",
+    "summary": "Creates table \"secretWingle\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "secretWingle"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"secretWingle\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"secretWingle\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"secretWingle\"",
+        "sql": "CREATE TABLE \"public\".\"secretWingle\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"id\" text NOT NULL,\n  \"message\" text NOT NULL,\n  \"senderId\" text NOT NULL,\n  \"targetPhone\" text NOT NULL,\n  \"unlocked\" bool DEFAULT false NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"secretWingle\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"secretWingle\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.transactionLedger",
+    "label": "Create table \"transactionLedger\"",
+    "summary": "Creates table \"transactionLedger\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "transactionLedger"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"transactionLedger\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"transactionLedger\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"transactionLedger\"",
+        "sql": "CREATE TABLE \"public\".\"transactionLedger\" (\n  \"amountLKR\" float8 NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"id\" text NOT NULL,\n  \"status\" text DEFAULT 'PENDING' NOT NULL,\n  \"transactionReference\" text,\n  \"updatedAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"userId\" text NOT NULL,\n  \"wingitsCredited\" int4 NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"transactionLedger\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"transactionLedger\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.wingitsTransaction",
+    "label": "Create table \"wingitsTransaction\"",
+    "summary": "Creates table \"wingitsTransaction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "wingitsTransaction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"wingitsTransaction\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"wingitsTransaction\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"wingitsTransaction\"",
+        "sql": "CREATE TABLE \"public\".\"wingitsTransaction\" (\n  \"amount\" int4 NOT NULL,\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"description\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"type\" text NOT NULL,\n  \"userId\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"wingitsTransaction\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"wingitsTransaction\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.mingle.imageViewCount",
+    "label": "Add column \"imageViewCount\" to \"mingle\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "imageViewCount",
+        "table": "mingle"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"imageViewCount\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "mingle",
+          "imageViewCount"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"imageViewCount\"",
+        "sql": "ALTER TABLE \"public\".\"mingle\" ADD COLUMN \"imageViewCount\" int4 DEFAULT 0 NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"imageViewCount\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "mingle",
+          "imageViewCount"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.discoverable",
+    "label": "Add column \"discoverable\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "discoverable",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"discoverable\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "discoverable"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"discoverable\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"discoverable\" bool DEFAULT true NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"discoverable\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "discoverable"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.freeWinglesAccepted",
+    "label": "Add column \"freeWinglesAccepted\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "freeWinglesAccepted",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"freeWinglesAccepted\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "freeWinglesAccepted"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"freeWinglesAccepted\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"freeWinglesAccepted\" int4 DEFAULT 0 NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"freeWinglesAccepted\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "freeWinglesAccepted"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.freeWinglesSent",
+    "label": "Add column \"freeWinglesSent\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "freeWinglesSent",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"freeWinglesSent\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "freeWinglesSent"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"freeWinglesSent\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"freeWinglesSent\" int4 DEFAULT 0 NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"freeWinglesSent\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "freeWinglesSent"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.isUnlimited",
+    "label": "Add column \"isUnlimited\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "isUnlimited",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"isUnlimited\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "isUnlimited"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"isUnlimited\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"isUnlimited\" bool DEFAULT false NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"isUnlimited\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "isUnlimited"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.lastDailyBonusAt",
+    "label": "Add column \"lastDailyBonusAt\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "lastDailyBonusAt",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"lastDailyBonusAt\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "lastDailyBonusAt"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"lastDailyBonusAt\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"lastDailyBonusAt\" timestamptz"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"lastDailyBonusAt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "lastDailyBonusAt"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.pushSubscription",
+    "label": "Add column \"pushSubscription\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "pushSubscription",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"pushSubscription\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "pushSubscription"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"pushSubscription\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"pushSubscription\" json"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"pushSubscription\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "pushSubscription"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.readReceipts",
+    "label": "Add column \"readReceipts\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "readReceipts",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"readReceipts\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "readReceipts"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"readReceipts\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"readReceipts\" bool DEFAULT true NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"readReceipts\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "readReceipts"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.selfieStatus",
+    "label": "Add column \"selfieStatus\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "selfieStatus",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"selfieStatus\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "selfieStatus"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"selfieStatus\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"selfieStatus\" text DEFAULT 'pending'"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"selfieStatus\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "selfieStatus"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.showDistance",
+    "label": "Add column \"showDistance\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "showDistance",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"showDistance\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "showDistance"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"showDistance\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"showDistance\" bool DEFAULT true NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"showDistance\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "showDistance"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.showOnline",
+    "label": "Add column \"showOnline\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "showOnline",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"showOnline\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "showOnline"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"showOnline\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"showOnline\" bool DEFAULT true NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"showOnline\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "showOnline"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.suspensionReason",
+    "label": "Add column \"suspensionReason\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "suspensionReason",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"suspensionReason\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "suspensionReason"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"suspensionReason\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"suspensionReason\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"suspensionReason\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "suspensionReason"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.verificationSelfie",
+    "label": "Add column \"verificationSelfie\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "verificationSelfie",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"verificationSelfie\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "verificationSelfie"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"verificationSelfie\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"verificationSelfie\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"verificationSelfie\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "verificationSelfie"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.wingitsBalance",
+    "label": "Add column \"wingitsBalance\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "wingitsBalance",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"wingitsBalance\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "wingitsBalance"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"wingitsBalance\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"wingitsBalance\" int4 DEFAULT 20 NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"wingitsBalance\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "wingitsBalance"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.secretWingle.secretWingle_senderId_idx_4689c490",
+    "label": "Create index \"secretWingle_senderId_idx_4689c490\" on \"secretWingle\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "secretWingle_senderId_idx_4689c490",
+        "table": "secretWingle"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"secretWingle_senderId_idx_4689c490\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"secretWingle_senderId_idx_4689c490\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"secretWingle_senderId_idx_4689c490\"",
+        "sql": "CREATE INDEX \"secretWingle_senderId_idx_4689c490\" ON \"public\".\"secretWingle\" (\"senderId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"secretWingle_senderId_idx_4689c490\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"secretWingle_senderId_idx_4689c490\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.transactionLedger.transactionLedger_userId_idx_a489d58a",
+    "label": "Create index \"transactionLedger_userId_idx_a489d58a\" on \"transactionLedger\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "transactionLedger_userId_idx_a489d58a",
+        "table": "transactionLedger"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"transactionLedger_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"transactionLedger_userId_idx_a489d58a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"transactionLedger_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"transactionLedger_userId_idx_a489d58a\" ON \"public\".\"transactionLedger\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"transactionLedger_userId_idx_a489d58a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"transactionLedger_userId_idx_a489d58a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.wingitsTransaction.wingitsTransaction_userId_idx_a489d58a",
+    "label": "Create index \"wingitsTransaction_userId_idx_a489d58a\" on \"wingitsTransaction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "wingitsTransaction_userId_idx_a489d58a",
+        "table": "wingitsTransaction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"wingitsTransaction_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"wingitsTransaction_userId_idx_a489d58a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"wingitsTransaction_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"wingitsTransaction_userId_idx_a489d58a\" ON \"public\".\"wingitsTransaction\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"wingitsTransaction_userId_idx_a489d58a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"wingitsTransaction_userId_idx_a489d58a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.secretWingle.secretWingle_senderId_fkey",
+    "label": "Add foreign key \"secretWingle_senderId_fkey\" on \"secretWingle\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "secretWingle_senderId_fkey",
+        "table": "secretWingle"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"secretWingle_senderId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "secretWingle_senderId_fkey",
+          "public",
+          "\"public\".\"secretWingle\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"secretWingle_senderId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"secretWingle\"\nADD CONSTRAINT \"secretWingle_senderId_fkey\"\nFOREIGN KEY (\"senderId\")\nREFERENCES \"public\".\"user\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"secretWingle_senderId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "secretWingle_senderId_fkey",
+          "public",
+          "\"public\".\"secretWingle\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.transactionLedger.transactionLedger_userId_fkey",
+    "label": "Add foreign key \"transactionLedger_userId_fkey\" on \"transactionLedger\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "transactionLedger_userId_fkey",
+        "table": "transactionLedger"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"transactionLedger_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "transactionLedger_userId_fkey",
+          "public",
+          "\"public\".\"transactionLedger\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"transactionLedger_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"transactionLedger\"\nADD CONSTRAINT \"transactionLedger_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"user\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"transactionLedger_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "transactionLedger_userId_fkey",
+          "public",
+          "\"public\".\"transactionLedger\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.wingitsTransaction.wingitsTransaction_userId_fkey",
+    "label": "Add foreign key \"wingitsTransaction_userId_fkey\" on \"wingitsTransaction\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "wingitsTransaction_userId_fkey",
+        "table": "wingitsTransaction"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"wingitsTransaction_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "wingitsTransaction_userId_fkey",
+          "public",
+          "\"public\".\"wingitsTransaction\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"wingitsTransaction_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"wingitsTransaction\"\nADD CONSTRAINT \"wingitsTransaction_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"user\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"wingitsTransaction_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "wingitsTransaction_userId_fkey",
+          "public",
+          "\"public\".\"wingitsTransaction\""
+        ]
+      }
+    ]
+  }
+]

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
+import { isCurrentSession } from '@/lib/session-version';
 
 const secretKey = process.env.SESSION_SECRET || 'winglemingle_session_jwt_secret_key_2026_super_secure_auth_token_99x';
 const encodedKey = new TextEncoder().encode(secretKey);
@@ -21,7 +22,7 @@ export async function middleware(request: NextRequest) {
       const verified = await jwtVerify(sessionCookie, encodedKey, {
         algorithms: ['HS256'],
       });
-      payload = verified.payload;
+      if (await isCurrentSession(verified.payload)) payload = verified.payload;
     } catch (err) {
       // Invalid or expired token
     }
@@ -62,5 +63,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  runtime: 'nodejs',
   matcher: ['/', '/sign-in', '/sign-up', '/onboarding', '/discover', '/discover/:path*'],
 };

@@ -320,6 +320,14 @@ export function Auth({ mode }: {mode: 'signin' | 'register';}) {
               </button>
             </div>
 
+            {!isRegister && (
+              <div className="text-right">
+                <Link href="/forgot-password" className="text-[13px] font-medium text-berry-400 hover:text-berry-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-berry-400">
+                  Forgot password?
+                </Link>
+              </div>
+            )}
+
             {/* Password Rules */}
             {isRegister && isPasswordFocused && (
               <div className="rounded-2xl border border-white/5 bg-[#0a0a0a]/50 p-4 space-y-2.5">

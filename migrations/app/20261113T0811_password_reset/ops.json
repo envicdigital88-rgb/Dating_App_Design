@@ -1,0 +1,167 @@
+[
+  {
+    "id": "table.passwordReset",
+    "label": "Create table \"passwordReset\"",
+    "summary": "Creates table \"passwordReset\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "passwordReset"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"passwordReset\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"passwordReset\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"passwordReset\"",
+        "sql": "CREATE TABLE \"public\".\"passwordReset\" (\n  \"attempts\" int4 DEFAULT 0 NOT NULL,\n  \"challengeId\" text NOT NULL,\n  \"email\" text NOT NULL,\n  \"expiresAt\" timestamptz NOT NULL,\n  \"otpHash\" text NOT NULL,\n  \"passwordHash\" text NOT NULL,\n  \"requestCount\" int4 DEFAULT 0 NOT NULL,\n  \"requestWindowStart\" timestamptz NOT NULL,\n  \"requestedAt\" timestamptz NOT NULL,\n  \"resetTokenHash\" text,\n  \"usedAt\" timestamptz,\n  \"userId\" text NOT NULL,\n  \"verifiedAt\" timestamptz,\n  PRIMARY KEY (\"userId\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"passwordReset\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"passwordReset\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.user.sessionVersion",
+    "label": "Add column \"sessionVersion\" to \"user\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "sessionVersion",
+        "table": "user"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"sessionVersion\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "sessionVersion"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"sessionVersion\"",
+        "sql": "ALTER TABLE \"public\".\"user\" ADD COLUMN \"sessionVersion\" int4 DEFAULT 0 NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"sessionVersion\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "user",
+          "sessionVersion"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.passwordReset.passwordReset_challengeId_key",
+    "label": "Add unique constraint on \"passwordReset\" (challengeId)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "passwordReset_challengeId_key",
+        "table": "passwordReset"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"passwordReset_challengeId_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "passwordReset_challengeId_key",
+          "public",
+          "\"public\".\"passwordReset\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"passwordReset_challengeId_key\"",
+        "sql": "ALTER TABLE \"public\".\"passwordReset\" ADD CONSTRAINT \"passwordReset_challengeId_key\" UNIQUE (\"challengeId\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"passwordReset_challengeId_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "passwordReset_challengeId_key",
+          "public",
+          "\"public\".\"passwordReset\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.passwordReset.passwordReset_userId_fkey",
+    "label": "Add foreign key \"passwordReset_userId_fkey\" on \"passwordReset\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "passwordReset_userId_fkey",
+        "table": "passwordReset"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"passwordReset_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "passwordReset_userId_fkey",
+          "public",
+          "\"public\".\"passwordReset\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"passwordReset_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"passwordReset\"\nADD CONSTRAINT \"passwordReset_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"user\" (\"id\")\nON DELETE CASCADE"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"passwordReset_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "passwordReset_userId_fkey",
+          "public",
+          "\"public\".\"passwordReset\""
+        ]
+      }
+    ]
+  }
+]

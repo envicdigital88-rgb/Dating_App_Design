@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
+import { accountSessionVersion, isCurrentSession } from '@/lib/session-version'
 
 const secretKey = process.env.SESSION_SECRET || 'winglemingle_session_jwt_secret_key_2026_super_secure_auth_token_99x'
 const encodedKey = new TextEncoder().encode(secretKey)
@@ -25,9 +26,11 @@ export async function decrypt(session: string | undefined = '') {
 }
 
 export async function createSession(userId: string, verified: boolean = true) {
+  const sessionVersion = await accountSessionVersion(userId)
+  if (sessionVersion === null) throw new Error('Account not found')
   // 30 days (persists across browser/tab closes for well over 10 days)
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-  const session = await encrypt({ userId, verified, expiresAt })
+  const session = await encrypt({ userId, verified, expiresAt, sessionVersion })
   
   const cookieStore = await cookies()
 
@@ -44,7 +47,7 @@ export async function createSession(userId: string, verified: boolean = true) {
 export async function updateSession() {
   const cookieStore = await cookies()
   const session = cookieStore.get('session')?.value
-  const payload = await decrypt(session)
+  const payload = await getSession()
 
   if (!session || !payload?.userId) {
     return null
@@ -55,6 +58,7 @@ export async function updateSession() {
   const newSession = await encrypt({
     userId: payload.userId,
     verified: payload.verified ?? true,
+    sessionVersion: payload.sessionVersion ?? 0,
     expiresAt
   })
 
@@ -85,5 +89,7 @@ export async function getSession() {
   const cookieStore = await cookies()
   const session = cookieStore.get('session')?.value
   if (!session) return null
-  return await decrypt(session)
+  const payload = await decrypt(session)
+  if (!payload || !await isCurrentSession(payload)) return null
+  return payload
 }

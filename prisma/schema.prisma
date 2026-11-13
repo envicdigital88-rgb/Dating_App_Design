@@ -8,6 +8,7 @@ model User {
   email          String         @unique
   phone          String
   password       String
+  sessionVersion Int            @default(0)
   role           String         @default("member") // "member" or "admin"
   age            Int            @default(0)
   gender         String         @default("woman") // "woman", "man", "non-binary"
@@ -70,6 +71,23 @@ model User {
   
   wingitsTransactions  WingitsTransaction[]
   transactionLedgers   TransactionLedger[]
+}
+
+model PasswordReset {
+  userId             String   @id
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challengeId        String   @unique
+  email              String
+  passwordHash       String
+  otpHash            String
+  expiresAt          DateTime
+  attempts           Int      @default(0)
+  requestedAt        DateTime
+  requestWindowStart DateTime
+  requestCount       Int      @default(0)
+  verifiedAt         DateTime?
+  resetTokenHash     String?
+  usedAt             DateTime?
 }
 
 model WingitsTransaction {
