@@ -319,16 +319,16 @@ export function buildSecretWingleSms({
   const name = (recipientName || senderName)?.trim();
 
   const enHeader = name
-    ? `💌 Hey ${name}, someone has a crush on you but is too shy to tell you directly. 🙈💜`
-    : `💌 Someone has a crush on you but is too shy to tell you directly. 🙈💜`;
+    ? `Hey ${name}, someone has a crush on you but is too shy to tell you directly.`
+    : `Someone has a crush on you but is too shy to tell you directly.`;
 
   const siHeader = name
-    ? `💌 Hey ${name}, කෙනෙක් ඔයාට කැමතියි… ඒත් ඒක කෙළින්ම කියන්න ලැජ්ජයි. 🙈💜`
-    : `💌 කෙනෙක් ඔයාට කැමතියි… ඒත් ඒක කෙළින්ම කියන්න ලැජ්ජයි. 🙈💜`;
+    ? `Hey ${name}, කෙනෙක් ඔයාට කැමතියි… ඒත් ඒක කෙළින්ම කියන්න ලැජ්ජයි.`
+    : `කෙනෙක් ඔයාට කැමතියි… ඒත් ඒක කෙළින්ම කියන්න ලැජ්ජයි.`;
 
   const taHeader = name
-    ? `💌 Hey ${name}, ஒருவர் உங்கள் மீது காதல் கொண்டிருக்கிறார்… ஆனால் அதை நேரடியாகச் சொல்ல வெட்கப்படுகிறார். 🙈💜`
-    : `💌 ஒருவர் உங்கள் மீது காதல் கொண்டிருக்கிறார்… ஆனால் அதை நேரடியாகச் சொல்ல வெட்கப்படுகிறார். 🙈💜`;
+    ? `Hey ${name}, ஒருவர் உங்கள் மீது காதல் கொண்டிருக்கிறார்… ஆனால் அதை நேரடியாகச் சொல்ல வெட்கப்படுகிறார்.`
+    : `ஒருவர் உங்கள் மீது காதல் கொண்டிருக்கிறார்… ஆனால் அதை நேரடியாகச் சொல்ல வெட்கப்படுகிறார்.`;
 
-  return `${enHeader}\n\nThey sent you a Secret Wingle.\n\n👉 ${cleanUrl}\n\n${siHeader}\n\nඑයා ඔයාට Secret Wingle එකක් එවලා.\n\n👉 ${cleanUrl}\n\n${taHeader}\n\nஅவர் உங்களுக்கு ஒரு Secret Wingle அனுப்பியுள்ளார்.\n\n👉 ${cleanUrl}`;
+  return `${enHeader}\n\nThey sent you a Secret Wingle.\n\n👉 ${cleanUrl}\n\n${siHeader}\n\nඑයා ඔයාට Secret Wingle එකක් එවලා.\n\n ${cleanUrl}\n\n${taHeader}\n\nஅவர் உங்களுக்கு ஒரு Secret Wingle அனுப்பியுள்ளார்.\n\n ${cleanUrl}`;
 }
