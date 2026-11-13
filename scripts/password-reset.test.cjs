@@ -101,7 +101,10 @@ function fixture(options = {}) {
     '@/lib/db': { db },
     '@/lib/session': { async deleteSession() { state.jar.delete('session'); state.clearedSessions++; } },
     '@/lib/password-reset-email': { async sendPasswordResetEmail(email, code) { state.mail.push({ email, code }); return true; } },
-  }, { Date: ClockDate });
+  }, {
+    Date: ClockDate,
+    process: { env: { SESSION_SECRET: SECRET, RESEND_API_KEY: 'synthetic-mail-key', NODE_ENV: 'production', ...options.env } },
+  });
   return {
     state, db, cookies, actions,
     async request(email = state.user.email) {
@@ -138,6 +141,24 @@ test('email request, OTP verification, and password update complete with single-
   h.state.jar = savedCookies;
   assert.equal((await h.actions.resetPassword('Another-password-58!')).ok, false);
   assert.equal(h.state.user.sessionVersion, 1);
+});
+
+test('production can request, verify, and reset with email configured and no SESSION_SECRET', async () => {
+  const h = fixture({ env: { SESSION_SECRET: undefined } });
+  assert.equal((await h.request()).ok, true);
+  assert.equal(h.state.mail.length, 1);
+  assert.equal((await h.actions.verifyPasswordResetCode(h.state.mail[0].code)).ok, true);
+  assert.equal((await h.actions.resetPassword(NEW_PASSWORD)).ok, true);
+  assert.equal(await bcrypt.compare(NEW_PASSWORD, h.state.user.password), true);
+});
+
+test('missing email configuration remains a real error and never reports an email was sent', async () => {
+  const h = fixture({ env: { RESEND_API_KEY: undefined } });
+  const result = await h.request();
+  assert.equal(result.ok, false);
+  assert.match(result.error, /temporarily unavailable/);
+  assert.equal(h.state.mail.length, 0);
+  assert.equal(h.state.reset, null);
 });
 
 test('unknown emails and rate-limited requests get the same generic response', async () => {

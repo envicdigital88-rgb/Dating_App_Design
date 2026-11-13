@@ -22,10 +22,13 @@ const stamp = (time: number) => Temporal.Instant.fromEpochMilliseconds(time);
 const timestamp = (value: { toString(): string }) => Date.parse(value.toString());
 const tokenHash = (token: string) => crypto.createHash('sha256').update(token).digest('hex');
 
-function otpHash(code: string, challengeId: string, userId: string) {
-  const secret = process.env.SESSION_SECRET?.trim();
-  if (!secret) throw new Error('Password reset secret is not configured');
-  return crypto.createHmac('sha256', secret).update(`password-reset-code:${challengeId}:${userId}:${code}`).digest('hex');
+function otpHash(code: string, challengeId: string, userId: string): Promise<string> {
+  // A memory-hard, per-challenge hash protects short codes without depending on a deployment signing secret.
+  return new Promise((resolve, reject) => {
+    crypto.scrypt(code, `password-reset-code:${challengeId}:${userId}`, 32,
+      { N: 32768, r: 8, p: 1, maxmem: 64 * 1024 * 1024 },
+      (error, derived) => error ? reject(error) : resolve(derived.toString('hex')));
+  });
 }
 
 function equalHash(a: string, b: string | null) {
@@ -47,12 +50,14 @@ async function setResetCookie(name: string, value: string, maxAge: number) {
 export async function requestPasswordReset(email: string) {
   const parsed = z.string().trim().toLowerCase().email().max(254).safeParse(email);
   if (!parsed.success) return { ok: false as const, error: 'Please enter a valid email address.' };
-  if (!process.env.RESEND_API_KEY?.trim() || !process.env.SESSION_SECRET?.trim()) {
+  if (!process.env.RESEND_API_KEY?.trim()) {
+    console.error('Password reset email is unavailable: RESEND_API_KEY is missing.');
     return { ok: false as const, error: 'Password reset email is temporarily unavailable. Please try again later.' };
   }
   try {
     let challengeId = crypto.randomBytes(32).toString('hex');
-    const emailTag = crypto.createHmac('sha256', process.env.SESSION_SECRET!.trim())
+    // This tag only detects a repeated email entry; it never authorizes a reset.
+    const emailTag = crypto.createHash('sha256')
       .update(`password-reset-email:${parsed.data}`).digest('hex');
     const jar = await cookies();
     const code = crypto.randomInt(0, 1_000_000).toString().padStart(6, '0');
@@ -69,7 +74,7 @@ export async function requestPasswordReset(email: string) {
         if (previous && (now - timestamp(previous.requestedAt) < 60_000 || (inWindow && previous.requestCount >= 5))) return false;
         const record = {
           challengeId, email: user.email, passwordHash: user.password,
-          otpHash: otpHash(code, challengeId, account.id), expiresAt: stamp(now + TEN_MINUTES),
+          otpHash: await otpHash(code, challengeId, account.id), expiresAt: stamp(now + TEN_MINUTES),
           attempts: 0, requestedAt: stamp(now), requestWindowStart: inWindow ? previous.requestWindowStart : stamp(now),
           requestCount: inWindow ? previous.requestCount + 1 : 1,
           verifiedAt: null, resetTokenHash: null, usedAt: null,
@@ -118,7 +123,7 @@ export async function verifyPasswordResetCode(code: string) {
       if (!current || current.challengeId !== challengeId || !user || current.email !== user.email ||
         current.passwordHash !== user.password || current.usedAt || current.verifiedAt ||
         timestamp(current.expiresAt) <= Date.now() || current.attempts >= 5) return invalidCode();
-      if (!equalHash(otpHash(code, challengeId, challenge.userId), current.otpHash)) {
+      if (!equalHash(await otpHash(code, challengeId, challenge.userId), current.otpHash)) {
         await tx.orm.public.PasswordReset.where({ userId: challenge.userId }).update({ attempts: current.attempts + 1 });
         return invalidCode();
       }

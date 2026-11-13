@@ -82,6 +82,24 @@ node --test scripts/payment-gateway.test.cjs scripts/invoice-email.test.cjs
 node --experimental-strip-types scripts/payment-verification.test.ts
 ```
 
+### Password reset emails
+
+The sign-in page links to `/forgot-password`, where members request an email code,
+verify it, and choose a new password. Reset emails always use
+`Wingle Mingle <noreply@winglemingle.com>` from the verified Resend domain.
+
+Set `RESEND_API_KEY` in the hosting provider's **Production** server environment
+and redeploy after changing it. Local `.env` values are not copied to a hosted
+deployment automatically. A missing key causes the “Password reset email is
+temporarily unavailable” message and a server log identifying the missing setting.
+
+Reset codes use per-challenge scrypt hashes, expire after 10 minutes, and allow
+five attempts. No extra signing-secret setting is required for this flow.
+Configure a strong `SESSION_SECRET` separately for session signing. A successful
+reset invalidates previous signed-in sessions.
+
+Run the isolated recovery checks with `node --test scripts/password-reset.test.cjs`.
+
 ## 📁 Project Structure
 
 - `/app` - Next.js App Router pages and layouts
